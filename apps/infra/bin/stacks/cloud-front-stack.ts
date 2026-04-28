@@ -81,6 +81,7 @@ export class CloudFrontStack extends Stack {
 
     const rewriteFunction = new cloudfront.Function(this, `${idPrefix}-RewriteFunction`, {
       functionName: `${idPrefix}-Rewrite`,
+      runtime: cloudfront.FunctionRuntime.JS_2_0,
       code: cloudfront.FunctionCode.fromFile({
         filePath: path.join(__dirname, "cloudfront-rewrite-function.js"),
       }),
