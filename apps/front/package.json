@@ -1,0 +1,62 @@
+{
+  "name": "@twy/front",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write .",
+    "synth": "pnpm exec cdk synth",
+    "diff": "pnpm exec cdk diff",
+    "deploy": "pnpm exec cdk deploy --require-approval never"
+  },
+  "dependencies": {
+    "@amplitude/analytics-browser": "^2.27.0",
+    "@ant-design/charts": "2.6.5",
+    "@ant-design/icons": "6.1.0",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@ebay/nice-modal-react": "^1.2.13",
+    "@tanstack/react-query": "^5.90.2",
+    "ahooks": "3.9.5",
+    "antd": "5.27.4",
+    "aws-cdk-lib": "^2.251.0",
+    "axios": "1.12.2",
+    "constructs": "^10.0.0",
+    "dayjs": "^1.11.13",
+    "js-cookie": "^3.0.5",
+    "jwt-decode": "4.0.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-router-dom": "7.9.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.37.0",
+    "@tanstack/react-query-devtools": "^5.90.2",
+    "@types/js-cookie": "^3.0.6",
+    "@types/node": "24.7.2",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.1",
+    "@vitejs/plugin-react": "5.0.4",
+    "eslint": "9.37.0",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "16.4.0",
+    "ts-node": "10.9.2",
+    "typescript-eslint": "8.46.0",
+    "vite": "^7.0.0",
+    "vitest": "3.2.4"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css,scss}": [
+      "prettier --write"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@domains/*": ["./src/domains/*"],
+      "@contracts/*": ["./src/contracts/*"],
+      "@helpers/*": ["./src/helpers/*"],
+      "@functions/*": ["./src/functions/*"],
+      "@utils/*": ["./src/utils/*"]
+    }
+  }
+}

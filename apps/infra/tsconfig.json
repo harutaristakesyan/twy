@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "out",
+    "paths": {
+      "@functions/*": ["./src/functions/*"],
+      "@libs/*": ["./src/libs/*"]
+    }
+  },
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+  },
+  "include": ["bin", "lib", "src"],
+  "exclude": [
+    "node_modules",
+    "cdk.out",
+    "cdk.context.json",
+    "cdk.metadata.json",
+    "cdk.tree.json"
+  ]
+}

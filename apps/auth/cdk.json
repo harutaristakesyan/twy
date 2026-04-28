@@ -1,0 +1,8 @@
+{
+  "app": "pnpm exec ts-node -r tsconfig-paths/register bin/deploy.ts",
+  "context": {
+    "@aws-cdk/aws-lambda:recognizeVersionProps": true,
+    "@aws-cdk/aws-lambda-nodejs:esbuildMinify": true
+  },
+  "requireApproval": "never"
+}

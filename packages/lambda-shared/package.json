@@ -1,0 +1,39 @@
+{
+  "name": "@twy/lambda-shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared Lambda middlewares and helpers (middy wrappers, error utils)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@middy/core": "^6.4.5",
+    "@middy/http-json-body-parser": "^6.4.5",
+    "aws-cdk-lib": "^2.251.0",
+    "http-errors": "^2.0.0",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.161",
+    "@types/http-errors": "^2.0.5",
+    "@types/node": "^22.18.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
