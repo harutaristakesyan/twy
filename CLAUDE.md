@@ -46,11 +46,7 @@ Deploy graph (enforced by both Turbo and CI): `lambda-shared → infra → {auth
 
 Each CDK app keeps stack code under `bin/` and runtime code under `src/`. `apps/infra/bin/stacks/` holds the shared stacks; the others define one stack file plus a `cdk.ts` entrypoint and a `deploy.ts` helper.
 
-### Domains (multi-domain deploy)
-
-Each environment serves a `primaryDomain` plus optional `additionalDomains` from a single per-env CloudFront distribution and ACM cert (`apps/infra/bin/environments.ts`). Today: dev = `dev.twy.am` + `dev.twy.be` (apex only); prod = `twy.am` + `twy.be` (each with `www`). All domains share the same DSQL cluster, Cognito user pool, API Gateway, and files bucket — there's exactly one backend per env. **Auth is per-origin**: Cognito tokens live in `localStorage`, so a user signed in on `twy.am` is *not* signed in on `twy.be` (same DB, same Cognito account — just no cross-origin token sync). The `primaryDomain` drives `idPrefix`-derived physical names (S3 buckets, SSM paths like `/twy-am/site/bucketName`); changing it would force-replace those resources, so always extend via `additionalDomains` instead.
-
-To add a new alias domain: (1) create the Route53 hosted zone in the matching AWS account (dev zone in `DEV_ACCOUNT_ID`, prod zone in `PROD_ACCOUNT_ID`); (2) point the registrar's NS records at Route53; (3) append to `additionalDomains` in `environments.ts`. The cert uses `acm.CertificateValidation.fromDnsMultiZone` so cross-zone DNS validation is automatic.
+DomainStack hands the ACM cert ARN to CloudFrontStack via an SSM parameter (`/${idPrefix}/cert/arn`), not a CFN cross-stack export. CFN exports get pinned to importing stacks — replacing the cert (e.g. when SANs change) fails with "cannot update export in use" until the importer is redeployed first. SSM resolves at deploy time, so the cert can be replaced freely. CloudFrontStack has an explicit `addDependency(domainStack)` to guarantee deploy order.
 
 ### Lambda runtime pattern
 

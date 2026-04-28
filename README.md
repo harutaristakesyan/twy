@@ -142,27 +142,6 @@ In CI these come from per-environment GitHub vars (`vars.DEV_ACCOUNT_ID`, `vars.
 
 For local deploys: `aws sso login --profile <profile>`, export it, run the per-app `deploy` script.
 
-### Domains
-
-Each environment can serve **multiple domains** from a single CloudFront distribution backed by one ACM cert. Configured in `apps/infra/bin/environments.ts`:
-
-| Env  | `primaryDomain` | `additionalDomains` | `includeWww` | Aliases served                                                |
-| ---- | --------------- | ------------------- | ------------ | ------------------------------------------------------------- |
-| dev  | `dev.twy.am`    | `["dev.twy.be"]`    | `false`      | `dev.twy.am`, `dev.twy.be`                                    |
-| prod | `twy.am`        | `["twy.be"]`        | `true`       | `twy.am`, `www.twy.am`, `twy.be`, `www.twy.be`                |
-
-All aliases hit the **same** backend (DSQL, Cognito pool, API Gateway, files bucket). `primaryDomain` drives physical resource names via `idPrefix = primaryDomain.replace(/\./g, "-")` (e.g. `twy-am-bucket`, SSM path `/twy-am/site/bucketName`) — keep it stable; extend via `additionalDomains` instead.
-
-**Auth is per-origin.** Cognito tokens live in `localStorage`, which is origin-scoped. A user signed in on `twy.am` will not be signed in on `twy.be` — same Cognito account and DB row, no cross-domain SSO.
-
-To add a new alias domain:
-
-1. Create the Route53 public hosted zone in the matching AWS account (dev zone in `DEV_ACCOUNT_ID`, prod zone in `PROD_ACCOUNT_ID`).
-2. At the registrar, point the domain's NS records at Route53.
-3. Append to `additionalDomains` in `environments.ts` and deploy `@twy/infra`.
-
-ACM uses `CertificateValidation.fromDnsMultiZone`, so DNS validation across multiple Route53 zones is automatic. SES is set up per domain (DKIM + SPF + DMARC) so transactional mail can originate from any of them.
-
 ## CI/CD
 
 Single workflow: `.github/workflows/ci-cd.yml`. Triggers on push to `master`/`main` and `workflow_dispatch`.

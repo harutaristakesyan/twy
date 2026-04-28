@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import { Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
-import type * as acm from "aws-cdk-lib/aws-certificatemanager";
+import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as route53 from "aws-cdk-lib/aws-route53";
@@ -10,17 +10,12 @@ import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import type { Construct } from "constructs";
 
 interface CloudFrontStackProps extends StackProps {
-  primaryDomain: string;
-  additionalDomains: string[];
-  includeWww: boolean;
-  hostedZones: Record<string, route53.IHostedZone>;
-  certificate: acm.ICertificate;
+  domainName: string;
+  hostedZone: route53.IHostedZone;
   spaMode?: boolean;
   blockRobots?: boolean;
   apiDomain?: string;
 }
-
-const sanitizeId = (s: string) => s.replace(/\./g, "-");
 
 export class CloudFrontStack extends Stack {
   public readonly distribution: cloudfront.Distribution;
@@ -28,23 +23,15 @@ export class CloudFrontStack extends Stack {
   constructor(scope: Construct, id: string, props: CloudFrontStackProps) {
     super(scope, id, props);
 
-    const {
-      primaryDomain,
-      additionalDomains,
-      includeWww,
-      hostedZones,
-      certificate,
-      apiDomain,
-      spaMode,
-      blockRobots = false,
-    } = props;
+    const { domainName, hostedZone, apiDomain, spaMode, blockRobots = false } = props;
 
-    const allDomains = [primaryDomain, ...additionalDomains];
-    const aliasNames = includeWww ? allDomains.flatMap((d) => [d, `www.${d}`]) : [...allDomains];
-    const idPrefix = sanitizeId(primaryDomain);
+    const wwwDomain = `www.${domainName}`;
+    const idPrefix = domainName.replace(/\./g, "-");
 
-    const registrableZone = (fqdn: string) =>
-      hostedZones[fqdn] ?? hostedZones[fqdn.replace(/^www\./, "")];
+    // Resolve cert ARN at deploy time via SSM rather than via CFN cross-stack
+    // import. See domain-stack.ts CertArnParam for the rationale.
+    const certArn = StringParameter.valueForStringParameter(this, `/${idPrefix}/cert/arn`);
+    const certificate = acm.Certificate.fromCertificateArn(this, "ImportedCert", certArn);
 
     // S3 Bucket for static site
     const bucket = new s3.Bucket(this, `${idPrefix}-Bucket`, {
@@ -86,7 +73,7 @@ export class CloudFrontStack extends Stack {
     // CloudFront Distribution
     this.distribution = new cloudfront.Distribution(this, `${idPrefix}-Distribution`, {
       certificate,
-      domainNames: aliasNames,
+      domainNames: [domainName, wwwDomain],
       defaultRootObject: "index.html",
       minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
       errorResponses: spaMode
@@ -190,22 +177,18 @@ export class CloudFrontStack extends Stack {
       });
     }
 
-    // DNS Records — one ARecord per alias, in its registrable hosted zone.
-    // Preserve original logical IDs for primary apex/www so the existing CFN
-    // resources are not replaced (would cause brief DNS downtime).
-    const aliasLogicalId = (name: string) => {
-      if (name === primaryDomain) return `${idPrefix}-ARecord-Root`;
-      if (name === `www.${primaryDomain}`) return `${idPrefix}-ARecord-WWW`;
-      return `${idPrefix}-ARecord-${sanitizeId(name)}`;
-    };
+    // DNS Records
+    new route53.ARecord(this, `${idPrefix}-ARecord-Root`, {
+      recordName: domainName,
+      zone: hostedZone,
+      target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(this.distribution)),
+    });
 
-    for (const name of aliasNames) {
-      new route53.ARecord(this, aliasLogicalId(name), {
-        recordName: name,
-        zone: registrableZone(name),
-        target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(this.distribution)),
-      });
-    }
+    new route53.ARecord(this, `${idPrefix}-ARecord-WWW`, {
+      recordName: wwwDomain,
+      zone: hostedZone,
+      target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(this.distribution)),
+    });
 
     new StringParameter(this, "BucketName", {
       parameterName: `/${idPrefix}/site/bucketName`,

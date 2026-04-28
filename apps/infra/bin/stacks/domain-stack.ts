@@ -7,92 +7,67 @@ import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import type { Construct } from "constructs";
 
 interface DomainStackProps extends StackProps {
-  primaryDomain: string;
-  additionalDomains: string[];
-  includeWww: boolean;
+  domain: string;
 }
 
-const sanitizeId = (s: string) => s.replace(/\./g, "-");
-
 export class DomainStack extends Stack {
-  public readonly hostedZones: Record<string, route53.IHostedZone>;
+  public readonly hostedZone: route53.IHostedZone;
   public readonly certificate: acm.ICertificate;
 
   constructor(scope: Construct, id: string, props: DomainStackProps) {
     super(scope, id, props);
-    const { primaryDomain, additionalDomains, includeWww } = props;
+    const { domain } = props;
 
-    const allDomains = [primaryDomain, ...additionalDomains];
-    const certNames = includeWww ? allDomains.flatMap((d) => [d, `www.${d}`]) : [...allDomains];
+    const hostedZone = route53.HostedZone.fromLookup(this, "HostedZone", {
+      domainName: domain,
+    });
 
-    const idPrefix = sanitizeId(primaryDomain);
+    const idPrefix = domain.replace(/\./g, "-");
 
-    // Preserve original logical ID "HostedZone" for the primary domain so the
-    // existing CFN resource is not replaced; new domains get a suffixed ID.
-    this.hostedZones = Object.fromEntries(
-      allDomains.map((domain) => [
-        domain,
-        route53.HostedZone.fromLookup(
-          this,
-          domain === primaryDomain ? "HostedZone" : `HostedZone-${sanitizeId(domain)}`,
-          { domainName: domain },
-        ),
-      ]),
-    );
-
-    const registrableZone = (fqdn: string) =>
-      this.hostedZones[fqdn] ?? this.hostedZones[fqdn.replace(/^www\./, "")];
+    this.hostedZone = hostedZone;
 
     this.certificate = new acm.Certificate(this, "WildcardCert", {
-      domainName: certNames[0],
-      subjectAlternativeNames: certNames.slice(1),
-      validation: acm.CertificateValidation.fromDnsMultiZone(
-        Object.fromEntries(certNames.map((name) => [name, registrableZone(name)])),
-      ),
+      domainName: domain,
+      subjectAlternativeNames: [`www.${domain}`],
+      validation: acm.CertificateValidation.fromDns(hostedZone),
     });
 
-    for (const domain of allDomains) {
-      const hostedZone = this.hostedZones[domain];
-      const dId = sanitizeId(domain);
-      const isPrimary = domain === primaryDomain;
+    // Hand the cert ARN to CloudFrontStack via SSM instead of a CFN cross-stack
+    // export. CFN exports are pinned to the importing stack — replacing the cert
+    // (e.g. when SANs change) fails with "cannot update export in use" until the
+    // importer is redeployed first. SSM resolves at deploy time, no such pin.
+    new StringParameter(this, "CertArnParam", {
+      parameterName: `/${idPrefix}/cert/arn`,
+      stringValue: this.certificate.certificateArn,
+      description: "ACM cert ARN for CloudFront — read by customer-portal-cf via SSM",
+    });
 
-      new ses.EmailIdentity(this, isPrimary ? "SesDomain" : `SesDomain-${dId}`, {
-        identity: ses.Identity.publicHostedZone(hostedZone),
-        dkimSigning: true,
-      });
+    new ses.EmailIdentity(this, "SesDomain", {
+      identity: ses.Identity.publicHostedZone(hostedZone),
+      dkimSigning: true,
+    });
 
-      const spfValues = isPrimary
-        ? [
-            "v=spf1 include:amazonses.com ~all",
-            "google-site-verification=FIK-nfl2SL1L7SB2ajoqSnpERPmJpWy3mDQpKPMWUqg",
-          ]
-        : ["v=spf1 include:amazonses.com ~all"];
+    new route53.TxtRecord(this, "SpfRecord", {
+      zone: hostedZone,
+      recordName: domain,
+      values: [
+        "v=spf1 include:amazonses.com ~all",
+        "google-site-verification=FIK-nfl2SL1L7SB2ajoqSnpERPmJpWy3mDQpKPMWUqg",
+      ],
+      ttl: Duration.days(2),
+    });
 
-      new route53.TxtRecord(this, isPrimary ? "SpfRecord" : `SpfRecord-${dId}`, {
-        zone: hostedZone,
-        recordName: domain,
-        values: spfValues,
-        ttl: Duration.days(2),
-      });
-
-      new route53.TxtRecord(this, isPrimary ? "DmarcRecord" : `DmarcRecord-${dId}`, {
-        zone: hostedZone,
-        recordName: `_dmarc.${domain}`,
-        values: [`v=DMARC1; p=none; rua=mailto:dmarc-reports@${domain}`],
-        ttl: Duration.days(2),
-      });
-    }
+    new route53.TxtRecord(this, "DmarcRecord", {
+      zone: hostedZone,
+      recordName: `_dmarc.${domain}`,
+      values: [`v=DMARC1; p=none; rua=mailto:dmarc-reports@${domain}`],
+      ttl: Duration.days(2),
+    });
 
     new CfnOutput(this, "HostedZoneName", {
-      value: primaryDomain,
+      value: domain,
       exportName: "HostedZoneName",
     });
-
-    const corsOrigins = [
-      "http://localhost:3000",
-      ...allDomains.map((d) => `https://${d}`),
-      ...(includeWww ? allDomains.map((d) => `https://www.${d}`) : []),
-    ];
 
     const bucket = new s3.Bucket(this, `${idPrefix}-files-bucket`, {
       bucketName: `${idPrefix}-files-bucket`,
@@ -102,7 +77,7 @@ export class DomainStack extends Stack {
       cors: [
         {
           allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
-          allowedOrigins: corsOrigins,
+          allowedOrigins: ["http://localhost:3000", `https://${domain}`],
           allowedHeaders: ["*"],
           exposedHeaders: ["ETag", "x-amz-request-id", "x-amz-id-2"],
           maxAge: 3000,

@@ -18,9 +18,7 @@ const env = { region, account };
 // 1. Base domain / cert / DNS
 const domainStack = new DomainStack(app, `${envVar}-domain`, {
   env,
-  primaryDomain: config.primaryDomain,
-  additionalDomains: config.additionalDomains,
-  includeWww: config.includeWww,
+  ...config,
 });
 
 // 2. Database (independent)
@@ -37,16 +35,19 @@ const apiGatewayStack = new ApiGatewayStack(app, `${envVar}-api-gateway`, {
 
 apiGatewayStack.addDependency(authStack);
 
-new CloudFrontStack(app, `${envVar}-customer-portal-cf`, {
+const cloudFrontStack = new CloudFrontStack(app, `${envVar}-customer-portal-cf`, {
   env,
-  primaryDomain: config.primaryDomain,
-  additionalDomains: config.additionalDomains,
-  includeWww: config.includeWww,
-  hostedZones: domainStack.hostedZones,
-  certificate: domainStack.certificate,
+  domainName: config.domain,
+  hostedZone: domainStack.hostedZone,
   apiDomain: apiGatewayStack.apiDomain,
   spaMode: true,
 });
+
+// CloudFrontStack reads the cert ARN from an SSM parameter written by
+// DomainStack (see domain-stack.ts CertArnParam). The dependency is no longer
+// inferred from a construct ref, so declare it explicitly to guarantee the
+// parameter exists when CloudFront resolves it.
+cloudFrontStack.addDependency(domainStack);
 
 // Tagging
 Tags.of(app).add("Environment", envVar);
