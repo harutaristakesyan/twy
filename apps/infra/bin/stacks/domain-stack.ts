@@ -32,6 +32,16 @@ export class DomainStack extends Stack {
       validation: acm.CertificateValidation.fromDns(hostedZone),
     });
 
+    // Preserve the existing CFN auto-export of the cert ARN through this deploy.
+    // The previous version of CloudFrontStack imported the cert via cross-stack
+    // ref, generating an auto-export. Removing that ref would also remove the
+    // export — but CFN refuses to delete an export while another stack still
+    // imports it. exportValue() with no name re-creates the auto-export under
+    // the same name, keeping the live import valid until CloudFront redeploys.
+    // Remove this line in a follow-up once no stack imports it (run
+    // `aws cloudformation list-imports --export-name <name>` to confirm empty).
+    this.exportValue(this.certificate.certificateArn);
+
     // Hand the cert ARN to CloudFrontStack via SSM instead of a CFN cross-stack
     // export. CFN exports are pinned to the importing stack — replacing the cert
     // (e.g. when SANs change) fails with "cannot update export in use" until the
