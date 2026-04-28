@@ -18,7 +18,9 @@ const env = { region, account };
 // 1. Base domain / cert / DNS
 const domainStack = new DomainStack(app, `${envVar}-domain`, {
   env,
-  ...config,
+  primaryDomain: config.primaryDomain,
+  additionalDomains: config.additionalDomains,
+  includeWww: config.includeWww,
 });
 
 // 2. Database (independent)
@@ -37,8 +39,10 @@ apiGatewayStack.addDependency(authStack);
 
 new CloudFrontStack(app, `${envVar}-customer-portal-cf`, {
   env,
-  domainName: config.domain,
-  hostedZone: domainStack.hostedZone,
+  primaryDomain: config.primaryDomain,
+  additionalDomains: config.additionalDomains,
+  includeWww: config.includeWww,
+  hostedZones: domainStack.hostedZones,
   certificate: domainStack.certificate,
   apiDomain: apiGatewayStack.apiDomain,
   spaMode: true,
