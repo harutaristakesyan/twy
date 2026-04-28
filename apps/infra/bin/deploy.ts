@@ -48,9 +48,9 @@ const cloudFrontStack = new CloudFrontStack(app, `${envVar}-customer-portal-cf`,
 });
 
 // CloudFrontStack reads the cert ARN from an SSM parameter written by
-// DomainStack (see domain-stack.ts CertArnParam). The dependency is no longer
-// inferred from a construct ref, so declare it explicitly to guarantee the
-// parameter exists when CloudFront resolves it.
+// DomainStack (see domain-stack.ts CertArnParam). Because the cert isn't
+// passed as a construct ref, CDK can't infer the stack dependency — declare
+// it explicitly so the SSM param exists when CloudFront resolves it.
 cloudFrontStack.addDependency(domainStack);
 
 // Tagging
