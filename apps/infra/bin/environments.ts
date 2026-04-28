@@ -1,12 +1,18 @@
 export interface EnvConfig {
-  domain: string;
+  primaryDomain: string;
+  additionalDomains: string[];
+  includeWww: boolean;
 }
 
 export const environments: Record<string, EnvConfig> = {
   dev: {
-    domain: "dev.twy.am",
+    primaryDomain: "dev.twy.am",
+    additionalDomains: ["dev.twy.be"],
+    includeWww: false,
   },
   prod: {
-    domain: "twy.am",
+    primaryDomain: "twy.am",
+    additionalDomains: ["twy.be"],
+    includeWww: true,
   },
 };
