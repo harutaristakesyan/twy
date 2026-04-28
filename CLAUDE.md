@@ -4,6 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `README.md` is the canonical reference for layout, scripts, and CI/CD. This file captures the constraints and conventions that aren't obvious from a single-file read.
 
+## Where to look first
+
+| Need | File |
+|---|---|
+| Per-package conventions (UI, auth, functions, infra, lambda-shared) | `apps/<name>/CLAUDE.md`, `packages/<name>/CLAUDE.md` |
+| Slash commands (`/ship`, `/verify`, `/new-handler`, `/new-migration`, `/debug-test`, `/review-pr`, `/sync-docs`) | `.claude/commands/` |
+| Specialized subagents (code-reviewer, debugger, security-auditor, migration-writer, lambda-handler-author, cdk-stack-reviewer, refactoring-specialist, test-writer, docs-writer) | `.claude/agents/` |
+| Authoring procedures (Lambda handler, Kysely migration, UI page, CDK stack) | `.claude/skills/` |
+| Permissions, hooks, model selection | `.claude/settings.json` |
+| Onboarding for the agent infra itself | `.claude/README.md` |
+| Project-scoped MCP servers (filesystem, git, github, postgres-dev) | `.mcp.json` |
+
+## Verification loop
+
+Always end a working session by running, in order:
+1. `/verify` — runs `biome ci`, `turbo build`, `turbo test`, `turbo check` (matches CI exactly).
+2. `code-reviewer` subagent on the diff. Address blockers/majors.
+3. `/ship` — guided commit + push (Conventional Commits with required scope, header ≤150).
+
+Never bypass the gate with `--no-verify`. Never `git push --force*` (the deny list catches it).
+
 ## Common commands
 
 ```bash

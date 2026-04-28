@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "Project-shared Claude Code config for the twy monorepo. Checked in. Personal overrides go in settings.local.json (gitignored).",
+
+  "model": "claude-sonnet-4-6",
+  "_modelNote": "Sonnet is the daily-driver. For planning a multi-app refactor, an architectural change, or a CDK migration, switch to Opus with `/model opus` for the planning turn(s) and switch back. The plan, debugger, code-reviewer, and security-auditor subagents are explicitly pinned to Opus.",
+
+  "permissions": {
+    "defaultMode": "acceptEdits",
+
+    "allow": [
+      "Read(**)",
+      "Glob(**)",
+      "Grep(**)",
+      "Edit(**)",
+      "Write(**)",
+      "MultiEdit(**)",
+
+      "Bash(pnpm install)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm build)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm check)",
+      "Bash(pnpm check:ci)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm run:*)",
+      "Bash(pnpm exec biome:*)",
+      "Bash(pnpm exec vitest:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(pnpm --filter:*)",
+      "Bash(pnpm turbo run:*)",
+
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff)",
+      "Bash(git diff:*)",
+      "Bash(git log)",
+      "Bash(git log:*)",
+      "Bash(git show)",
+      "Bash(git show:*)",
+      "Bash(git branch)",
+      "Bash(git branch:*)",
+      "Bash(git remote -v)",
+      "Bash(git fetch)",
+      "Bash(git fetch:*)",
+      "Bash(git pull --ff-only)",
+      "Bash(git pull --ff-only:*)",
+      "Bash(git stash)",
+      "Bash(git stash:*)",
+      "Bash(git add:*)",
+      "Bash(git restore:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git switch:*)",
+      "Bash(git commit -m:*)",
+
+      "Bash(ls)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(sed -n:*)",
+      "Bash(awk:*)",
+      "Bash(jq:*)",
+      "Bash(node -e:*)",
+      "Bash(node --version)",
+      "Bash(pnpm --version)",
+      "Bash(which:*)",
+      "Bash(pwd)",
+      "Bash(echo:*)",
+      "Bash(date)",
+      "Bash(true)",
+      "Bash(false)",
+
+      "Bash(pnpm exec cdk synth:*)",
+      "Bash(pnpm exec cdk diff:*)",
+      "Bash(pnpm exec cdk ls:*)",
+
+      "WebFetch(domain:docs.claude.com)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:docs.aws.amazon.com)",
+      "WebFetch(domain:biomejs.dev)",
+      "WebFetch(domain:turbo.build)",
+      "WebFetch(domain:kysely.dev)",
+      "WebFetch(domain:middy.js.org)",
+      "WebFetch(domain:zod.dev)",
+      "WebFetch(domain:react.dev)",
+      "WebFetch(domain:ant.design)",
+      "WebFetch(domain:vitejs.dev)",
+      "WebFetch(domain:tanstack.com)",
+      "WebFetch(domain:vitest.dev)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ],
+
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git reset:*)",
+      "Bash(git revert:*)",
+      "Bash(git tag:*)",
+      "Bash(git commit --amend:*)",
+
+      "Bash(pnpm --filter @twy/functions migrate)",
+      "Bash(pnpm --filter @twy/functions migrate:*)",
+      "Bash(pnpm --filter @twy/auth deploy:*)",
+      "Bash(pnpm --filter @twy/ui deploy:*)",
+      "Bash(pnpm --filter @twy/functions deploy:*)",
+      "Bash(pnpm --filter @twy/infra deploy:*)",
+      "Bash(pnpm exec cdk deploy:*)",
+      "Bash(pnpm exec cdk destroy:*)",
+      "Bash(pnpm exec cdk bootstrap:*)",
+
+      "Bash(aws:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(cp -r:*)",
+      "Bash(chmod:*)",
+      "Bash(chown:*)",
+
+      "Bash(pnpm publish:*)",
+      "Bash(npm publish:*)",
+      "Bash(pnpm version:*)",
+      "Bash(pnpm dlx:*)",
+      "Bash(npx:*)"
+    ],
+
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.*.local)",
+      "Read(**/secrets/**)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/id_rsa)",
+      "Read(**/id_ed25519)",
+      "Read(~/.aws/credentials)",
+      "Read(~/.ssh/**)",
+
+      "Edit(.env)",
+      "Edit(.env.*)",
+      "Edit(**/.env)",
+      "Edit(**/.env.local)",
+      "Write(.env)",
+      "Write(.env.*)",
+      "Write(**/.env.local)",
+
+      "Edit(pnpm-lock.yaml)",
+      "Write(pnpm-lock.yaml)",
+      "Edit(apps/functions/src/migration/sql/V*.sql)",
+      "Edit(apps/functions/src/migration/sql/V*__*.sql)",
+
+      "Bash(git push --force)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f)",
+      "Bash(git push -f:*)",
+      "Bash(git push --force-with-lease)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git push origin master:*)",
+      "Bash(git push origin main:*)",
+      "Bash(git push origin :*)",
+      "Bash(git reset --hard)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -fd)",
+      "Bash(git clean -fdx)",
+      "Bash(git clean -fX)",
+      "Bash(git update-ref -d:*)",
+
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf ~/*)",
+      "Bash(rm -rf .)",
+      "Bash(rm -rf ..)",
+      "Bash(rm -rf node_modules:*)",
+
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(scp:*)",
+      "Bash(ssh:*)",
+      "Bash(nc:*)",
+      "Bash(ncat:*)",
+      "Bash(sudo:*)",
+
+      "Bash(aws iam:*)",
+      "Bash(aws sts assume-role:*)",
+      "Bash(aws s3 rb:*)",
+      "Bash(aws s3 rm:*)",
+      "Bash(aws cloudformation delete-stack:*)",
+      "Bash(aws dsql delete:*)",
+      "Bash(aws dsql update:*)",
+      "Bash(aws cognito-idp delete:*)",
+
+      "Bash(docker:*)",
+      "Bash(kubectl:*)",
+      "Bash(helm:*)",
+      "Bash(terraform:*)",
+
+      "Bash(npm install -g:*)",
+      "Bash(pnpm add -g:*)",
+      "Bash(pnpm install -g:*)"
+    ]
+  },
+
+  "env": {
+    "NODE_OPTIONS": "--max-old-space-size=8192",
+    "FORCE_COLOR": "1",
+    "DO_NOT_TRACK": "1",
+    "TURBO_TELEMETRY_DISABLED": "1",
+    "ADBLOCK": "1",
+    "DISABLE_OPENCOLLECTIVE": "1",
+    "ENV": "dev"
+  },
+
+  "outputStyle": "default",
+
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/session-start.sh" }]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/user-prompt-submit.sh" }]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/pre-tool-use.sh" }]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/pre-tool-use.sh" }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/post-tool-use.sh" }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/stop.sh" }]
+      }
+    ]
+  }
+}

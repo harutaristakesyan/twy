@@ -154,3 +154,15 @@ cdk.out
 # Allow committed Vite envs in apps/ui (public build-time vars)
 !apps/ui/.env.development
 !apps/ui/.env.production
+
+# Claude Code — personal overrides and per-machine state
+.claude/settings.local.json
+.claude/.cache/
+.claude/projects/
+.claude/shell-snapshots/
+.claude/todos/
+.claude/statsig/
+.claude/ide/
+.claude/hooks/.last-session
+CLAUDE.local.md
+**/CLAUDE.local.md
