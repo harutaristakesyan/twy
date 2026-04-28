@@ -133,9 +133,16 @@
       "includes": ["apps/infra/bin/stacks/cloudfront-rewrite-function.js"],
       "linter": {
         "rules": {
-          "correctness": { "noInnerDeclarations": "off" },
-          "style": { "useConst": "off" },
-          "suspicious": { "noVar": "off" }
+          "correctness": {
+            "noInnerDeclarations": "off",
+            "noUnusedVariables": "off"
+          },
+          "style": {
+            "useConst": "off",
+            "useTemplate": "off"
+          },
+          "suspicious": { "noVar": "off" },
+          "complexity": { "useOptionalChain": "off" }
         }
       }
     },
