@@ -9,6 +9,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "out",
+    "types": ["node"],
     "paths": {
       "@functions/*": ["./src/functions/*"],
       "@libs/*": ["./src/libs/*"]
