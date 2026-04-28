@@ -1,8 +1,9 @@
 {
   "extends": "./tsconfig.paths.json",
   "compilerOptions": {
-    "target": "ES2023",
-    "lib": ["ES2023"],
+    "target": "ES2024",
+    "lib": ["ES2024"],
+    "ignoreDeprecations": "6.0",
     "module": "NodeNext",
     "moduleResolution": "nodenext",
 

@@ -1,15 +1,12 @@
-import { middyfy } from "@twy/lambda-shared";
-import { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
-import createError from "http-errors";
+import type { MessageResponse } from "@contracts/common/response";
+import { type UpdateLoadEvent, UpdateLoadEventSchema } from "@contracts/load/request";
 import {
+  type UpdateLoad,
   updateLoad as updateLoadRecord,
-  UpdateLoad,
 } from "@libs/db/operations/loadOperations";
-import { MessageResponse } from "@contracts/common/response";
-import {
-  UpdateLoadEvent,
-  UpdateLoadEventSchema,
-} from "@contracts/load/request";
+import { middyfy } from "@twy/lambda-shared";
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
+import createError from "http-errors";
 
 const updateLoad = async (event: UpdateLoadEvent): Promise<MessageResponse> => {
   const { loadId } = event.pathParameters;

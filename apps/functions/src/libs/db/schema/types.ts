@@ -1,4 +1,4 @@
-import { ColumnType, Insertable, Updateable } from "kysely";
+import type { ColumnType, Insertable, Updateable } from "kysely";
 
 export type Timestamp = ColumnType<Date | null, Date | null, Date | null>;
 
@@ -20,10 +20,7 @@ export type AuditKeys = "id" | AuditTimeKeys;
 export type NewRow<T> = Omit<Insertable<T>, AuditKeys>;
 
 // Same, but let you exclude a few more columns that your app fills in
-export type NewRowExcept<T, Extra extends keyof T = never> = Omit<
-  Insertable<T>,
-  AuditKeys | Extra
->;
+export type NewRowExcept<T, Extra extends keyof T = never> = Omit<Insertable<T>, AuditKeys | Extra>;
 
 // Patch/update type: usually you still don’t want to set audit fields
 export type PatchRow<T> = Omit<Updateable<T>, AuditKeys>;

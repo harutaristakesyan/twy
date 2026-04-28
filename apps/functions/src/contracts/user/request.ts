@@ -28,26 +28,22 @@ export const ListUsersEventSchema = z.object({
   queryStringParameters: z.object({
     page: z
       .string()
-      .transform((val) => parseInt(val, 10))
+      .transform((val) => Number.parseInt(val, 10))
       .default(0)
-      .transform((val) => (isNaN(val) ? 0 : val)),
+      .transform((val) => (Number.isNaN(val) ? 0 : val)),
     limit: z
       .string()
-      .transform((val) => parseInt(val, 10))
+      .transform((val) => Number.parseInt(val, 10))
       .default(5)
-      .transform((val) => (isNaN(val) ? 5 : val)),
+      .transform((val) => (Number.isNaN(val) ? 5 : val)),
     sortField: z
       .enum(Object.keys(userSortFieldMap) as [keyof typeof userSortFieldMap])
       .default("createdAt")
-      .transform(
-        (val) => userSortFieldMap[val as keyof typeof userSortFieldMap],
-      ),
+      .transform((val) => userSortFieldMap[val as keyof typeof userSortFieldMap]),
     sortOrder: z
       .enum(Object.keys(userSortOrderMap) as [keyof typeof userSortOrderMap])
       .default("descend")
-      .transform(
-        (val) => userSortOrderMap[val as keyof typeof userSortOrderMap],
-      ),
+      .transform((val) => userSortOrderMap[val as keyof typeof userSortOrderMap]),
     query: z.string().optional(),
   }),
 });

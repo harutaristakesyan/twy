@@ -1,13 +1,13 @@
-import { Duration, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
-import { Construct } from "constructs";
-import * as s3 from "aws-cdk-lib/aws-s3";
+import * as path from "node:path";
+import { Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
+import type * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as route53 from "aws-cdk-lib/aws-route53";
-import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as targets from "aws-cdk-lib/aws-route53-targets";
-import * as path from "path";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
+import type { Construct } from "constructs";
 
 interface CloudFrontStackProps extends StackProps {
   domainName: string;
@@ -24,14 +24,7 @@ export class CloudFrontStack extends Stack {
   constructor(scope: Construct, id: string, props: CloudFrontStackProps) {
     super(scope, id, props);
 
-    const {
-      domainName,
-      hostedZone,
-      certificate,
-      apiDomain,
-      spaMode,
-      blockRobots = false,
-    } = props;
+    const { domainName, hostedZone, certificate, apiDomain, spaMode, blockRobots = false } = props;
 
     const wwwDomain = `www.${domainName}`;
     const idPrefix = domainName.replace(/\./g, "-");
@@ -66,87 +59,74 @@ export class CloudFrontStack extends Stack {
       );
     }
 
-    const rewriteFunction = new cloudfront.Function(
-      this,
-      `${idPrefix}-RewriteFunction`,
-      {
-        functionName: `${idPrefix}-Rewrite`,
-        code: cloudfront.FunctionCode.fromFile({
-          filePath: path.join(__dirname, "cloudfront-rewrite-function.js"),
-        }),
-      },
-    );
+    const rewriteFunction = new cloudfront.Function(this, `${idPrefix}-RewriteFunction`, {
+      functionName: `${idPrefix}-Rewrite`,
+      code: cloudfront.FunctionCode.fromFile({
+        filePath: path.join(__dirname, "cloudfront-rewrite-function.js"),
+      }),
+    });
 
     // CloudFront Distribution
-    this.distribution = new cloudfront.Distribution(
-      this,
-      `${idPrefix}-Distribution`,
-      {
-        certificate,
-        domainNames: [domainName, wwwDomain],
-        defaultRootObject: "index.html",
-        minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
-        errorResponses: spaMode
-          ? [
-              {
-                httpStatus: 403,
-                responseHttpStatus: 200,
-                responsePagePath: "/index.html",
-                ttl: Duration.minutes(1),
-              },
-              {
-                httpStatus: 404,
-                responseHttpStatus: 200,
-                responsePagePath: "/index.html",
-                ttl: Duration.minutes(1),
-              },
-            ]
-          : [
-              {
-                httpStatus: 403,
-                responseHttpStatus: 403,
-                responsePagePath: "/error.html",
-                ttl: Duration.minutes(1),
-              },
-              {
-                httpStatus: 404,
-                responseHttpStatus: 404,
-                responsePagePath: "/404.html",
-                ttl: Duration.minutes(1),
-              },
-            ],
-        defaultBehavior: {
-          origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
-          compress: true,
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-          viewerProtocolPolicy:
-            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          responseHeadersPolicy,
-          cachePolicy: new cloudfront.CachePolicy(
-            this,
-            `${idPrefix}-StaticCachePolicy`,
+    this.distribution = new cloudfront.Distribution(this, `${idPrefix}-Distribution`, {
+      certificate,
+      domainNames: [domainName, wwwDomain],
+      defaultRootObject: "index.html",
+      minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
+      errorResponses: spaMode
+        ? [
             {
-              cachePolicyName: `${idPrefix}-StaticFilesCache`,
-              comment: "Cache static files like HTML, JS, CSS, etc.",
-              defaultTtl: Duration.days(1),
-              maxTtl: Duration.days(30),
-              minTtl: Duration.hours(1),
-              cookieBehavior: cloudfront.CacheCookieBehavior.none(),
-              headerBehavior: cloudfront.CacheHeaderBehavior.none(),
-              queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
-              enableAcceptEncodingGzip: true,
-              enableAcceptEncodingBrotli: true,
+              httpStatus: 403,
+              responseHttpStatus: 200,
+              responsePagePath: "/index.html",
+              ttl: Duration.minutes(1),
             },
-          ),
-          functionAssociations: [
             {
-              function: rewriteFunction,
-              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+              httpStatus: 404,
+              responseHttpStatus: 200,
+              responsePagePath: "/index.html",
+              ttl: Duration.minutes(1),
+            },
+          ]
+        : [
+            {
+              httpStatus: 403,
+              responseHttpStatus: 403,
+              responsePagePath: "/error.html",
+              ttl: Duration.minutes(1),
+            },
+            {
+              httpStatus: 404,
+              responseHttpStatus: 404,
+              responsePagePath: "/404.html",
+              ttl: Duration.minutes(1),
             },
           ],
-        },
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
+        compress: true,
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        responseHeadersPolicy,
+        cachePolicy: new cloudfront.CachePolicy(this, `${idPrefix}-StaticCachePolicy`, {
+          cachePolicyName: `${idPrefix}-StaticFilesCache`,
+          comment: "Cache static files like HTML, JS, CSS, etc.",
+          defaultTtl: Duration.days(1),
+          maxTtl: Duration.days(30),
+          minTtl: Duration.hours(1),
+          cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+          headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+          queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+          enableAcceptEncodingGzip: true,
+          enableAcceptEncodingBrotli: true,
+        }),
+        functionAssociations: [
+          {
+            function: rewriteFunction,
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+          },
+        ],
       },
-    );
+    });
 
     // Optionally wire API Gateway behind CloudFront if apiDomain provided
     if (apiDomain) {
@@ -155,10 +135,8 @@ export class CloudFrontStack extends Stack {
         "ApiOriginRequestPolicy",
         {
           originRequestPolicyName: `${idPrefix}-AllowAllQueryStrings`,
-          comment:
-            "Forward all query strings and selected headers for API Gateway",
-          queryStringBehavior:
-            cloudfront.OriginRequestQueryStringBehavior.all(),
+          comment: "Forward all query strings and selected headers for API Gateway",
+          queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all(),
           headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
             "Accept",
             "Content-Type",
@@ -187,34 +165,25 @@ export class CloudFrontStack extends Stack {
         enableAcceptEncodingBrotli: true,
       });
 
-      this.distribution.addBehavior(
-        "/api/*",
-        new origins.HttpOrigin(apiDomain),
-        {
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-          viewerProtocolPolicy:
-            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          originRequestPolicy,
-          cachePolicy,
-        },
-      );
+      this.distribution.addBehavior("/api/*", new origins.HttpOrigin(apiDomain), {
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        originRequestPolicy,
+        cachePolicy,
+      });
     }
 
     // DNS Records
     new route53.ARecord(this, `${idPrefix}-ARecord-Root`, {
       recordName: domainName,
       zone: hostedZone,
-      target: route53.RecordTarget.fromAlias(
-        new targets.CloudFrontTarget(this.distribution),
-      ),
+      target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(this.distribution)),
     });
 
     new route53.ARecord(this, `${idPrefix}-ARecord-WWW`, {
       recordName: wwwDomain,
       zone: hostedZone,
-      target: route53.RecordTarget.fromAlias(
-        new targets.CloudFrontTarget(this.distribution),
-      ),
+      target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(this.distribution)),
     });
 
     new StringParameter(this, "BucketName", {

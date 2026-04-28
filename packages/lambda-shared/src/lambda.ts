@@ -1,15 +1,15 @@
 import middy from "@middy/core";
+import middyJsonBodyParser from "@middy/http-json-body-parser";
 import type {
   APIGatewayEventRequestContextV2,
   APIGatewayProxyEventV2,
   APIGatewayProxyEventV2WithRequestContext,
   Context,
 } from "aws-lambda";
-import middyJsonBodyParser from "@middy/http-json-body-parser";
-import { ZodType } from "zod";
+import type { ZodType } from "zod";
 import { addAwsRequestId } from "./middy/addAwsRequestId.js";
 import { httpJwtExtractor } from "./middy/httpJwtExtractor.js";
-import { httpZodHandler, HttpZodHandlerMode } from "./middy/httpZodHandler.js";
+import { type HttpZodHandlerMode, httpZodHandler } from "./middy/httpZodHandler.js";
 import { jsonErrorHandler } from "./middy/jsonErrorHandler.js";
 
 export type MiddyOptions = Pick<middy.PluginObject, "timeoutEarlyInMillis">;
@@ -36,8 +36,7 @@ export const middyfy = <
   TEvent,
   TResult,
   TOriginalEvent extends
-    APIGatewayProxyEventV2WithRequestContext<APIGatewayEventRequestContextV2> =
-    APIGatewayProxyEventV2,
+    APIGatewayProxyEventV2WithRequestContext<APIGatewayEventRequestContextV2> = APIGatewayProxyEventV2,
   TContext extends Context = Context,
 >(
   handler:
@@ -51,18 +50,10 @@ export const middyfy = <
     middlewares.push(httpZodHandler({ eventSchema, mode }));
   }
 
-  return middlewares.reduce(
-    (handler, middleware) => handler.use(middleware),
-    wrapHandler(handler),
-  );
+  return middlewares.reduce((handler, middleware) => handler.use(middleware), wrapHandler(handler));
 };
 
-export const wrapHandler = <
-  TEvent,
-  TData,
-  TResult = unknown,
-  TContext extends Context = Context,
->(
+export const wrapHandler = <TEvent, TData, TResult = unknown, TContext extends Context = Context>(
   handler:
     | LambdaHandler<TData, TResult, TContext>
     | middy.MiddyfiedHandler<TEvent, TResult, Error, TContext>,
@@ -70,9 +61,4 @@ export const wrapHandler = <
 ): middy.MiddyfiedHandler<TEvent, TResult, Error, TContext> =>
   "use" in handler
     ? handler
-    : (middy(handler, opts) as unknown as middy.MiddyfiedHandler<
-        TEvent,
-        TResult,
-        Error,
-        TContext
-      >);
+    : (middy(handler, opts) as unknown as middy.MiddyfiedHandler<TEvent, TResult, Error, TContext>);

@@ -2,10 +2,9 @@ import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { toError } from "@twy/lambda-shared";
-import { middyfy } from "@twy/lambda-shared";
-import * as zod from "zod";
+import { middyfy, requireEnv, toError } from "@twy/lambda-shared";
 import errors from "http-errors";
+import * as zod from "zod";
 
 const EventSchema = zod.object({
   body: zod.object({
@@ -22,7 +21,7 @@ interface LoginResponse {
   refreshToken: string;
 }
 
-const userPoolClientId = process.env.USER_POOL_CLIENT_ID!;
+const userPoolClientId = requireEnv("USER_POOL_CLIENT_ID");
 
 const cognitoClient = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION,

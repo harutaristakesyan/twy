@@ -1,17 +1,11 @@
-import {
-  aws_iam,
-  Duration,
-  RemovalPolicy,
-  Stack,
-  StackProps,
-} from "aws-cdk-lib";
-import { Construct } from "constructs";
+import { aws_iam, Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
 import * as cognito from "aws-cdk-lib/aws-cognito";
-import { StringParameter } from "aws-cdk-lib/aws-ssm";
-import { emailTemplate } from "./auth-template/email";
-import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { Architecture, Runtime } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { RetentionDays } from "aws-cdk-lib/aws-logs";
+import { StringParameter } from "aws-cdk-lib/aws-ssm";
+import type { Construct } from "constructs";
+import { emailTemplate } from "./auth-template/email";
 
 interface AuthStackProps extends StackProps {}
 
@@ -19,10 +13,7 @@ export class AuthStack extends Stack {
   constructor(scope: Construct, id: string, props: AuthStackProps) {
     super(scope, id, props);
 
-    const dsqlClusterId = StringParameter.valueForStringParameter(
-      this,
-      "/dsql/cluster-id",
-    );
+    const dsqlClusterId = StringParameter.valueForStringParameter(this, "/dsql/cluster-id");
 
     const dsql = dsqlConnectPolicyFor(this.region, this.account, dsqlClusterId);
 
@@ -31,7 +22,7 @@ export class AuthStack extends Stack {
       description: "Post confirmation function",
       entry: "src/functions/postConfirmation.ts",
       handler: "handler",
-      runtime: Runtime.NODEJS_20_X,
+      runtime: Runtime.NODEJS_24_X,
       architecture: Architecture.ARM_64,
       timeout: Duration.seconds(30),
       memorySize: 512,
@@ -72,21 +63,15 @@ export class AuthStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
-    const userPoolClient = new cognito.UserPoolClient(
-      this,
-      "TWYUserPoolClient",
-      {
-        userPool,
-        generateSecret: false,
-        authFlows: {
-          userPassword: true,
-          userSrp: true,
-        },
-        supportedIdentityProviders: [
-          cognito.UserPoolClientIdentityProvider.COGNITO,
-        ],
+    const userPoolClient = new cognito.UserPoolClient(this, "TWYUserPoolClient", {
+      userPool,
+      generateSecret: false,
+      authFlows: {
+        userPassword: true,
+        userSrp: true,
       },
-    );
+      supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.COGNITO],
+    });
 
     new StringParameter(this, "UserPoolIdParam", {
       parameterName: "/cognito/user-pool-id",
@@ -102,11 +87,7 @@ export class AuthStack extends Stack {
   }
 }
 
-function dsqlConnectPolicyFor(
-  region: string,
-  account: string,
-  clusterId: string,
-) {
+function dsqlConnectPolicyFor(region: string, account: string, clusterId: string) {
   return new aws_iam.PolicyStatement({
     effect: aws_iam.Effect.ALLOW,
     actions: ["dsql:DbConnectAdmin", "ssm:GetParameter"],

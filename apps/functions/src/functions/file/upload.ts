@@ -1,15 +1,10 @@
-import { middyfy } from "@twy/lambda-shared";
-import { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
-import {
-  UploadFileEvent,
-  UploadFileEventSchema,
-} from "@contracts/file/request";
-import { UploadFileResponse } from "@contracts/file/response";
+import { type UploadFileEvent, UploadFileEventSchema } from "@contracts/file/request";
+import type { UploadFileResponse } from "@contracts/file/response";
 import { createUploadUrl } from "@libs/s3";
+import { middyfy } from "@twy/lambda-shared";
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
-const uploadFile = async (
-  event: UploadFileEvent,
-): Promise<UploadFileResponse> => {
+const uploadFile = async (event: UploadFileEvent): Promise<UploadFileResponse> => {
   const { fileName, contentType, size } = event.body;
 
   return await createUploadUrl({

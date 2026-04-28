@@ -1,4 +1,4 @@
-import { Timestamp } from "./types";
+import type { Timestamp } from "./types";
 
 export interface FileTable {
   id: string;

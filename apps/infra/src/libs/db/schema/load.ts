@@ -1,4 +1,4 @@
-import { StrN, NumN, Timestamp } from "./types.js";
+import type { NumN, StrN, Timestamp } from "./types.js";
 
 export interface LoadTable {
   // Audit fields

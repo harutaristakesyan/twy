@@ -4,16 +4,12 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [
-        "dist/**",
-        "out/**",
-        "cdk.out/**",
-        ".next/**",
-        "!.next/cache/**"
-      ]
+      "outputs": ["dist/**", "out/**", "cdk.out/**", ".next/**", "!.next/cache/**"]
     },
     "lint": {
-      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "check": {
       "outputs": []
     },
     "test": {

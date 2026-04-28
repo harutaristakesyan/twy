@@ -1,5 +1,5 @@
-import { LoadStatus } from "@libs/db";
-import { MessageResponse } from "@contracts/common/response";
+import type { MessageResponse } from "@contracts/common/response";
+import type { LoadStatus } from "@libs/db";
 
 export interface LoadLocationResponse {
   cityZipCode: string | null;

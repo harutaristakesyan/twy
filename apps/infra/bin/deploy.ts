@@ -1,10 +1,10 @@
 import { App, Tags } from "aws-cdk-lib";
 import { environments } from "./environments";
-import { DomainStack } from "./stacks/domain-stack";
+import { AuthStack } from "./stacks/auth-stack";
 import { CloudFrontStack } from "./stacks/cloud-front-stack";
 import { DbStack } from "./stacks/db-stack";
+import { DomainStack } from "./stacks/domain-stack";
 import { ApiGatewayStack } from "./stacks/gateway-stack";
-import { AuthStack } from "./stacks/auth-stack";
 
 const region = process.env.AWS_REGION!;
 const account = process.env.ACCOUNT_ID!;

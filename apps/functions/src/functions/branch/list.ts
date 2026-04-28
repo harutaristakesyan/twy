@@ -1,17 +1,11 @@
-import { middyfy } from "@twy/lambda-shared";
-import { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
+import { type ListBranchesEvent, ListBranchesEventSchema } from "@contracts/branch/request";
+import type { BranchListResponse } from "@contracts/branch/response";
 import { listBranches as listBranchRecords } from "@libs/db/operations/branchOperations";
-import { BranchListResponse } from "@contracts/branch/response";
-import {
-  ListBranchesEvent,
-  ListBranchesEventSchema,
-} from "@contracts/branch/request";
+import { middyfy } from "@twy/lambda-shared";
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
-const listBranches = async (
-  event: ListBranchesEvent,
-): Promise<BranchListResponse> => {
-  const { page, limit, sortField, sortOrder, query } =
-    event.queryStringParameters;
+const listBranches = async (event: ListBranchesEvent): Promise<BranchListResponse> => {
+  const { page, limit, sortField, sortOrder, query } = event.queryStringParameters;
 
   const { branches, total } = await listBranchRecords({
     page,

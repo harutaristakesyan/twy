@@ -70,26 +70,22 @@ export const ListLoadsEventSchema = z.object({
   queryStringParameters: z.object({
     page: z
       .string()
-      .transform((val) => parseInt(val, 10))
+      .transform((val) => Number.parseInt(val, 10))
       .default(0)
-      .transform((val) => (isNaN(val) ? 0 : val)),
+      .transform((val) => (Number.isNaN(val) ? 0 : val)),
     limit: z
       .string()
-      .transform((val) => parseInt(val, 10))
+      .transform((val) => Number.parseInt(val, 10))
       .default(10)
-      .transform((val) => (isNaN(val) ? 10 : val)),
+      .transform((val) => (Number.isNaN(val) ? 10 : val)),
     sortField: z
       .enum(Object.keys(loadSortFieldMap) as [keyof typeof loadSortFieldMap])
       .default("createdAt")
-      .transform(
-        (val) => loadSortFieldMap[val as keyof typeof loadSortFieldMap],
-      ),
+      .transform((val) => loadSortFieldMap[val as keyof typeof loadSortFieldMap]),
     sortOrder: z
       .enum(Object.keys(loadSortOrderMap) as [keyof typeof loadSortOrderMap])
       .default("descend")
-      .transform(
-        (val) => loadSortOrderMap[val as keyof typeof loadSortOrderMap],
-      ),
+      .transform((val) => loadSortOrderMap[val as keyof typeof loadSortOrderMap]),
     query: z.string().optional(),
   }),
 });

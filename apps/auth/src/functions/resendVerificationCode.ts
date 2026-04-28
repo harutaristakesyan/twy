@@ -2,10 +2,9 @@ import {
   CognitoIdentityProviderClient,
   ResendConfirmationCodeCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { toError } from "@twy/lambda-shared";
-import { middyfy } from "@twy/lambda-shared";
-import * as zod from "zod";
+import { middyfy, requireEnv, toError } from "@twy/lambda-shared";
 import errors from "http-errors";
+import * as zod from "zod";
 
 const EventSchema = zod.object({
   body: zod.object({
@@ -19,15 +18,13 @@ interface ResendCodeResponse {
   message: string;
 }
 
-const userPoolClientId = process.env.USER_POOL_CLIENT_ID!;
+const userPoolClientId = requireEnv("USER_POOL_CLIENT_ID");
 
 const cognitoClient = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION,
 });
 
-const resendVerificationCodeHandler = async (
-  event: EventSchema,
-): Promise<ResendCodeResponse> => {
+const resendVerificationCodeHandler = async (event: EventSchema): Promise<ResendCodeResponse> => {
   const { email } = event.body;
 
   try {
@@ -46,6 +43,4 @@ const resendVerificationCodeHandler = async (
   }
 };
 
-export const handler = middyfy<EventSchema, ResendCodeResponse>(
-  resendVerificationCodeHandler,
-);
+export const handler = middyfy<EventSchema, ResendCodeResponse>(resendVerificationCodeHandler);

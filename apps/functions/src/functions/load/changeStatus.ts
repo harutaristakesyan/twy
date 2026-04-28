@@ -1,12 +1,9 @@
-import { middyfy } from "@twy/lambda-shared";
-import { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
-import createError from "http-errors";
+import { type ChangeLoadStatusEvent, ChangeLoadStatusEventSchema } from "@contracts/load/request";
+import type { ChangeLoadStatusResponse } from "@contracts/load/response";
 import { changeLoadStatus as changeLoadStatusRecord } from "@libs/db/operations/loadOperations";
-import {
-  ChangeLoadStatusEvent,
-  ChangeLoadStatusEventSchema,
-} from "@contracts/load/request";
-import { ChangeLoadStatusResponse } from "@contracts/load/response";
+import { middyfy } from "@twy/lambda-shared";
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
+import createError from "http-errors";
 
 const changeLoadStatus = async (
   event: ChangeLoadStatusEvent,
@@ -15,11 +12,7 @@ const changeLoadStatus = async (
   const { status } = event.body;
   const changedBy = event.requestContext.authUser.userId;
 
-  const { updated, statusChangedByEmail } = await changeLoadStatusRecord(
-    loadId,
-    status,
-    changedBy,
-  );
+  const { updated, statusChangedByEmail } = await changeLoadStatusRecord(loadId, status, changedBy);
 
   if (!updated) {
     throw new createError.NotFound("Load not found");

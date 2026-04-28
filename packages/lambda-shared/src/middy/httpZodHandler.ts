@@ -1,6 +1,6 @@
-import { ZodError, ZodType } from "zod";
-import middy from "@middy/core";
+import type middy from "@middy/core";
 import createError, { isHttpError } from "http-errors";
+import { ZodError, type ZodType } from "zod";
 
 export type HttpZodHandlerMode = "validate" | "parse";
 
@@ -16,11 +16,9 @@ export type HttpZodHandlerOptions = {
   mode?: HttpZodHandlerMode;
 };
 
-export const httpZodHandler = (
-  options?: HttpZodHandlerOptions,
-): middy.MiddlewareObj => {
+export const httpZodHandler = (options?: HttpZodHandlerOptions): middy.MiddlewareObj => {
   return {
-    before: (request): void | createError.HttpError => {
+    before: (request): undefined | createError.HttpError => {
       if (!options?.eventSchema) {
         return;
       }

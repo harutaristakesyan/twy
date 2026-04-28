@@ -1,0 +1,180 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.13/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "main"
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/build",
+      "!**/.turbo",
+      "!**/cdk.out",
+      "!**/.cdk.staging",
+      "!**/node_modules",
+      "!**/coverage",
+      "!**/.next",
+      "!**/.vercel",
+      "!**/out",
+      "!pnpm-lock.yaml",
+      "!**/*.tsbuildinfo",
+      "!**/*.min.js",
+      "!**/*.generated.ts"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "jsxQuoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "bracketSpacing": true
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedVariables": "warn",
+        "noUnusedImports": "warn",
+        "noUnusedFunctionParameters": "warn",
+        "noUnusedPrivateClassMembers": "warn",
+        "useExhaustiveDependencies": "warn",
+        "useHookAtTopLevel": "error"
+      },
+      "style": {
+        "useImportType": "error",
+        "useNodejsImportProtocol": "error",
+        "useConst": "error",
+        "useTemplate": "warn",
+        "useShorthandFunctionType": "warn",
+        "noInferrableTypes": "warn",
+        "noNonNullAssertion": "warn",
+        "noParameterAssign": "error",
+        "useNumberNamespace": "warn",
+        "useSelfClosingElements": "warn"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noConsole": {
+          "level": "warn",
+          "options": { "allow": ["warn", "error"] }
+        },
+        "noDoubleEquals": "error",
+        "noEmptyBlockStatements": "warn",
+        "noArrayIndexKey": "warn"
+      },
+      "complexity": {
+        "noUselessTypeConstraint": "warn",
+        "noUselessFragments": "warn",
+        "useArrowFunction": "warn",
+        "useFlatMap": "warn",
+        "useOptionalChain": "warn"
+      },
+      "a11y": {
+        "recommended": true
+      }
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on",
+        "useSortedKeys": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["apps/ui/**/*.{ts,tsx,js,jsx}"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useHookAtTopLevel": "error",
+            "useExhaustiveDependencies": "error",
+            "useJsxKeyInIterable": "error"
+          },
+          "suspicious": {
+            "noArrayIndexKey": "warn"
+          },
+          "style": {
+            "useFragmentSyntax": "warn",
+            "noNonNullAssertion": "error"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/auth/bin/**", "apps/infra/bin/**", "apps/functions/bin/**"],
+      "linter": {
+        "rules": {
+          "suspicious": { "noConsole": "off" },
+          "style": { "noNonNullAssertion": "off" }
+        }
+      }
+    },
+    {
+      "includes": ["apps/infra/bin/stacks/cloudfront-rewrite-function.js"],
+      "linter": {
+        "rules": {
+          "correctness": { "noInnerDeclarations": "off" },
+          "style": { "useConst": "off" },
+          "suspicious": { "noVar": "off" }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/*.test.{ts,tsx,js,jsx}",
+        "**/*.spec.{ts,tsx,js,jsx}",
+        "**/__tests__/**",
+        "**/__mocks__/**"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off",
+            "noExplicitAny": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/*.config.{ts,js,mjs,cts,mts}",
+        "**/vite.config.*",
+        "**/vitest.config.*",
+        "**/turbo.json"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDefaultExport": "off"
+          },
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -10,15 +10,14 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: "20"
-  PNPM_VERSION: "10"
+  NODE_VERSION: "24"
 
 jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
       auth: ${{ steps.filter.outputs.auth }}
-      front: ${{ steps.filter.outputs.front }}
+      ui: ${{ steps.filter.outputs.ui }}
       functions: ${{ steps.filter.outputs.functions }}
       infra: ${{ steps.filter.outputs.infra }}
     steps:
@@ -32,8 +31,8 @@ jobs:
               - 'packages/lambda-shared/**'
               - 'pnpm-lock.yaml'
               - '.github/workflows/ci-cd.yml'
-            front:
-              - 'apps/front/**'
+            ui:
+              - 'apps/ui/**'
               - 'pnpm-lock.yaml'
               - '.github/workflows/ci-cd.yml'
             functions:
@@ -46,11 +45,23 @@ jobs:
               - 'pnpm-lock.yaml'
               - '.github/workflows/ci-cd.yml'
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec biome ci .
+
   build:
-    needs: changes
+    needs: [changes, lint]
     if: |
       needs.changes.outputs.auth == 'true' ||
-      needs.changes.outputs.front == 'true' ||
+      needs.changes.outputs.ui == 'true' ||
       needs.changes.outputs.functions == 'true' ||
       needs.changes.outputs.infra == 'true' ||
       github.event_name == 'workflow_dispatch'
@@ -58,8 +69,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -83,8 +92,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -125,8 +132,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -147,13 +152,13 @@ jobs:
           ACCOUNT_ID: ${{ vars[matrix.environment.account_var] }}
           AWS_REGION: ${{ matrix.environment.region }}
 
-  deploy-front:
+  deploy-ui:
     needs: [changes, build, deploy-infra]
     if: |
       always() &&
       needs.build.result == 'success' &&
       (needs.deploy-infra.result == 'success' || needs.deploy-infra.result == 'skipped') &&
-      (needs.changes.outputs.front == 'true' || github.event_name == 'workflow_dispatch')
+      (needs.changes.outputs.ui == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -163,18 +168,16 @@ jobs:
           - { name: prod, account_var: PROD_ACCOUNT_ID, region: us-east-1 }
     environment: ${{ matrix.environment.name }}
     concurrency:
-      group: deploy-front-${{ matrix.environment.name }}-${{ github.ref }}
+      group: deploy-ui-${{ matrix.environment.name }}-${{ github.ref }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run build --filter @twy/front...
+      - run: pnpm turbo run build --filter @twy/ui...
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ vars[matrix.environment.account_var] }}:role/github-deploy-role
@@ -183,7 +186,7 @@ jobs:
       - uses: docker/setup-buildx-action@v3
       - name: Deploy CDK
         run: pnpm exec cdk deploy --all --require-approval never
-        working-directory: apps/front
+        working-directory: apps/ui
         env:
           ENV: ${{ matrix.environment.name }}
           ACCOUNT_ID: ${{ vars[matrix.environment.account_var] }}
@@ -209,8 +212,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}

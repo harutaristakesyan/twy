@@ -1,7 +1,7 @@
-import { Stack, StackProps } from "aws-cdk-lib";
-import { Construct } from "constructs";
+import { Stack, type StackProps } from "aws-cdk-lib";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
-import { HttpLambdaRouter, LambdaRouteDefinition } from "./cdk";
+import type { Construct } from "constructs";
+import { HttpLambdaRouter, type LambdaRouteDefinition } from "./cdk";
 
 interface FunctionsStackProps extends StackProps {
   envName: string;

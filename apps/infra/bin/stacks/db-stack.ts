@@ -1,7 +1,7 @@
-import { Stack, StackProps } from "aws-cdk-lib";
-import { Construct } from "constructs";
+import { Stack, type StackProps } from "aws-cdk-lib";
 import * as dsql from "aws-cdk-lib/aws-dsql";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
+import type { Construct } from "constructs";
 
 export class DbStack extends Stack {
   public readonly cluster: dsql.CfnCluster;

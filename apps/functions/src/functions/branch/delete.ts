@@ -1,16 +1,11 @@
-import { middyfy } from "@twy/lambda-shared";
-import { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
+import { type DeleteBranchEvent, DeleteBranchEventSchema } from "@contracts/branch/request";
+import type { MessageResponse } from "@contracts/common/response";
 import { deleteBranch as deleteBranchRecord } from "@libs/db/operations/branchOperations";
-import {
-  DeleteBranchEvent,
-  DeleteBranchEventSchema,
-} from "@contracts/branch/request";
+import { middyfy } from "@twy/lambda-shared";
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
-import { MessageResponse } from "@contracts/common/response";
 
-const deleteBranch = async (
-  event: DeleteBranchEvent,
-): Promise<MessageResponse> => {
+const deleteBranch = async (event: DeleteBranchEvent): Promise<MessageResponse> => {
   const { branchId } = event.pathParameters;
 
   const removed = await deleteBranchRecord(branchId);

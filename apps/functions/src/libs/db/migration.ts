@@ -1,8 +1,11 @@
-import path from "path";
-import { promises as fs } from "fs";
-import { Kysely, sql } from "kysely";
-import { Database } from "./index.js";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { type Kysely, sql } from "kysely";
+import type { Database } from "./index.js";
+
 const MIGRATION_LOG_TABLE = "_migration_log";
+
+const stdout = (line: string) => process.stdout.write(`${line}\n`);
 
 export const runMigrations = async (db: Kysely<Database>, folder: string) => {
   await db.schema
@@ -19,9 +22,7 @@ export const runMigrations = async (db: Kysely<Database>, folder: string) => {
     .addColumn("filename", "varchar", (col) => col.notNull().unique())
     .execute();
 
-  const files = (await fs.readdir(folder))
-    .filter((f) => /^V\d+__.*\.sql$/.test(f))
-    .sort();
+  const files = (await fs.readdir(folder)).filter((f) => /^V\d+__.*\.sql$/.test(f)).sort();
 
   for (const file of files) {
     const rows = (await db
@@ -33,7 +34,7 @@ export const runMigrations = async (db: Kysely<Database>, folder: string) => {
     const row = rows[0] ?? { count: "0" };
 
     if (Number(row.count) > 0) {
-      console.log(`⏭️ Skipping already applied: ${file}`);
+      stdout(`⏭️ Skipping already applied: ${file}`);
       continue;
     }
 
@@ -49,11 +50,8 @@ export const runMigrations = async (db: Kysely<Database>, folder: string) => {
         await sql.raw(statement).execute(db);
       }
     }
-    console.log(`🚀 Applying: ${file}`);
 
-    await db
-      .insertInto(MIGRATION_LOG_TABLE)
-      .values({ filename: file })
-      .execute();
+    stdout(`🚀 Applying: ${file}`);
+    await db.insertInto(MIGRATION_LOG_TABLE).values({ filename: file }).execute();
   }
 };

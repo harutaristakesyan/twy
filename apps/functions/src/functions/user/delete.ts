@@ -1,16 +1,13 @@
-import { middyfy } from "@twy/lambda-shared";
-import { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
-import createError from "http-errors";
-import { deleteUser as deleteUserRecord } from "@libs/db/operations/userOperations";
 import {
-  DeleteUserEvent,
-  DeleteUserEventSchema,
-} from "@contracts/user/request";
-import { MessageResponse } from "@contracts/common/response";
-import {
-  CognitoIdentityProviderClient,
   AdminDeleteUserCommand,
+  CognitoIdentityProviderClient,
 } from "@aws-sdk/client-cognito-identity-provider";
+import type { MessageResponse } from "@contracts/common/response";
+import { type DeleteUserEvent, DeleteUserEventSchema } from "@contracts/user/request";
+import { deleteUser as deleteUserRecord } from "@libs/db/operations/userOperations";
+import { middyfy } from "@twy/lambda-shared";
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
+import createError from "http-errors";
 
 const userPoolId = process.env.USER_POOL_ID;
 

@@ -18,11 +18,5 @@
     "require": ["tsconfig-paths/register"]
   },
   "include": ["bin", "lib", "src"],
-  "exclude": [
-    "node_modules",
-    "cdk.out",
-    "cdk.context.json",
-    "cdk.metadata.json",
-    "cdk.tree.json"
-  ]
+  "exclude": ["node_modules", "cdk.out", "cdk.context.json", "cdk.metadata.json", "cdk.tree.json"]
 }

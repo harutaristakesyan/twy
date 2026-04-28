@@ -1,20 +1,15 @@
-import { middyfy } from "@twy/lambda-shared";
-import { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
-import createError from "http-errors";
+import { type CreateLoadEvent, CreateLoadEventSchema } from "@contracts/load/request";
+import type { CreateLoadResponse } from "@contracts/load/response";
 import {
   createLoad as createLoadRecord,
-  LoadFileInput,
+  type LoadFileInput,
 } from "@libs/db/operations/loadOperations";
 import { getFullUserInfoById } from "@libs/db/operations/userOperations";
-import {
-  CreateLoadEvent,
-  CreateLoadEventSchema,
-} from "@contracts/load/request";
-import { CreateLoadResponse } from "@contracts/load/response";
+import { middyfy } from "@twy/lambda-shared";
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
+import createError from "http-errors";
 
-const createLoad = async (
-  event: CreateLoadEvent,
-): Promise<CreateLoadResponse> => {
+const createLoad = async (event: CreateLoadEvent): Promise<CreateLoadResponse> => {
   const {
     customer,
     referenceNumber,
@@ -73,14 +68,12 @@ const createLoad = async (
     soldAs,
     weight,
     temperature,
-    pickupCityZipCode:
-      typeof pickup.cityZipCode === "undefined" ? null : pickup.cityZipCode,
+    pickupCityZipCode: typeof pickup.cityZipCode === "undefined" ? null : pickup.cityZipCode,
     pickupPhone: pickup.phone,
     pickupCarrier: pickup.carrier,
     pickupName: pickup.name,
     pickupAddress: pickup.address,
-    dropoffCityZipCode:
-      typeof dropoff.cityZipCode === "undefined" ? null : dropoff.cityZipCode,
+    dropoffCityZipCode: typeof dropoff.cityZipCode === "undefined" ? null : dropoff.cityZipCode,
     dropoffPhone: dropoff.phone,
     dropoffCarrier: dropoff.carrier,
     dropoffName: dropoff.name,

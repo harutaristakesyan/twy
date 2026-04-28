@@ -1,11 +1,11 @@
-import { Stack, StackProps } from "aws-cdk-lib";
-import { Construct } from "constructs";
+import { Stack, type StackProps } from "aws-cdk-lib";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
+import type { Construct } from "constructs";
 import {
-  dsqlConnectPolicyFor,
   cognitoUserManagementPolicyFor,
+  dsqlConnectPolicyFor,
   HttpLambdaRouter,
-  LambdaRouteDefinition,
+  type LambdaRouteDefinition,
   s3ObjectWritePolicyFor,
 } from "./cdk";
 
@@ -19,28 +19,15 @@ export class FunctionsStack extends Stack {
 
     const { envName } = props;
 
-    const dsqlClusterId = StringParameter.valueForStringParameter(
-      this,
-      "/dsql/cluster-id",
-    );
+    const dsqlClusterId = StringParameter.valueForStringParameter(this, "/dsql/cluster-id");
 
     const dsql = dsqlConnectPolicyFor(this.region, this.account, dsqlClusterId);
 
-    const userPoolId = StringParameter.valueForStringParameter(
-      this,
-      "/cognito/user-pool-id",
-    );
+    const userPoolId = StringParameter.valueForStringParameter(this, "/cognito/user-pool-id");
 
-    const cognitoPolicy = cognitoUserManagementPolicyFor(
-      this.region,
-      this.account,
-      userPoolId,
-    );
+    const cognitoPolicy = cognitoUserManagementPolicyFor(this.region, this.account, userPoolId);
 
-    const filesBucketName = StringParameter.valueForStringParameter(
-      this,
-      "/files/bucket-name",
-    );
+    const filesBucketName = StringParameter.valueForStringParameter(this, "/files/bucket-name");
 
     const fileStoragePolicy = s3ObjectWritePolicyFor(filesBucketName);
 

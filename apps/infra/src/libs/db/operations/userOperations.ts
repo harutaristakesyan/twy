@@ -1,6 +1,6 @@
 import { getDb } from "@libs/db";
-import { Insertable } from "kysely";
-import { UserTable } from "@libs/db/schema/users";
+import type { UserTable } from "@libs/db/schema/users";
+import type { Insertable } from "kysely";
 
 const tableName = "users";
 export type NewUser = Insertable<UserTable>;

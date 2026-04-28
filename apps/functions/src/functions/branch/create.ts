@@ -1,15 +1,10 @@
-import { middyfy } from "@twy/lambda-shared";
-import { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
+import { type CreateBranchEvent, CreateBranchEventSchema } from "@contracts/branch/request";
+import type { MessageResponse } from "@contracts/common/response";
 import { createBranch as createBranchRecord } from "@libs/db/operations/branchOperations";
-import {
-  CreateBranchEvent,
-  CreateBranchEventSchema,
-} from "@contracts/branch/request";
-import { MessageResponse } from "@contracts/common/response";
+import { middyfy } from "@twy/lambda-shared";
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
-const createBranch = async (
-  event: CreateBranchEvent,
-): Promise<MessageResponse> => {
+const createBranch = async (event: CreateBranchEvent): Promise<MessageResponse> => {
   const { name, owner, contact } = event.body;
 
   await createBranchRecord({

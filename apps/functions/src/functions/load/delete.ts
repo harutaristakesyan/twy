@@ -1,12 +1,9 @@
-import { middyfy } from "@twy/lambda-shared";
-import { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
-import createError from "http-errors";
+import type { MessageResponse } from "@contracts/common/response";
+import { type DeleteLoadEvent, DeleteLoadEventSchema } from "@contracts/load/request";
 import { deleteLoad as deleteLoadRecord } from "@libs/db/operations/loadOperations";
-import {
-  DeleteLoadEvent,
-  DeleteLoadEventSchema,
-} from "@contracts/load/request";
-import { MessageResponse } from "@contracts/common/response";
+import { middyfy } from "@twy/lambda-shared";
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
+import createError from "http-errors";
 
 const deleteLoad = async (event: DeleteLoadEvent): Promise<MessageResponse> => {
   const { loadId } = event.pathParameters;

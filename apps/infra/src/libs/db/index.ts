@@ -1,6 +1,6 @@
-import { MigrationLogTable } from "@libs/db/schema/migration";
+import type { MigrationLogTable } from "@libs/db/schema/migration";
+import type { UserTable } from "@libs/db/schema/users";
 import type { BranchTable } from "./schema/index";
-import { UserTable } from "@libs/db/schema/users";
 
 export { getDb } from "./client";
 

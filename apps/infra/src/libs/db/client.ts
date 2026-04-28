@@ -1,10 +1,18 @@
-import { Pool } from "pg";
-import { CamelCasePlugin, Kysely, PostgresDialect } from "kysely";
+import { GetParameterCommand, SSMClient } from "@aws-sdk/client-ssm";
 import { DsqlSigner } from "@aws-sdk/dsql-signer";
-import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
-import { Database } from "./index.js";
+import { CamelCasePlugin, Kysely, PostgresDialect } from "kysely";
+import { Pool } from "pg";
+import type { Database } from "./index.js";
 
-const region = process.env.AWS_REGION!;
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
+const region = requireEnv("AWS_REGION");
 const dbName = "postgres";
 const dbUser = "admin";
 

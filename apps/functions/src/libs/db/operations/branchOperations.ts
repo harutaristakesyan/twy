@@ -1,16 +1,16 @@
 import { randomUUID } from "node:crypto";
-import createError from "http-errors";
 import {
-  AuditTimeKeys,
-  BranchTable,
-  Database,
+  type AuditTimeKeys,
+  type BranchTable,
+  type Database,
   getDb,
-  NewRow,
-  OrderDirection,
-  PatchRow,
+  type NewRow,
+  type OrderDirection,
+  type PatchRow,
   Roles,
 } from "@libs/db";
-import { Kysely, Selectable, Transaction } from "kysely";
+import createError from "http-errors";
+import type { Kysely, Selectable, Transaction } from "kysely";
 
 export type Branch = Omit<Selectable<BranchTable>, AuditTimeKeys> & {
   owner: BranchOwnerRecord | null;
@@ -70,10 +70,7 @@ const mapBranchRow = (row: BranchWithOwnerRow): Branch => ({
   },
 });
 
-const ensureOwnerExists = async (
-  db: Executor,
-  ownerId: string,
-): Promise<void> => {
+const ensureOwnerExists = async (db: Executor, ownerId: string): Promise<void> => {
   const owner = await db
     .selectFrom("users")
     .select(["id"])
@@ -85,11 +82,7 @@ const ensureOwnerExists = async (
   }
 };
 
-const assignOwner = async (
-  db: Executor,
-  branchId: string,
-  ownerId: string | null,
-) => {
+const assignOwner = async (db: Executor, branchId: string, ownerId: string | null) => {
   if (ownerId === null) {
     await db
       .updateTable("users")
@@ -135,9 +128,7 @@ export const listBranches = async (input: ListBranchesInput) => {
   const sortOrder = input?.sortOrder;
   const searchQuery = input?.query;
 
-  let countQuery = db
-    .selectFrom(BRANCH_TABLE)
-    .select(db.fn.count<number>("id").as("count"));
+  let countQuery = db.selectFrom(BRANCH_TABLE).select(db.fn.count<number>("id").as("count"));
   let query = selectBranchWithOwner(db);
 
   if (searchQuery) {
@@ -163,10 +154,7 @@ export const listBranches = async (input: ListBranchesInput) => {
   const offset = page * limit;
   query = query.limit(limit).offset(offset);
 
-  const [rows, countResult] = await Promise.all([
-    query.execute(),
-    countQuery.executeTakeFirst(),
-  ]);
+  const [rows, countResult] = await Promise.all([query.execute(), countQuery.executeTakeFirst()]);
 
   return {
     branches: rows.map((row) => mapBranchRow(row as BranchWithOwnerRow)),
@@ -217,7 +205,7 @@ export const updateBranch = async (branchId: string, input: UpdateBranch) => {
       updatePayload.name = input.name;
     }
 
-    if (Object.prototype.hasOwnProperty.call(input, "contact")) {
+    if (Object.hasOwn(input, "contact")) {
       updatePayload.contact = input.contact ?? null;
     }
 
@@ -232,7 +220,7 @@ export const updateBranch = async (branchId: string, input: UpdateBranch) => {
         .execute();
     }
 
-    if (Object.prototype.hasOwnProperty.call(input, "ownerId")) {
+    if (Object.hasOwn(input, "ownerId")) {
       await assignOwner(trx, branchId, input.ownerId ?? null);
     }
   });
@@ -252,11 +240,7 @@ export const deleteBranch = async (branchId: string): Promise<boolean> => {
       return false;
     }
 
-    await trx
-      .updateTable("users")
-      .set({ branch: null })
-      .where("branch", "=", branchId)
-      .execute();
+    await trx.updateTable("users").set({ branch: null }).where("branch", "=", branchId).execute();
 
     await trx.deleteFrom(BRANCH_TABLE).where("id", "=", branchId).execute();
 

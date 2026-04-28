@@ -23,14 +23,14 @@ export const ListBranchesEventSchema = z.object({
   queryStringParameters: z.object({
     page: z
       .string()
-      .transform((val) => parseInt(val, 10))
+      .transform((val) => Number.parseInt(val, 10))
       .default(0)
-      .transform((val) => (isNaN(val) ? 0 : val)),
+      .transform((val) => (Number.isNaN(val) ? 0 : val)),
     limit: z
       .string()
-      .transform((val) => parseInt(val, 10))
+      .transform((val) => Number.parseInt(val, 10))
       .default(5)
-      .transform((val) => (isNaN(val) ? 5 : val)),
+      .transform((val) => (Number.isNaN(val) ? 5 : val)),
     sortField: z
       .enum(Object.keys(sortFieldMap) as [keyof typeof sortFieldMap])
       .default("createdAt")

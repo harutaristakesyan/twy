@@ -2,7 +2,7 @@ import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { middyfy } from "@twy/lambda-shared";
+import { middyfy, requireEnv } from "@twy/lambda-shared";
 import * as zod from "zod";
 
 const EventSchema = zod.object({
@@ -20,14 +20,12 @@ interface RefreshTokenResponse {
   tokenType?: string;
 }
 
-const userPoolClientId = process.env.USER_POOL_CLIENT_ID!;
+const userPoolClientId = requireEnv("USER_POOL_CLIENT_ID");
 const cognitoClient = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION,
 });
 
-const refreshTokenHandler = async (
-  event: EventSchema,
-): Promise<RefreshTokenResponse> => {
+const refreshTokenHandler = async (event: EventSchema): Promise<RefreshTokenResponse> => {
   const { refreshToken } = event.body;
 
   // 1. Try Cognito native flow
@@ -49,6 +47,4 @@ const refreshTokenHandler = async (
   };
 };
 
-export const handler = middyfy<EventSchema, RefreshTokenResponse>(
-  refreshTokenHandler,
-);
+export const handler = middyfy<EventSchema, RefreshTokenResponse>(refreshTokenHandler);

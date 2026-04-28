@@ -1,17 +1,14 @@
-import { middyfy } from "@twy/lambda-shared";
-import { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
-import createError from "http-errors";
-import { updateUser as updateUserRecord } from "@libs/db/operations/userOperations";
-import { MessageResponse } from "@contracts/common/response";
-import {
-  UpdateUserEvent,
-  UpdateUserEventSchema,
-} from "@contracts/user/request";
 import {
   AdminDisableUserCommand,
   AdminEnableUserCommand,
   CognitoIdentityProviderClient,
 } from "@aws-sdk/client-cognito-identity-provider";
+import type { MessageResponse } from "@contracts/common/response";
+import { type UpdateUserEvent, UpdateUserEventSchema } from "@contracts/user/request";
+import { updateUser as updateUserRecord } from "@libs/db/operations/userOperations";
+import { middyfy } from "@twy/lambda-shared";
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
+import createError from "http-errors";
 
 const userPoolId = process.env.USER_POOL_ID;
 

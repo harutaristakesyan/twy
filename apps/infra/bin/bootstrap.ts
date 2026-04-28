@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync } from "node:child_process";
 import { environments } from "./environments"; // make sure this path is correct
 
 const region = process.env.AWS_REGION!;

@@ -1,4 +1,4 @@
-import { StrN, Timestamp } from "./types.js";
+import type { StrN, Timestamp } from "./types.js";
 
 export interface UserTable {
   id: string;

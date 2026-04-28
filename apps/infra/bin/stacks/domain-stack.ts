@@ -1,16 +1,10 @@
-import {
-  CfnOutput,
-  Duration,
-  RemovalPolicy,
-  Stack,
-  StackProps,
-} from "aws-cdk-lib";
-import { Construct } from "constructs";
-import * as ses from "aws-cdk-lib/aws-ses";
-import * as route53 from "aws-cdk-lib/aws-route53";
+import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
+import * as route53 from "aws-cdk-lib/aws-route53";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as ses from "aws-cdk-lib/aws-ses";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
+import type { Construct } from "constructs";
 
 interface DomainStackProps extends StackProps {
   domain: string;
@@ -50,7 +44,10 @@ export class DomainStack extends Stack {
     new route53.TxtRecord(this, "SpfRecord", {
       zone: hostedZone,
       recordName: domain,
-      values: ["v=spf1 include:amazonses.com ~all"],
+      values: [
+        "v=spf1 include:amazonses.com ~all",
+        "google-site-verification=FIK-nfl2SL1L7SB2ajoqSnpERPmJpWy3mDQpKPMWUqg",
+      ],
       ttl: Duration.days(2),
     });
 
@@ -73,11 +70,7 @@ export class DomainStack extends Stack {
       autoDeleteObjects: true,
       cors: [
         {
-          allowedMethods: [
-            s3.HttpMethods.PUT,
-            s3.HttpMethods.GET,
-            s3.HttpMethods.HEAD,
-          ],
+          allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
           allowedOrigins: ["http://localhost:3000", `https://${domain}`],
           allowedHeaders: ["*"],
           exposedHeaders: ["ETag", "x-amz-request-id", "x-amz-id-2"],

@@ -1,5 +1,5 @@
-import { APIGatewayProxyResult } from "aws-lambda";
-import { MiddlewareObj } from "@middy/core";
+import type { MiddlewareObj } from "@middy/core";
+import type { APIGatewayProxyResult } from "aws-lambda";
 import { isHttpError } from "http-errors";
 
 export const jsonErrorHandler = (): MiddlewareObj => ({
@@ -16,8 +16,7 @@ export const jsonErrorHandler = (): MiddlewareObj => ({
       // Try parsing message in case it's a JSON string
       try {
         const parsed = JSON.parse(error.message);
-        response =
-          typeof parsed === "object" ? parsed : { message: error.message };
+        response = typeof parsed === "object" ? parsed : { message: error.message };
       } catch {
         response = { message: error.message };
       }

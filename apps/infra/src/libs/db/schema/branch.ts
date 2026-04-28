@@ -1,4 +1,4 @@
-import { StrN, Timestamp } from "./types";
+import type { StrN, Timestamp } from "./types";
 
 export interface BranchTable {
   id: string;

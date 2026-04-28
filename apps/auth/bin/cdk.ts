@@ -1,5 +1,4 @@
-import { Construct } from "constructs";
-import { StringParameter } from "aws-cdk-lib/aws-ssm";
+import { Duration, RemovalPolicy } from "aws-cdk-lib";
 import {
   HttpApi,
   HttpAuthorizer,
@@ -7,15 +6,13 @@ import {
   HttpRouteKey,
   PayloadFormatVersion,
 } from "aws-cdk-lib/aws-apigatewayv2";
-import {
-  NodejsFunction,
-  NodejsFunctionProps,
-} from "aws-cdk-lib/aws-lambda-nodejs";
-import { Duration, RemovalPolicy } from "aws-cdk-lib";
-import { Architecture, Runtime } from "aws-cdk-lib/aws-lambda";
-import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
-import { HttpMethod } from "aws-cdk-lib/aws-events";
 import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
+import type { HttpMethod } from "aws-cdk-lib/aws-events";
+import { Architecture, Runtime } from "aws-cdk-lib/aws-lambda";
+import { NodejsFunction, type NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
+import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
+import { StringParameter } from "aws-cdk-lib/aws-ssm";
+import { Construct } from "constructs";
 
 export interface LambdaRouteDefinition {
   functionPath: string; // 'auth/login'
@@ -36,10 +33,7 @@ export class HttpLambdaRouter extends Construct {
 
     const { envName, routes, baseDir = "src/functions" } = props;
 
-    const httpApiId = StringParameter.valueFromLookup(
-      this,
-      `/${envName}/lambda/http-api-id`,
-    );
+    const httpApiId = StringParameter.valueFromLookup(this, `/${envName}/lambda/http-api-id`);
     const authorizerId = StringParameter.valueFromLookup(
       this,
       `/${envName}/cognito/jwt-authorizer-id`,
@@ -74,13 +68,9 @@ export class HttpLambdaRouter extends Construct {
       new HttpRoute(this, `${functionName}Route`, {
         httpApi,
         routeKey: HttpRouteKey.with(path!, method),
-        integration: new HttpLambdaIntegration(
-          `${functionName}Integration`,
-          lambdaFn,
-          {
-            payloadFormatVersion: PayloadFormatVersion.VERSION_2_0,
-          },
-        ),
+        integration: new HttpLambdaIntegration(`${functionName}Integration`, lambdaFn, {
+          payloadFormatVersion: PayloadFormatVersion.VERSION_2_0,
+        }),
         authorizer: def.requiresAuth ? jwtAuthorizer : undefined,
       });
     });
@@ -88,25 +78,18 @@ export class HttpLambdaRouter extends Construct {
 }
 
 export type LambdaDefaults = Partial<
-  Pick<
-    NodejsFunctionProps,
-    "memorySize" | "timeout" | "runtime" | "architecture" | "bundling"
-  >
+  Pick<NodejsFunctionProps, "memorySize" | "timeout" | "runtime" | "architecture" | "bundling">
 >;
 
 const DEFAULTS: LambdaDefaults = {
   memorySize: 256,
   timeout: Duration.seconds(15),
-  runtime: Runtime.NODEJS_20_X,
+  runtime: Runtime.NODEJS_24_X,
   architecture: Architecture.ARM_64,
   bundling: { forceDockerBundling: false },
 };
 
-export function createNodeLambda(
-  scope: Construct,
-  id: string,
-  props: NodejsFunctionProps,
-) {
+export function createNodeLambda(scope: Construct, id: string, props: NodejsFunctionProps) {
   // Create a custom log group with retention policy if not already provided
   const logGroup =
     props.logGroup ??

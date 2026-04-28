@@ -5,33 +5,35 @@
   "description": "TWY monorepo",
   "packageManager": "pnpm@10.33.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "build": "turbo run build",
-    "lint": "turbo run lint",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check --write .",
+    "check:ci": "biome ci .",
     "test": "turbo run test",
     "synth": "turbo run synth",
     "dev": "turbo run dev",
-    "run:ui": "pnpm --filter @twy/front dev",
-    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yml,yaml}\" --ignore-path .gitignore",
+    "run:ui": "pnpm --filter @twy/ui dev",
     "lint:commit": "commitlint --edit",
     "prepare": "husky"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.13",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@commitlint/format": "^19.8.1",
     "aws-cdk": "^2.1119.0",
     "conventional-changelog-atom": "^5.0.0",
-    "esbuild": "^0.25.10",
+    "esbuild": "^0.28.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.1.6",
-    "prettier": "^3.6.2",
+    "lint-staged": "^16.4.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "turbo": "^2.5.0",
-    "typescript": "^5.9.3"
+    "turbo": "^2.9.6",
+    "typescript": "^6.0.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

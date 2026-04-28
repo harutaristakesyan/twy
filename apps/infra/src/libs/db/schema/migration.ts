@@ -1,5 +1,5 @@
-import { ColumnType } from "kysely";
-import { Timestamp } from "./types.js";
+import type { ColumnType } from "kysely";
+import type { Timestamp } from "./types.js";
 
 export interface MigrationLogTable {
   id: ColumnType<number, number | undefined, number>;

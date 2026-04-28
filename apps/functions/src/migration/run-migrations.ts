@@ -1,17 +1,20 @@
 // run-migrations.ts
-import path from "path";
+
+import path from "node:path";
 import { getDb } from "@libs/db";
 import { runMigrations } from "@libs/db/migration";
 
+const stdout = (line: string) => process.stdout.write(`${line}\n`);
+
 (async () => {
-  let db;
+  let db: Awaited<ReturnType<typeof getDb>> | undefined;
   try {
-    console.log("🔌 Connecting to DB...");
+    stdout("🔌 Connecting to DB...");
     db = await getDb();
     const sqlDir = path.join(__dirname, "sql");
 
     await runMigrations(db, sqlDir);
-    console.log("✅ All migrations complete!");
+    stdout("✅ All migrations complete!");
   } catch (err) {
     console.error("❌ Migration failed:", err);
     process.exitCode = 1;

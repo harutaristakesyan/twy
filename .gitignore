@@ -50,9 +50,6 @@ web_modules/
 # Optional npm cache directory
 .npm
 
-# Optional eslint cache
-.eslintcache
-
 # Optional stylelint cache
 .stylelintcache
 
@@ -154,6 +151,6 @@ cdk.out
 .vscode
 *.swp
 
-# Allow committed Vite envs in apps/front (public build-time vars)
-!apps/front/.env.development
-!apps/front/.env.production
+# Allow committed Vite envs in apps/ui (public build-time vars)
+!apps/ui/.env.development
+!apps/ui/.env.production

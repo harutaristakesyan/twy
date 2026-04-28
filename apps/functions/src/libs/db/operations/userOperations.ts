@@ -1,6 +1,6 @@
-import { Database, OrderDirection, Roles, getDb } from "@libs/db";
+import { type Database, getDb, type OrderDirection, type Roles } from "@libs/db";
 import createError from "http-errors";
-import { Kysely, Transaction } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 
 const USER_TABLE = "users";
 const BRANCH_TABLE = "branch";
@@ -39,10 +39,7 @@ const mapUserListItem = (row: UserRow) => ({
   ...mapUserDetails(row),
 });
 
-const ensureBranchExists = async (
-  db: Executor,
-  branchId: string,
-): Promise<void> => {
+const ensureBranchExists = async (db: Executor, branchId: string): Promise<void> => {
   const branch = await db
     .selectFrom(BRANCH_TABLE)
     .select(["id"])
@@ -114,9 +111,7 @@ export const listUsers = async (input: ListUsersInput) => {
       `${USER_TABLE}.createdAt as createdAt`,
     ]);
 
-  let countQuery = db
-    .selectFrom(USER_TABLE)
-    .select(db.fn.count<number>("id").as("count"));
+  let countQuery = db.selectFrom(USER_TABLE).select(db.fn.count<number>("id").as("count"));
 
   if (input.query) {
     queryBuilder = queryBuilder.where((qb) =>
@@ -141,10 +136,7 @@ export const listUsers = async (input: ListUsersInput) => {
   const offset = input.page * input.limit;
   queryBuilder = queryBuilder.limit(input.limit).offset(offset);
 
-  const [rows, count] = await Promise.all([
-    queryBuilder.execute(),
-    countQuery.executeTakeFirst(),
-  ]);
+  const [rows, count] = await Promise.all([queryBuilder.execute(), countQuery.executeTakeFirst()]);
 
   const totalCount = count?.count ?? 0;
   const total = Number(totalCount);
@@ -161,10 +153,7 @@ export interface UpdateUserInput {
   isActive?: boolean;
 }
 
-export const updateUser = async (
-  userId: string,
-  input: UpdateUserInput,
-): Promise<boolean> => {
+export const updateUser = async (userId: string, input: UpdateUserInput): Promise<boolean> => {
   const db = await getDb();
 
   return db.transaction().execute(async (trx) => {
@@ -180,7 +169,7 @@ export const updateUser = async (
 
     const updatePayload: Record<string, unknown> = {};
 
-    if (Object.prototype.hasOwnProperty.call(input, "branchId")) {
+    if (Object.hasOwn(input, "branchId")) {
       const branchId = input.branchId ?? null;
 
       if (branchId) {
@@ -190,7 +179,7 @@ export const updateUser = async (
       updatePayload.branch = branchId;
     }
 
-    if (Object.prototype.hasOwnProperty.call(input, "role")) {
+    if (Object.hasOwn(input, "role")) {
       updatePayload.role = input.role ?? null;
     }
 

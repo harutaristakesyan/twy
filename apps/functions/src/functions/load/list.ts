@@ -1,12 +1,11 @@
-import { middyfy } from "@twy/lambda-shared";
-import { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
+import { type ListLoadsEvent, ListLoadsEventSchema } from "@contracts/load/request";
+import type { LoadListResponse } from "@contracts/load/response";
 import { listLoads as listLoadRecords } from "@libs/db/operations/loadOperations";
-import { LoadListResponse } from "@contracts/load/response";
-import { ListLoadsEvent, ListLoadsEventSchema } from "@contracts/load/request";
+import { middyfy } from "@twy/lambda-shared";
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
 const listLoads = async (event: ListLoadsEvent): Promise<LoadListResponse> => {
-  const { page, limit, sortField, sortOrder, query } =
-    event.queryStringParameters;
+  const { page, limit, sortField, sortOrder, query } = event.queryStringParameters;
 
   const { loads, total } = await listLoadRecords({
     page,

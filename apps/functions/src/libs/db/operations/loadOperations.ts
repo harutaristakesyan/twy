@@ -1,16 +1,16 @@
 import { randomUUID } from "node:crypto";
-import createError from "http-errors";
 import {
-  Database,
+  type Database,
   getDb,
-  LoadStatus,
+  type LoadStatus,
+  type LoadTable,
   loadStatusValues,
-  LoadTable,
-  NewRow,
-  OrderDirection,
-  PatchRow,
+  type NewRow,
+  type OrderDirection,
+  type PatchRow,
 } from "@libs/db";
-import { Kysely, Selectable, Transaction } from "kysely";
+import createError from "http-errors";
+import type { Kysely, Selectable, Transaction } from "kysely";
 
 const LOAD_TABLE = "load";
 const LOAD_FILES_TABLE = "load_files";
@@ -106,10 +106,7 @@ const normalizeLoadFiles = (files: LoadFileInput[]): LoadFileInput[] => {
   return ordered;
 };
 
-const ensureBranchExists = async (
-  db: Executor,
-  branchId: string,
-): Promise<void> => {
+const ensureBranchExists = async (db: Executor, branchId: string): Promise<void> => {
   const branch = await db
     .selectFrom(BRANCH_TABLE)
     .select(["id"])
@@ -121,10 +118,7 @@ const ensureBranchExists = async (
   }
 };
 
-const ensureFilesPersisted = async (
-  db: Executor,
-  files: LoadFileInput[],
-): Promise<string[]> => {
+const ensureFilesPersisted = async (db: Executor, files: LoadFileInput[]): Promise<string[]> => {
   const uniqueFiles = normalizeLoadFiles(files);
 
   if (uniqueFiles.length === 0) {
@@ -247,9 +241,7 @@ export const listLoads = async (input: ListLoadsInput) => {
   const searchQuery = input.query;
 
   let dataQuery = db.selectFrom(LOAD_TABLE).selectAll();
-  let countQuery = db
-    .selectFrom(LOAD_TABLE)
-    .select(db.fn.count<number>("id").as("count"));
+  let countQuery = db.selectFrom(LOAD_TABLE).select(db.fn.count<number>("id").as("count"));
 
   if (searchQuery) {
     dataQuery = dataQuery.where((wb) =>
@@ -295,11 +287,7 @@ export const listLoads = async (input: ListLoadsInput) => {
   };
 };
 
-const replaceLoadFiles = async (
-  db: Executor,
-  loadId: string,
-  fileIds: string[],
-): Promise<void> => {
+const replaceLoadFiles = async (db: Executor, loadId: string, fileIds: string[]): Promise<void> => {
   await db.deleteFrom(LOAD_FILES_TABLE).where("loadId", "=", loadId).execute();
 
   if (fileIds.length === 0) {
@@ -317,9 +305,7 @@ export const createLoad = async (input: NewLoad): Promise<string> => {
   return db.transaction().execute(async (trx) => {
     await ensureBranchExists(trx, input.branchId);
 
-    const fileIds = input.files
-      ? await ensureFilesPersisted(trx, input.files)
-      : [];
+    const fileIds = input.files ? await ensureFilesPersisted(trx, input.files) : [];
 
     const loadId = randomUUID();
 
@@ -329,14 +315,11 @@ export const createLoad = async (input: NewLoad): Promise<string> => {
         id: loadId,
         customer: input.customer,
         referenceNumber: input.referenceNumber,
-        customerRate:
-          typeof input.customerRate === "undefined" ? null : input.customerRate,
+        customerRate: typeof input.customerRate === "undefined" ? null : input.customerRate,
         contactName: input.contactName,
         carrier: typeof input.carrier === "undefined" ? null : input.carrier,
         carrierPaymentMethod:
-          typeof input.carrierPaymentMethod === "undefined"
-            ? null
-            : input.carrierPaymentMethod,
+          typeof input.carrierPaymentMethod === "undefined" ? null : input.carrierPaymentMethod,
         carrierRate: input.carrierRate,
         chargeServiceFeeToOffice: Boolean(input.chargeServiceFeeToOffice),
         loadType: input.loadType,
@@ -346,8 +329,7 @@ export const createLoad = async (input: NewLoad): Promise<string> => {
         bookedAs: input.bookedAs,
         soldAs: input.soldAs,
         weight: input.weight,
-        temperature:
-          typeof input.temperature === "undefined" ? null : input.temperature,
+        temperature: typeof input.temperature === "undefined" ? null : input.temperature,
         pickupCityZipCode: input.pickupCityZipCode ?? null,
         pickupPhone: input.pickupPhone,
         pickupCarrier: input.pickupCarrier,
@@ -377,10 +359,7 @@ export const createLoad = async (input: NewLoad): Promise<string> => {
   });
 };
 
-export const updateLoad = async (
-  loadId: string,
-  input: UpdateLoad,
-): Promise<boolean> => {
+export const updateLoad = async (loadId: string, input: UpdateLoad): Promise<boolean> => {
   const db = await getDb();
 
   return db.transaction().execute(async (trx) => {
@@ -400,9 +379,7 @@ export const updateLoad = async (
 
     let normalizedFiles: string[] | undefined;
     if (typeof input.files !== "undefined") {
-      normalizedFiles = input.files
-        ? await ensureFilesPersisted(trx, input.files)
-        : [];
+      normalizedFiles = input.files ? await ensureFilesPersisted(trx, input.files) : [];
     }
 
     const updatePayload: Record<string, unknown> = {};
@@ -435,12 +412,8 @@ export const updateLoad = async (
       updatePayload.carrierRate = input.carrierRate;
     }
 
-    if (
-      Object.prototype.hasOwnProperty.call(input, "chargeServiceFeeToOffice")
-    ) {
-      updatePayload.chargeServiceFeeToOffice = Boolean(
-        input.chargeServiceFeeToOffice,
-      );
+    if (Object.hasOwn(input, "chargeServiceFeeToOffice")) {
+      updatePayload.chargeServiceFeeToOffice = Boolean(input.chargeServiceFeeToOffice);
     }
 
     if (typeof input.loadType !== "undefined") {
@@ -552,11 +525,7 @@ export const changeLoadStatus = async (
         .set({ status, statusChangedBy: changedBy, updatedAt: new Date() })
         .where("id", "=", loadId)
         .executeTakeFirst(),
-      trx
-        .selectFrom(USER_TABLE)
-        .select(["email"])
-        .where("id", "=", changedBy)
-        .executeTakeFirst(),
+      trx.selectFrom(USER_TABLE).select(["email"]).where("id", "=", changedBy).executeTakeFirst(),
     ]);
 
     const updated = (result?.numUpdatedRows ?? 0n) > 0n;
@@ -582,10 +551,7 @@ export const deleteLoad = async (loadId: string): Promise<boolean> => {
       return false;
     }
 
-    await trx
-      .deleteFrom(LOAD_FILES_TABLE)
-      .where("loadId", "=", loadId)
-      .execute();
+    await trx.deleteFrom(LOAD_FILES_TABLE).where("loadId", "=", loadId).execute();
 
     await trx.deleteFrom(LOAD_TABLE).where("id", "=", loadId).execute();
 

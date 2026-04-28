@@ -2,10 +2,9 @@ import {
   CognitoIdentityProviderClient,
   SignUpCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { toError } from "@twy/lambda-shared";
-import { middyfy } from "@twy/lambda-shared";
-import * as zod from "zod";
+import { middyfy, requireEnv, toError } from "@twy/lambda-shared";
 import errors from "http-errors";
+import * as zod from "zod";
 
 const EventSchema = zod.object({
   body: zod.object({
@@ -23,7 +22,7 @@ interface SignUpResponse {
   message: string;
 }
 
-const userPoolClientId = process.env.USER_POOL_CLIENT_ID!;
+const userPoolClientId = requireEnv("USER_POOL_CLIENT_ID");
 
 const cognitoClient = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION,
@@ -46,8 +45,12 @@ const signUpHandler = async (event: EventSchema): Promise<SignUpResponse> => {
 
     const result = await cognitoClient.send(command);
 
+    if (!result.UserSub) {
+      throw new Error("Cognito SignUp returned no UserSub");
+    }
+
     return {
-      userSub: result.UserSub!,
+      userSub: result.UserSub,
       message: "Verification code sent to email",
     };
   } catch (error) {
