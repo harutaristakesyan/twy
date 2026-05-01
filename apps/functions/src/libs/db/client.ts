@@ -1,27 +1,11 @@
-import { GetParameterCommand, SSMClient } from "@aws-sdk/client-ssm";
 import { DsqlSigner } from "@aws-sdk/dsql-signer";
-import { requireEnv } from "@twy/lambda-shared";
 import { CamelCasePlugin, Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
+import { Resource } from "sst";
 import type { Database } from "./index.js";
 
-const region = requireEnv("AWS_REGION");
 const dbName = "postgres";
 const dbUser = "admin";
-
-const ssmClient = new SSMClient({ region });
-
-async function getClusterId(): Promise<string> {
-  const command = new GetParameterCommand({
-    Name: "/dsql/cluster-id",
-    WithDecryption: true,
-  });
-  const response = await ssmClient.send(command);
-  if (!response.Parameter?.Value) {
-    throw new Error("Failed to retrieve cluster ID from SSM");
-  }
-  return response.Parameter.Value;
-}
 
 function createTTLCache<T extends { destroy?: () => Promise<void> }>(
   ttlMs: number,
@@ -38,11 +22,9 @@ function createTTLCache<T extends { destroy?: () => Promise<void> }>(
 
     if (!expired && cachedValue) return cachedValue;
 
-    // If another caller is already (re)building, await it.
     if (building) return building;
 
     building = (async () => {
-      // destroy previous instance (best-effort)
       if (cachedValue?.destroy) {
         try {
           await cachedValue.destroy();
@@ -51,12 +33,10 @@ function createTTLCache<T extends { destroy?: () => Promise<void> }>(
         }
       }
 
-      // build new value
       const fresh = await factory();
       cachedValue = fresh;
       lastFetched = Date.now();
 
-      // schedule proactive destroy after TTL
       if (timeout) clearTimeout(timeout);
       timeout = setTimeout(async () => {
         if (cachedValue?.destroy) {
@@ -66,7 +46,7 @@ function createTTLCache<T extends { destroy?: () => Promise<void> }>(
             console.error("[TTLCache] Scheduled destroy failed:", err);
           }
         }
-        cachedValue = undefined; // <- important: invalidate cache
+        cachedValue = undefined;
       }, ttlMs);
 
       return fresh;
@@ -81,8 +61,9 @@ function createTTLCache<T extends { destroy?: () => Promise<void> }>(
 }
 
 export const getDb = createTTLCache(10 * 60 * 1000, async () => {
-  const clusterId = await getClusterId();
-  const hostname = `${clusterId}.dsql.${region}.on.aws`;
+  const hostname = Resource.Cluster.host;
+  const region = Resource.Cluster.region;
+
   const signer = new DsqlSigner({ hostname, region, expiresIn: 900 });
   const token = await signer.getDbConnectAdminAuthToken();
 

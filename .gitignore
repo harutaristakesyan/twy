@@ -142,9 +142,9 @@ vite.config.ts.timestamp-*
 # Turborepo
 .turbo
 
-# AWS CDK
-cdk.out
-.cdk.staging
+# SST (Pulumi/Ion)
+.sst/
+sst-env.d.ts
 
 # IDE
 .idea

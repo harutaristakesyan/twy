@@ -1,11 +1,28 @@
 import { type Database, getDb, type OrderDirection, type Roles } from "@libs/db";
+import type { UserTable } from "@libs/db/schema/users";
 import createError from "http-errors";
-import type { Kysely, Transaction } from "kysely";
+import type { Insertable, Kysely, Transaction } from "kysely";
 
 const USER_TABLE = "users";
 const BRANCH_TABLE = "branch";
 
 type Executor = Kysely<Database> | Transaction<Database>;
+
+export type NewUser = Insertable<UserTable>;
+
+export const createUser = async (input: NewUser): Promise<void> => {
+  const db = await getDb();
+  const now = new Date();
+
+  await db
+    .insertInto(USER_TABLE)
+    .values({
+      ...input,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .execute();
+};
 
 interface UserRow {
   id: string;

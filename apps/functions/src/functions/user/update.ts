@@ -9,12 +9,11 @@ import { updateUser as updateUserRecord } from "@libs/db/operations/userOperatio
 import { middyfy } from "@twy/lambda-shared";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
+import { Resource } from "sst";
 
-const userPoolId = process.env.USER_POOL_ID;
+const userPoolId = Resource.UserPool.id;
 
-const cognitoClient = new CognitoIdentityProviderClient({
-  region: process.env.AWS_REGION,
-});
+const cognitoClient = new CognitoIdentityProviderClient({});
 
 const updateUser = async (event: UpdateUserEvent): Promise<MessageResponse> => {
   const { userId } = event.pathParameters;

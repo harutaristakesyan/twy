@@ -1,6 +1,6 @@
 # apps/ui — `@twy/ui`
 
-React 19 + Vite 8 + Ant Design 6 SPA. Deployed via CDK (`bin/stack.ts`) to S3 + CloudFront. The single backend (per env) lives at `apps/auth` + `apps/functions`; this app talks to it via `apps/ui/src/shared/api/ApiClient.ts`.
+React 19 + Vite 8 + Ant Design 6 SPA. Deployed via SST as a `sst.aws.StaticSite` mounted on a `sst.aws.Router` (defined in `infra/web.ts`). The single backend (per env) lives at `apps/auth` + `apps/functions`; this app talks to it via `apps/ui/src/shared/api/ApiClient.ts` — using a relative `/api` baseURL because the Router proxies same-origin requests to the API Gateway.
 
 > Read root `CLAUDE.md` first. This file is the UI-specific delta.
 
@@ -24,7 +24,7 @@ If you hit one of these in CI but not locally, run `pnpm check` (the editor exte
 | Layout | `src/app/layouts/{Layout,AppHeader,Sidebar}.tsx` | AntD `<Layout>`. |
 | Auth | `src/auth/AuthContext.tsx`, `src/auth/{ProtectedRoute,RoleBasedRoute}.tsx` | `useAuth()` for `{user, login, logout}`. |
 | Tokens | `src/shared/utils/jwt.ts` | **Cookies via `js-cookie`**, not `localStorage`. |
-| API | `src/shared/api/ApiClient.ts` | Axios singleton with auth interceptor + token refresh + mock interceptor. Never use raw `axios`/`fetch`. |
+| API | `src/shared/api/ApiClient.ts` | Axios singleton with relative `/api` baseURL + auth interceptor + token refresh + mock interceptor. Never use raw `axios`/`fetch`. |
 | Mocks | `src/shared/api/mockInterceptor.ts` | Toggle via `VITE_ENABLE_MOCKS=true` in `.env.development`. Mock interceptor must init **before** the auth interceptor. |
 | Server state | `@tanstack/react-query@5` | `useQuery`/`useMutation`. Query keys are tuples — see queries.ts. |
 | Modals | `@ebay/nice-modal-react` | `NiceModal.create(...)`, `NiceModal.show(...)`. |
@@ -36,6 +36,10 @@ If you hit one of these in CI but not locally, run `pnpm check` (the editor exte
 
 A user signed in on `twy.am` is **not** signed in on `twy.be` even though both hit the same backend. Cookies are scoped per origin. This is by design — see root `CLAUDE.md` "Domains (multi-domain deploy)". Don't try to share tokens across domains.
 
+## Same-origin /api routing
+
+`infra/web.ts` calls `router.routeUrl("/api/*", api.api.url)`, which means every request the SPA makes to `/api/...` is proxied through CloudFront to the API Gateway. The Axios baseURL stays `/api` and there are no CORS preflights in production. Locally during `vite dev`, the proxy in `vite.config.mts` covers the same role against the deployed dev backend.
+
 ## Vite envs
 
 Files at `apps/ui/.env.development` and `apps/ui/.env.production` are **committed** (`.gitignore` exception). They hold **public, build-time** values only:
@@ -43,10 +47,9 @@ Files at `apps/ui/.env.development` and `apps/ui/.env.production` are **committe
 ```
 VITE_ENABLE_MOCKS=false
 VITE_MOCK_DELAY=500
-VITE_API_BASE_URL=/api
 ```
 
-Never put a secret here — these get bundled into the JS the browser downloads. Anything secret goes in CDK env or SSM.
+Never put a secret here — these get bundled into the JS the browser downloads.
 
 ## Dev proxy
 
@@ -81,10 +84,4 @@ pnpm --filter @twy/ui exec vitest run path/to/file.test.tsx
 
 ## Deploy
 
-```bash
-ENV=dev pnpm --filter @twy/ui synth
-ENV=dev pnpm --filter @twy/ui diff
-ENV=dev pnpm --filter @twy/ui deploy   # asked-permission, never auto
-```
-
-`bin/stack.ts` reads the S3 bucket name and CloudFront distribution ID from SSM (paths derived from `idPrefix = primaryDomain.replace(/\./g, "-")`). Do NOT change `primaryDomain` — it would force-replace the bucket and lose the deployed assets.
+Deployment is owned by SST at the root — there are no per-app `synth/diff/deploy` scripts. The Vite build happens automatically as part of `sst deploy` (configured in `infra/web.ts` via the `sst.aws.StaticSite` `build` block, output dir `out/`). The Router uploads the bundle to its S3 origin and invalidates the distribution.

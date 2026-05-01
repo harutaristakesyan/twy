@@ -2,8 +2,9 @@ import {
   CognitoIdentityProviderClient,
   ForgotPasswordCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { middyfy, requireEnv, toError } from "@twy/lambda-shared";
+import { middyfy, toError } from "@twy/lambda-shared";
 import errors from "http-errors";
+import { Resource } from "sst";
 import * as zod from "zod";
 
 interface ForgotPasswordResponse {
@@ -18,11 +19,9 @@ const EventSchema = zod.object({
 
 type EventSchema = zod.infer<typeof EventSchema>;
 
-const userPoolClientId = requireEnv("USER_POOL_CLIENT_ID");
+const userPoolClientId = Resource.UserPoolClient.id;
 
-const cognitoClient = new CognitoIdentityProviderClient({
-  region: process.env.AWS_REGION,
-});
+const cognitoClient = new CognitoIdentityProviderClient({});
 
 const forgotPasswordHandler = async (event: EventSchema): Promise<ForgotPasswordResponse> => {
   const { email } = event.body;

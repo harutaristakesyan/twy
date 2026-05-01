@@ -16,5 +16,6 @@
     "declarationMap": true,
     "sourceMap": true
   },
-  "exclude": ["node_modules", "dist", "cdk.out", ".turbo"]
+  "include": ["types/**/*.d.ts"],
+  "exclude": ["node_modules", "dist", "cdk.out", ".turbo", ".sst"]
 }

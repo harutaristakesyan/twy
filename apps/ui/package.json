@@ -10,10 +10,7 @@
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",
-    "check": "biome check --write .",
-    "synth": "pnpm exec cdk synth",
-    "diff": "pnpm exec cdk diff",
-    "deploy": "pnpm exec cdk deploy --require-approval never"
+    "check": "biome check --write ."
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^2.41.1",
@@ -23,9 +20,7 @@
     "@tanstack/react-query": "^5.100.5",
     "ahooks": "3.9.7",
     "antd": "6.3.7",
-    "aws-cdk-lib": "^2.251.0",
     "axios": "1.15.2",
-    "constructs": "^10.0.0",
     "dayjs": "^1.11.13",
     "js-cookie": "^3.0.5",
     "jwt-decode": "4.0.0",
@@ -40,7 +35,6 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.1",
-    "ts-node": "10.9.2",
     "vite": "^8.0.0",
     "vitest": "^4.1.5"
   },

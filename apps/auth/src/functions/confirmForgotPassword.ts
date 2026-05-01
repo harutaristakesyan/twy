@@ -2,8 +2,9 @@ import {
   CognitoIdentityProviderClient,
   ConfirmForgotPasswordCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { middyfy, requireEnv, toError } from "@twy/lambda-shared";
+import { middyfy, toError } from "@twy/lambda-shared";
 import errors from "http-errors";
+import { Resource } from "sst";
 import * as zod from "zod";
 
 const EventSchema = zod.object({
@@ -20,11 +21,9 @@ interface ConfirmResetPasswordResponse {
   message: string;
 }
 
-const userPoolClientId = requireEnv("USER_POOL_CLIENT_ID");
+const userPoolClientId = Resource.UserPoolClient.id;
 
-const cognitoClient = new CognitoIdentityProviderClient({
-  region: process.env.AWS_REGION,
-});
+const cognitoClient = new CognitoIdentityProviderClient({});
 
 const confirmForgotPasswordHandler = async (
   event: EventSchema,

@@ -1,6 +1,6 @@
 # apps/auth — `@twy/auth`
 
-Cognito user pool + auth Lambdas (sign up, verify, login, refresh, forgot-password, confirm-forgot-password, resend-verification-code). Wired into the shared HttpApi via `bin/functionStack.ts` using the `HttpLambdaRouter` construct.
+Cognito flow Lambdas (sign up, verify, login, refresh, forgot-password, confirm-forgot-password, resend-verification-code). The infra (user pool, app client, post-confirmation trigger) lives in **`infra/auth.ts`** at the repo root, and the routes are wired in **`infra/routes.ts`** + **`infra/api.ts`**.
 
 > Read root `CLAUDE.md` first. This file is the auth-app-specific delta.
 
@@ -10,24 +10,30 @@ All under `src/functions/`:
 
 | File | Route | Auth |
 |---|---|---|
-| `signUp.ts` | `POST /auth/signup` | public |
-| `verify.ts` | `POST /auth/verify` | public |
-| `login.ts` | `POST /auth/login` | public |
-| `refreshToken.ts` | `POST /auth/refresh` | public |
-| `forgotPassword.ts` | `POST /auth/forgot-password` | public |
-| `confirmForgotPassword.ts` | `POST /auth/confirm-forgot-password` | public |
-| `resendVerificationCode.ts` | `POST /auth/resend-verification-code` | public |
+| `signUp.ts` | `POST /api/signup` | public |
+| `verify.ts` | `POST /api/verify` | public |
+| `login.ts` | `POST /api/login` | public |
+| `refreshToken.ts` | `POST /api/refresh-token` | public |
+| `forgotPassword.ts` | `POST /api/forgot-password` | public |
+| `confirmForgotPassword.ts` | `POST /api/create-password` | public |
+| `resendVerificationCode.ts` | `POST /api/resend-code` | public |
 
 Every other handler that authenticates a user must live in `apps/functions`, not here. This package is for Cognito flows specifically.
 
+The post-confirmation trigger is intentionally **not** here — it lives at `apps/functions/src/functions/postConfirmation.ts` because it needs DB access to insert the user row. SST wires it as the Cognito trigger via `infra/auth.ts`.
+
 ## Pattern
 
-Every handler uses `middyfy` from `@twy/lambda-shared`. Example:
+Every handler uses `middyfy` from `@twy/lambda-shared`. Read configuration from the SST Resource SDK, **never** from `process.env` or `requireEnv`. Example:
 
 ```typescript
-import { middyfy, requireEnv, toError } from "@twy/lambda-shared";
-import { CognitoIdentityProviderClient, InitiateAuthCommand } from "@aws-sdk/client-cognito-identity-provider";
+import {
+  CognitoIdentityProviderClient,
+  InitiateAuthCommand,
+} from "@aws-sdk/client-cognito-identity-provider";
+import { middyfy, toError } from "@twy/lambda-shared";
 import errors from "http-errors";
+import { Resource } from "sst";
 import * as zod from "zod";
 
 const EventSchema = zod.object({
@@ -35,48 +41,51 @@ const EventSchema = zod.object({
 });
 type EventSchema = zod.infer<typeof EventSchema>;
 
-interface LoginResponse { accessToken: string; idToken: string; refreshToken: string; }
+interface LoginResponse {
+  accessToken: string;
+  idToken: string;
+  refreshToken: string;
+}
 
-const cognito = new CognitoIdentityProviderClient({});
-const CLIENT_ID = requireEnv("COGNITO_CLIENT_ID");
+const userPoolClientId = Resource.UserPoolClient.id;
+const cognitoClient = new CognitoIdentityProviderClient({});
 
 const loginHandler = async (event: EventSchema): Promise<LoginResponse> => {
   try {
-    const result = await cognito.send(new InitiateAuthCommand({
-      AuthFlow: "USER_PASSWORD_AUTH",
-      ClientId: CLIENT_ID,
-      AuthParameters: { USERNAME: event.body.email, PASSWORD: event.body.password },
-    }));
+    const result = await cognitoClient.send(
+      new InitiateAuthCommand({
+        AuthFlow: "USER_PASSWORD_AUTH",
+        ClientId: userPoolClientId,
+        AuthParameters: { USERNAME: event.body.email, PASSWORD: event.body.password },
+      }),
+    );
     const auth = result.AuthenticationResult;
     if (!auth?.AccessToken || !auth.IdToken || !auth.RefreshToken) {
       throw new errors.Unauthorized("Login failed");
     }
-    return { accessToken: auth.AccessToken, idToken: auth.IdToken, refreshToken: auth.RefreshToken };
+    return {
+      accessToken: auth.AccessToken,
+      idToken: auth.IdToken,
+      refreshToken: auth.RefreshToken,
+    };
   } catch (err) {
-    const e = toError(err);
-    if (e.name === "NotAuthorizedException") throw new errors.Unauthorized("Bad credentials");
-    if (e.name === "UserNotConfirmedException") throw new errors.Forbidden("Email not verified");
-    throw e;
+    throw new errors.BadRequest(toError(err).message);
   }
 };
 
-export const handler = middyfy<EventSchema, LoginResponse>(loginHandler, {
-  eventSchema: EventSchema,
-  mode: "parse",
-});
+export const handler = middyfy<EventSchema, LoginResponse>(loginHandler);
 ```
 
 Use the `lambda-handler-author` subagent (or the `/new-handler` command) for new handlers — it codifies this exact shape.
 
-## Cognito client config
+## Resource SDK reads
 
-Read from env vars set by the CDK stack:
+| Resource | Provided by | Used for |
+|---|---|---|
+| `Resource.UserPoolClient.id` | `infra/auth.ts` | All sign-up / sign-in / refresh / forgot-password Cognito SDK calls |
+| `Resource.UserPool.id` | `infra/auth.ts` | Admin operations (only used in `apps/functions`, not here) |
 
-- `COGNITO_USER_POOL_ID`
-- `COGNITO_CLIENT_ID`
-- (optional) `COGNITO_REGION` — defaults to `AWS_REGION`.
-
-Always read with `requireEnv("X")`, not `process.env.X!`. The pre-tool-use hook + `noNonNullAssertion` rule + the requireEnv migration commit (`e8fb4b4`) all push this direction.
+The link is wired in `infra/routes.ts` via `linkKeys: ["userPoolClient"]` per route.
 
 ## Cognito error mapping
 
@@ -103,10 +112,8 @@ pnpm --filter @twy/auth build
 
 ## Deploy
 
-```bash
-ENV=dev pnpm --filter @twy/auth synth
-ENV=dev pnpm --filter @twy/auth diff
-ENV=dev pnpm --filter @twy/auth deploy
-```
+Deployment is owned by SST at the root. There is no `apps/auth` `synth/diff/deploy` script anymore — adding a handler means:
 
-CI runs deploy-auth after deploy-infra (the user pool is created by `apps/infra/bin/stacks/auth-stack.ts`; this app attaches Lambdas to it).
+1. Author the handler in `src/functions/`.
+2. Append a `RouteDef` to `infra/routes.ts` `authRoutes` (or `appRoutes` if it requires JWT).
+3. Run `pnpm sst deploy --stage dev` (locally, against your AWS profile) or push to trigger CI.

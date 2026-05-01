@@ -4,7 +4,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "out/**", "cdk.out/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", "out/**", ".next/**", "!.next/cache/**"]
     },
     "lint": {
       "outputs": []
@@ -15,20 +15,6 @@
     "test": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
-    },
-    "synth": {
-      "dependsOn": ["^build", "build"],
-      "outputs": ["cdk.out/**"]
-    },
-    "diff": {
-      "dependsOn": ["^build", "build"],
-      "cache": false,
-      "outputs": []
-    },
-    "deploy": {
-      "dependsOn": ["^build", "build"],
-      "cache": false,
-      "outputs": []
     },
     "dev": {
       "persistent": true,
