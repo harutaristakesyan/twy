@@ -1,7 +1,0 @@
-{
-  "app": "pnpm exec ts-node --project bin/tsconfig.json --prefer-ts-exts bin/deploy.ts",
-  "context": {
-    "@aws-cdk/aws-lambda:recognizeVersionProps": true
-  },
-  "requireApproval": "never"
-}

@@ -24,9 +24,7 @@
       "!pnpm-lock.yaml",
       "!**/*.tsbuildinfo",
       "!**/*.min.js",
-      "!**/*.generated.ts",
-      "!apps/*/bin",
-      "!apps/infra"
+      "!**/*.generated.ts"
     ]
   },
   "formatter": {

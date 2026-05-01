@@ -57,7 +57,13 @@ export function createApi(args: CreateApiArgs) {
     },
   });
 
-  const linkRegistry: Record<LinkKey, sst.aws.Dsql | sst.aws.CognitoUserPool | sst.aws.Bucket | ReturnType<sst.aws.CognitoUserPool["addClient"]>> = {
+  const linkRegistry: Record<
+    LinkKey,
+    | sst.aws.Dsql
+    | sst.aws.CognitoUserPool
+    | sst.aws.Bucket
+    | ReturnType<sst.aws.CognitoUserPool["addClient"]>
+  > = {
     cluster: db.cluster,
     userPool: auth.userPool,
     userPoolClient: auth.userPoolClient,
