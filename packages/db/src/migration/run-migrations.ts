@@ -8,15 +8,32 @@ const stdout = (line: string) => process.stdout.write(`${line}\n`);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const migrationsFolder = path.resolve(here, "../../drizzle");
 
+const isResumingError = (err: unknown): boolean =>
+  typeof err === "object" &&
+  err !== null &&
+  (err as Record<string, unknown>).name === "DatabaseResumingException";
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 (async () => {
-  try {
-    stdout(`Applying Drizzle migrations from ${migrationsFolder}...`);
-    await runMigrations(db, migrationsFolder);
-    stdout("All migrations complete.");
-  } catch (err) {
-    console.error("Migration failed:", err);
-    process.exitCode = 1;
-  } finally {
-    process.exit(process.exitCode ?? 0);
+  const maxAttempts = 5;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      stdout(`Applying Drizzle migrations from ${migrationsFolder}...`);
+      await runMigrations(db, migrationsFolder);
+      stdout("All migrations complete.");
+      process.exit(0);
+    } catch (err) {
+      if (isResumingError(err) && attempt < maxAttempts) {
+        const wait = attempt * 10_000;
+        stdout(
+          `Aurora is resuming from auto-pause. Retrying in ${wait / 1000}s (attempt ${attempt}/${maxAttempts})...`,
+        );
+        await sleep(wait);
+        continue;
+      }
+      console.error("Migration failed:", err);
+      process.exit(1);
+    }
   }
 })();
