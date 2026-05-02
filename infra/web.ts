@@ -8,51 +8,62 @@ interface CreateWebArgs {
 }
 
 /**
- * Multi-domain CloudFront Router fronting the React/Vite SPA + same-origin
- * /api proxy to the HTTP API.
+ * Two CloudFront Routers:
  *
- * Replaces:
- *   - apps/infra/bin/stacks/cloud-front-stack.ts (CloudFront distribution +
- *     SPA bucket + /api/* behavior + CloudFront Function rewrite + viewer
- *     cert from SSM + multiple ARecords).
- *   - apps/dashboard/bin/stack.ts (BucketDeployment of `out/`).
- *
- * The Router owns the cert (multi-SAN across primary + aliases, validated
- * via DNS in each zone) and the CloudFront distribution. StaticSite uploads
- * the Vite build to the Router-managed S3 origin and triggers an
- * invalidation. `router.route("/api", api.url)` proxies /api/* to the API
- * Gateway origin so the UI can call relative `/api/...` URLs (no CORS
- * preflight in production).
- *
- * Personal/ephemeral stages (anything other than `dev` or `prod`) skip the
- * custom-domain wiring and use the Router's default CloudFront name.
+ *   Marketing Router — twy.am / twy.be (+ www) → Astro static site (apps/web)
+ *   App Router       — app.twy.am / app.twy.be → React SPA (apps/dashboard)
+ *                      + /api/* proxy → ApiGatewayV2
  */
 export function createWeb(args: CreateWebArgs) {
   const { cfg, api } = args;
 
-  const router = new sst.aws.Router(
-    "Web",
-    cfg.hasCustomDomain && cfg.primaryDomain
-      ? {
-          domain: {
-            name: cfg.primaryDomain,
-            aliases: cfg.aliases,
-            dns: sst.aws.dns(),
-          },
-        }
-      : {},
-  );
+  const marketingRouter = new sst.aws.Router("Marketing", {
+    domain: {
+      name: cfg.marketingDomain,
+      aliases: cfg.marketingAliases,
+      dns: sst.aws.dns(),
+    },
+  });
 
-  router.route("/api", api.api.url);
+  const marketingSite = new sst.aws.StaticSite("MarketingSite", {
+    path: "apps/web",
+    build: {
+      command: "pnpm build",
+      output: "dist",
+    },
+    errorPage: "404.html",
+    environment: {
+      PUBLIC_APP_URL: `https://${cfg.appDomain}`,
+      PUBLIC_STAGE: $app.stage,
+    },
+    router: { instance: marketingRouter },
+  });
 
-  const site = new sst.aws.StaticSite("Dashboard", {
+  const appRouter = new sst.aws.Router("App", {
+    domain: {
+      name: cfg.appDomain,
+      aliases: cfg.appAliases,
+      dns: sst.aws.dns(),
+    },
+  });
+
+  appRouter.route("/api", api.api.url);
+
+  const dashboardSite = new sst.aws.StaticSite("Dashboard", {
     path: "apps/dashboard",
     build: {
       command: "pnpm build",
       output: "out",
     },
-    router: { instance: router },
+    router: { instance: appRouter },
   });
 
-  return { router, site, url: router.url };
+  return {
+    marketingRouter,
+    appRouter,
+    marketingSite,
+    dashboardSite,
+    marketingUrl: marketingRouter.url,
+    appUrl: appRouter.url,
+  };
 }

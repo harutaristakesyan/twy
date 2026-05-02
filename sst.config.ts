@@ -51,9 +51,10 @@ export default $config({
 
     return {
       stage: $app.stage,
-      primaryDomain: cfg.primaryDomain,
-      aliases: cfg.aliases,
-      siteUrl: web.url,
+      marketingDomain: cfg.marketingDomain,
+      appDomain: cfg.appDomain,
+      marketingUrl: web.marketingUrl,
+      appUrl: web.appUrl,
       apiUrl: api.api.url,
       clusterHost: db.cluster.host,
       userPoolId: auth.userPool.id,

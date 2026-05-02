@@ -1,0 +1,35 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const appUrl = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
+---
+
+<BaseLayout title="twy" description="twy — logistics management platform">
+  <div class="flex min-h-full flex-col">
+    <!-- Nav -->
+    <header class="px-6 py-4">
+      <span class="text-xl font-bold tracking-tight text-gray-900">twy</span>
+    </header>
+
+    <!-- Hero -->
+    <main class="flex flex-1 flex-col items-center justify-center px-6 text-center">
+      <h1 class="text-5xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+        Coming soon
+      </h1>
+      <p class="mt-4 text-lg text-gray-500">
+        Logistics management — built for teams that move fast.
+      </p>
+      <a
+        href={appUrl}
+        class="mt-8 inline-block rounded-lg bg-gray-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-gray-700"
+      >
+        Sign in
+      </a>
+    </main>
+
+    <!-- Footer -->
+    <footer class="px-6 py-4 text-center text-sm text-gray-400">
+      &copy; {new Date().getFullYear()} twy. All rights reserved.
+    </footer>
+  </div>
+</BaseLayout>

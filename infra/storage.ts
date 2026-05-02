@@ -12,8 +12,8 @@ import type { StageConfig } from "./domain";
  */
 export function createStorage(cfg: StageConfig) {
   const allowedOrigins = [
-    `https://${cfg.primaryDomain}`,
-    ...cfg.aliases.map((d) => `https://${d}`),
+    `https://${cfg.appDomain}`,
+    ...cfg.appAliases.map((d) => `https://${d}`),
     "http://localhost:3000",
   ];
 

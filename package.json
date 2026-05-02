@@ -20,6 +20,7 @@
     "remove": "sst remove",
     "shell": "sst shell",
     "run:dashboard": "pnpm --filter @twy/dashboard dev",
+    "run:web": "pnpm --filter @twy/web dev",
     "migrate": "sst shell -- pnpm --filter @twy/db migrate",
     "lint:commit": "commitlint --edit",
     "prepare": "husky"

@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "https://dev.twy.am",
+        target: "https://app.dev.twy.am",
         changeOrigin: true,
         secure: false,
       },

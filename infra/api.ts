@@ -22,13 +22,11 @@ interface CreateApiArgs {
 export function createApi(args: CreateApiArgs) {
   const { cfg, auth, db, filesBucket } = args;
 
-  const allowedOrigins = cfg.hasCustomDomain
-    ? [
-        `https://${cfg.primaryDomain}`,
-        ...cfg.aliases.map((d) => `https://${d}`),
-        "http://localhost:3000",
-      ]
-    : ["http://localhost:3000"];
+  const allowedOrigins = [
+    `https://${cfg.appDomain}`,
+    ...cfg.appAliases.map((d) => `https://${d}`),
+    "http://localhost:3000",
+  ];
 
   const api = new sst.aws.ApiGatewayV2("Api", {
     cors: {
