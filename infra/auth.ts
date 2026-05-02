@@ -41,7 +41,7 @@ export function createAuth(args: { db: { cluster: sst.aws.Aurora } }) {
     },
   });
 
-  const userPoolClient = userPool.addClient("Web", {
+  const userPoolClient = userPool.addClient("UserPoolClient", {
     transform: {
       client: {
         explicitAuthFlows: [
