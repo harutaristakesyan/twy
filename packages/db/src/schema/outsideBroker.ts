@@ -18,9 +18,7 @@ export const outsideBroker = pgTable("outside_broker", {
   branchId: uuid().references(() => branch.id, { onDelete: "set null" }),
   creditLimitUnlimited: boolean().notNull().default(true),
   creditLimit: numeric({ precision: 10, scale: 2 }),
-  createdBy: uuid()
-    .notNull()
-    .references(() => users.id, { onDelete: "restrict" }),
+  createdBy: uuid().references(() => users.id, { onDelete: "restrict" }),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });

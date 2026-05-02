@@ -57,9 +57,7 @@ export const load = pgTable("load", {
 
   status: text().$type<LoadStatus>().notNull().default("Pending"),
   statusChangedBy: varchar({ length: 255 }),
-  createdBy: uuid()
-    .notNull()
-    .references(() => users.id, { onDelete: "restrict" }),
+  createdBy: uuid().references(() => users.id, { onDelete: "restrict" }),
 
   createdAt: timestamp().notNull().defaultNow(),
   updatedAt: timestamp().notNull().defaultNow(),

@@ -17,10 +17,10 @@ CREATE TABLE "team_permissions" (
 	CONSTRAINT "team_permissions_team_id_resource_action_pk" PRIMARY KEY("team_id","resource","action")
 );
 --> statement-breakpoint
-ALTER TABLE "load" ADD COLUMN "created_by" uuid NOT NULL;--> statement-breakpoint
-ALTER TABLE "outside_broker" ADD COLUMN "created_by" uuid NOT NULL;--> statement-breakpoint
+ALTER TABLE "load" ADD COLUMN "created_by" uuid;--> statement-breakpoint
+ALTER TABLE "outside_broker" ADD COLUMN "created_by" uuid;--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "team_id" uuid;--> statement-breakpoint
-ALTER TABLE "users" ADD COLUMN "created_by" uuid NOT NULL;--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN "created_by" uuid;--> statement-breakpoint
 ALTER TABLE "team_permissions" ADD CONSTRAINT "team_permissions_team_id_team_id_fk" FOREIGN KEY ("team_id") REFERENCES "public"."team"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "load" ADD CONSTRAINT "load_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "outside_broker" ADD CONSTRAINT "outside_broker_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint

@@ -10,9 +10,7 @@ export const users = pgTable("users", {
   isActive: boolean().notNull().default(true),
   branch: uuid().references(() => branch.id, { onDelete: "set null" }),
   teamId: uuid().references(() => team.id, { onDelete: "set null" }),
-  createdBy: uuid()
-    .notNull()
-    .references((): AnyPgColumn => users.id, { onDelete: "restrict" }),
+  createdBy: uuid().references((): AnyPgColumn => users.id, { onDelete: "restrict" }),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
