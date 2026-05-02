@@ -34,7 +34,7 @@ pnpm build                                # turbo run build (respects ^build)
 pnpm check                                # biome check --write . (lint + format + import sort)
 pnpm check:ci                             # biome ci .  (zero-exit gate; matches CI)
 pnpm test                                 # turbo run test
-pnpm run:ui                               # alias for pnpm --filter @twy/ui dev
+pnpm run:dashboard                        # alias for pnpm --filter @twy/dashboard dev
 
 # SST (infra is now defined in sst.config.ts + infra/)
 pnpm sst dev --stage <username>           # personal live-Lambda dev loop
@@ -48,10 +48,10 @@ pnpm sst shell --stage dev -- pnpm --filter @twy/db migrate
 
 # Scope to one package
 pnpm --filter @twy/<name> <script>
-pnpm turbo run build --filter @twy/ui...    # `...` includes deps
+pnpm turbo run build --filter @twy/dashboard...    # `...` includes deps
 ```
 
-Run a single Vitest file: `pnpm --filter @twy/ui exec vitest run path/to/file.test.ts`.
+Run a single Vitest file: `pnpm --filter @twy/dashboard exec vitest run path/to/file.test.ts`.
 
 ## Architecture
 
@@ -62,7 +62,7 @@ sst.config.ts                # SST entrypoint — see app() and run()
 infra/                       # SST components, one module per concern
   domain.ts, database.ts, storage.ts, email.ts,
   auth.ts, api.ts, web.ts, routes.ts
-apps/ui          @twy/ui            React 19 + Vite SPA, deployed via sst.aws.StaticSite + sst.aws.Router
+apps/dashboard   @twy/dashboard     React 19 + Vite SPA, deployed via sst.aws.StaticSite + sst.aws.Router
 apps/auth        @twy/auth          Cognito flow Lambdas (Middy + Zod) — handlers only, infra in infra/auth.ts
 apps/functions   @twy/functions     Domain Lambdas — handlers + contracts; consumes @twy/db for all DB access
 packages/db          @twy/db              Drizzle schema, query operations, migration runner (Aurora Data API)
@@ -135,7 +135,7 @@ Per-stage scaling: prod stays warm at `min: 0.5 ACU`; dev (and personal stages) 
 
 ### UI
 
-React 19 + Ant Design 6 + TanStack Query + Axios. `apps/ui/.env.{development,production}` are committed via a `.gitignore` exception — they hold **public, build-time** values only (mock toggle, etc.); never put secrets there. Stricter Biome rules apply here (see overrides in `biome.json`): `useExhaustiveDependencies: error`, `useHookAtTopLevel: error`, `noNonNullAssertion: error`. When wiring fetchers used inside `useEffect`, wrap them in `useCallback` to satisfy `useExhaustiveDependencies`. The Axios client uses relative `/api` — same-origin proxying through the Router means no CORS preflights.
+React 19 + Ant Design 6 + TanStack Query + Axios. `apps/dashboard/.env.{development,production}` are committed via a `.gitignore` exception — they hold **public, build-time** values only (mock toggle, etc.); never put secrets there. Stricter Biome rules apply here (see overrides in `biome.json`): `useExhaustiveDependencies: error`, `useHookAtTopLevel: error`, `noNonNullAssertion: error`. When wiring fetchers used inside `useEffect`, wrap them in `useCallback` to satisfy `useExhaustiveDependencies`. The Axios client uses relative `/api` — same-origin proxying through the Router means no CORS preflights.
 
 ## Tooling conventions
 
@@ -148,10 +148,10 @@ Every package extends `tsconfig.base.json` (`target ES2024`, `module NodeNext`, 
 Root `biome.json` is authoritative. Format: double quotes, semicolons, trailing commas, 100-col, 2-space, LF. Notable rules and per-folder overrides:
 
 - `noConsole` is `warn` with `["warn", "error"]` allowed. **In SST infra modules (`sst.config.ts`, `infra/**`) and migration runners, use `process.stdout.write(...)` — not `console.log`** (these paths have `noConsole: off` but the convention is to write portable code).
-- `noNonNullAssertion`: `warn` globally, **`error`** in `apps/ui/**`, `off` in `sst.config.ts` + `infra/**` and tests.
+- `noNonNullAssertion`: `warn` globally, **`error`** in `apps/dashboard/**`, `off` in `sst.config.ts` + `infra/**` and tests.
 - `noExplicitAny`: `warn`. Replace `any` with `unknown` in catches (then narrow with `toError`) and use proper Ant Design table types in components.
 - `useImportType: error`. Prefer `import type { ... }` for type-only imports.
-- `useExhaustiveDependencies`: `error` in `apps/ui/**`.
+- `useExhaustiveDependencies`: `error` in `apps/dashboard/**`.
 - Tests (`*.test.*`, `*.spec.*`, `__tests__/`, `__mocks__/`) get `noConsole`, `noExplicitAny`, and `noNonNullAssertion` turned off.
 
 CI gate is `biome ci .`. Pre-commit (`.husky/pre-commit`) runs `pnpm lint-staged` → `biome check --write --no-errors-on-unmatched`.
@@ -181,5 +181,5 @@ Per-environment GitHub vars (`DEV_ACCOUNT_ID`, `PROD_ACCOUNT_ID`) feed the OIDC 
 - **Stale Turbo cache** — `pnpm turbo run build --force` for one run, or `rm -rf .turbo`.
 - **Husky hooks not running** — `pnpm prepare` reinstalls them; check `.husky/{pre-commit,commit-msg}` are executable.
 - **Don't bypass `biome ci`** with `--no-verify` — fix the violation. The codebase has been through deliberate cleanup passes; regressions have a way of compounding.
-- **Don't put secrets in `apps/ui/.env.*`** — those files are committed.
+- **Don't put secrets in `apps/dashboard/.env.*`** — those files are committed.
 - **Don't rename `primaryDomain`** in `infra/domain.ts` mid-flight — SST will replace the underlying CloudFront/cert/Route53 resources rather than update them.

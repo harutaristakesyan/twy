@@ -18,7 +18,7 @@
     "deploy": "sst deploy",
     "remove": "sst remove",
     "shell": "sst shell",
-    "run:ui": "pnpm --filter @twy/ui dev",
+    "run:dashboard": "pnpm --filter @twy/dashboard dev",
     "migrate": "sst shell -- pnpm --filter @twy/db migrate",
     "lint:commit": "commitlint --edit",
     "prepare": "husky"

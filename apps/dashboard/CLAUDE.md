@@ -1,12 +1,12 @@
-# apps/ui — `@twy/ui`
+# apps/dashboard — `@twy/dashboard`
 
-React 19 + Vite 8 + Ant Design 6 SPA. Deployed via SST as a `sst.aws.StaticSite` mounted on a `sst.aws.Router` (defined in `infra/web.ts`). The single backend (per env) lives at `apps/auth` + `apps/functions`; this app talks to it via `apps/ui/src/shared/api/ApiClient.ts` — using a relative `/api` baseURL because the Router proxies same-origin requests to the API Gateway.
+React 19 + Vite 8 + Ant Design 6 SPA. Deployed via SST as a `sst.aws.StaticSite` mounted on a `sst.aws.Router` (defined in `infra/web.ts`). The single backend (per env) lives at `apps/auth` + `apps/functions`; this app talks to it via `apps/dashboard/src/shared/api/ApiClient.ts` — using a relative `/api` baseURL because the Router proxies same-origin requests to the API Gateway.
 
 > Read root `CLAUDE.md` first. This file is the UI-specific delta.
 
 ## Stricter Biome rules apply here
 
-Biome overrides in root `biome.json` (search `apps/ui/**`):
+Biome overrides in root `biome.json` (search `apps/dashboard/**`):
 
 - `useExhaustiveDependencies: error` — every `useEffect`/`useCallback`/`useMemo` dep must be listed. Wrap fetchers in `useCallback`.
 - `useHookAtTopLevel: error` — no conditional hooks.
@@ -42,7 +42,7 @@ A user signed in on `twy.am` is **not** signed in on `twy.be` even though both h
 
 ## Vite envs
 
-Files at `apps/ui/.env.development` and `apps/ui/.env.production` are **committed** (`.gitignore` exception). They hold **public, build-time** values only:
+Files at `apps/dashboard/.env.development` and `apps/dashboard/.env.production` are **committed** (`.gitignore` exception). They hold **public, build-time** values only:
 
 ```
 VITE_ENABLE_MOCKS=false
@@ -77,9 +77,9 @@ Use the `ui-page-scaffold` skill (under `.claude/skills/`). The short version:
 ## Build & test
 
 ```bash
-pnpm --filter @twy/ui dev          # vite dev server
-pnpm --filter @twy/ui build        # tsc + vite build → out/
-pnpm --filter @twy/ui exec vitest run path/to/file.test.tsx
+pnpm --filter @twy/dashboard dev          # vite dev server
+pnpm --filter @twy/dashboard build        # tsc + vite build → out/
+pnpm --filter @twy/dashboard exec vitest run path/to/file.test.tsx
 ```
 
 ## Deploy

@@ -103,7 +103,7 @@
   },
   "overrides": [
     {
-      "includes": ["apps/ui/**/*.{ts,tsx,js,jsx}"],
+      "includes": ["apps/dashboard/**/*.{ts,tsx,js,jsx}"],
       "linter": {
         "rules": {
           "correctness": {

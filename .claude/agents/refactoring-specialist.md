@@ -38,7 +38,7 @@ You execute refactors using the Tidy First / Mikado method: find a small change 
 - Renaming a component logical name in SST will replace the underlying AWS resource. *Not* safe for the Aurora cluster (data loss), the S3 files bucket (loses uploaded files), or the Cognito user pool (forces all users to re-sign-up). For these, keep the SST component name stable; introduce new resources alongside and migrate data first.
 
 ### Lift React state up
-- Extract the hook with the state into a named module under `apps/ui/src/shared/hooks/`.
+- Extract the hook with the state into a named module under `apps/dashboard/src/shared/hooks/`.
 - Make the hook return a stable object (use `useMemo`) so consumers' deps lists stay correct.
 - Update consumers to import from the new path; let `useExhaustiveDependencies: error` catch missed deps.
 

@@ -11,7 +11,7 @@ twy/
 │   ├── domain.ts, database.ts, storage.ts,
 │   ├── email.ts, auth.ts, api.ts, web.ts, routes.ts
 ├── apps/
-│   ├── ui/                @twy/ui              Vite + React 19 SPA (deployed by infra/web.ts)
+│   ├── dashboard/         @twy/dashboard       Vite + React 19 SPA (deployed by infra/web.ts)
 │   ├── auth/              @twy/auth            Cognito flow Lambdas
 │   └── functions/         @twy/functions       Domain Lambdas + Drizzle migrations
 ├── packages/
@@ -50,7 +50,7 @@ twy/
 ```bash
 pnpm install                              # single hoisted lockfile at repo root
 pnpm build                                # build everything once so packages have dist/
-pnpm run:ui                               # alias for: pnpm --filter @twy/ui dev
+pnpm run:dashboard                        # alias for: pnpm --filter @twy/dashboard dev
 
 # Personal live-Lambda dev loop (your own stage, ephemeral resources):
 pnpm sst dev --stage <username>
@@ -62,7 +62,7 @@ SST deploys need AWS credentials — see [Environments](#environments).
 
 | Path                     | Name                 | Purpose                                                                |
 | ------------------------ | -------------------- | ---------------------------------------------------------------------- |
-| `apps/ui`                | `@twy/ui`            | Vite + React 19 SPA (deployed via `sst.aws.StaticSite` + Router)       |
+| `apps/dashboard`         | `@twy/dashboard`     | Vite + React 19 SPA (deployed via `sst.aws.StaticSite` + Router)       |
 | `apps/auth`              | `@twy/auth`          | Cognito flow Lambdas (signup/login/verify/forgot-password)             |
 | `apps/functions`         | `@twy/functions`     | Domain Lambdas + Drizzle migrations against Aurora Serverless v2       |
 | `packages/lambda-shared` | `@twy/lambda-shared` | Middy wrappers (`middyfy`, `httpZodHandler`, `jsonErrorHandler`), `toError` |
@@ -82,7 +82,7 @@ Root-level scripts route through Turborepo and SST.
 | `pnpm check:ci`      | `biome ci .` (zero-exit gate, used in CI)             |
 | `pnpm test`          | `turbo run test`                                      |
 | `pnpm dev`           | `turbo run dev` (persistent dev servers)              |
-| `pnpm run:ui`        | `pnpm --filter @twy/ui dev`                           |
+| `pnpm run:dashboard` | `pnpm --filter @twy/dashboard dev`                    |
 | `pnpm sst dev`       | SST live-Lambda dev loop (`--stage <username>`)       |
 | `pnpm sst deploy`    | Deploy all infra + apps to a stage (`--stage dev`/`prod`) |
 | `pnpm sst remove`    | Tear down a stage                                     |
@@ -91,18 +91,18 @@ Root-level scripts route through Turborepo and SST.
 Scope to one package with `--filter`:
 
 ```bash
-pnpm turbo run build --filter @twy/ui...   # `...` = package + its deps
+pnpm turbo run build --filter @twy/dashboard...   # `...` = package + its deps
 pnpm --filter @twy/db migrate
 ```
 
 ## Per-App
 
-### `@twy/ui` — Web SPA
+### `@twy/dashboard` — Customer Dashboard SPA
 
-Vite 8 (Rolldown), React 19, Ant Design 6, TanStack Query, Axios. Deployed by `infra/web.ts` via `sst.aws.StaticSite` behind a multi-domain `sst.aws.Router` (which also routes `/api/*` to API Gateway). Public Vite envs live at `apps/ui/.env.{development,production}` (committed via `.gitignore` exception — public build-time values only, never secrets).
+Vite 8 (Rolldown), React 19, Ant Design 6, TanStack Query, Axios. Deployed by `infra/web.ts` via `sst.aws.StaticSite` behind a multi-domain `sst.aws.Router` (which also routes `/api/*` to API Gateway). Public Vite envs live at `apps/dashboard/.env.{development,production}` (committed via `.gitignore` exception — public build-time values only, never secrets).
 
 ```bash
-pnpm --filter @twy/ui dev | build | preview | test
+pnpm --filter @twy/dashboard dev | build | preview | test
 ```
 
 ### `@twy/auth` — Cognito + Auth Lambdas
@@ -187,7 +187,7 @@ lint (biome ci)
 
 **TypeScript** — every package extends `tsconfig.base.json`: `target ES2024`, `module NodeNext`, `strict: true` (with `strictNullChecks: false`), `isolatedModules: true`. Set per-package `outDir` and any local `paths`.
 
-**Linting & formatting** — Biome 2 only. The root `biome.json` defines rules + formatter (double quotes, semicolons, trailing commas, 100-char width, 2-space indent). Per-area overrides exist for `apps/ui` (stricter React rules) and `infra/` + tests (`noConsole` and `noNonNullAssertion` relaxed). For CLI scripts and the migration runner, use `process.stdout.write` instead of `console.log` to satisfy `noConsole`.
+**Linting & formatting** — Biome 2 only. The root `biome.json` defines rules + formatter (double quotes, semicolons, trailing commas, 100-char width, 2-space indent). Per-area overrides exist for `apps/dashboard` (stricter React rules) and `infra/` + tests (`noConsole` and `noNonNullAssertion` relaxed). For CLI scripts and the migration runner, use `process.stdout.write` instead of `console.log` to satisfy `noConsole`.
 
 ## Adding a New App or Package
 

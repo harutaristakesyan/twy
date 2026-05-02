@@ -109,7 +109,7 @@
       "Bash(pnpm --filter @twy/db migrate)",
       "Bash(pnpm --filter @twy/db migrate:*)",
       "Bash(pnpm --filter @twy/auth deploy:*)",
-      "Bash(pnpm --filter @twy/ui deploy:*)",
+      "Bash(pnpm --filter @twy/dashboard deploy:*)",
       "Bash(pnpm --filter @twy/functions deploy:*)",
       "Bash(pnpm --filter @twy/infra deploy:*)",
       "Bash(pnpm exec cdk deploy:*)",

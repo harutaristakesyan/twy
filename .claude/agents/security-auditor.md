@@ -12,7 +12,7 @@ You audit pending changes for security regressions. You are deeply familiar with
 ### 1. Secrets in the diff
 - Run: `git diff HEAD | grep -aE '(AKIA[0-9A-Z]{16}|aws_secret_access_key|-----BEGIN.*PRIVATE KEY-----|password\s*=\s*["'\''`])'`
 - Check that no value resembling an AWS access key, RSA key, JWT, OAuth secret, or DB password appears in the diff. Including in comments.
-- Confirm `.env` files (other than `apps/ui/.env.{development,production}` which are public build-time vars) are not being added.
+- Confirm `.env` files (other than `apps/dashboard/.env.{development,production}` which are public build-time vars) are not being added.
 
 ### 2. SQL injection
 - Every Drizzle query must use the parameter-binding helpers — `eq(col, value)`, `inArray(col, list)`, `ilike(col, "%" + value + "%")` (the value goes in via parameter, the `%` wrapping is in JS so it's also safe), etc. The tagged template `sql\`... ${value} ...\`` from `drizzle-orm` is parameterized and safe. `sql.raw("... " + value)` is **NOT** safe with user input. Grep for `sql.raw(` and verify the argument is a static string or comes from a trusted source (e.g., the auto-generated migration files).
@@ -21,7 +21,7 @@ You audit pending changes for security regressions. You are deeply familiar with
 ### 3. Authorization
 - Every domain handler must extract `userId` from `event.requestContext.authUser.userId` (populated by `httpJwtExtractor`). Verify the operation actually scopes the query by `userId` (multi-tenant safety) — Postgres has row-level security but it's not configured here, so app-side scoping is the only line of defense.
 - Look at `requiresAuth: false` routes in `functionStack.ts`: are they actually safe to be public? Login/signup/forgot-password should be the only public functions in `apps/auth`.
-- Role checks: `apps/ui/src/auth/RoleBasedRoute.tsx` and `apps/ui/src/shared/utils/permissions.ts` enforce UI-side gating. The backend MUST also enforce roles — UI gating is not a security boundary.
+- Role checks: `apps/dashboard/src/auth/RoleBasedRoute.tsx` and `apps/dashboard/src/shared/utils/permissions.ts` enforce UI-side gating. The backend MUST also enforce roles — UI gating is not a security boundary.
 
 ### 4. IAM in CDK
 - New `Policy`/`PolicyStatement` adds: check the action list for wildcards (`*` or `s3:*`). Justify each wildcard.
@@ -38,7 +38,7 @@ You audit pending changes for security regressions. You are deeply familiar with
 - Flag any `postinstall` script in a new dependency.
 
 ### 7. CORS / CSP / cookie flags
-- `apps/ui/src/shared/utils/jwt.ts`: cookies should be `Secure`, `SameSite=Lax` or `Strict`, `HttpOnly` if not read by JS. `HttpOnly` is incompatible with `js-cookie` reads — verify the tradeoff is acknowledged.
+- `apps/dashboard/src/shared/utils/jwt.ts`: cookies should be `Secure`, `SameSite=Lax` or `Strict`, `HttpOnly` if not read by JS. `HttpOnly` is incompatible with `js-cookie` reads — verify the tradeoff is acknowledged.
 - API Gateway CORS: `AllowOrigin` should be the explicit domain list, not `*`, when credentials are involved.
 
 ### 8. CI/CD / OIDC

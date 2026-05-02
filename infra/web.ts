@@ -15,7 +15,7 @@ interface CreateWebArgs {
  *   - apps/infra/bin/stacks/cloud-front-stack.ts (CloudFront distribution +
  *     SPA bucket + /api/* behavior + CloudFront Function rewrite + viewer
  *     cert from SSM + multiple ARecords).
- *   - apps/ui/bin/stack.ts (BucketDeployment of `out/`).
+ *   - apps/dashboard/bin/stack.ts (BucketDeployment of `out/`).
  *
  * The Router owns the cert (multi-SAN across primary + aliases, validated
  * via DNS in each zone) and the CloudFront distribution. StaticSite uploads
@@ -45,8 +45,8 @@ export function createWeb(args: CreateWebArgs) {
 
   router.route("/api", api.api.url);
 
-  const site = new sst.aws.StaticSite("Ui", {
-    path: "apps/ui",
+  const site = new sst.aws.StaticSite("Dashboard", {
+    path: "apps/dashboard",
     build: {
       command: "pnpm build",
       output: "out",

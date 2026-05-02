@@ -21,17 +21,17 @@ If the diff is large (>30 files), focus on Lambda handlers, migrations, CDK stac
 ### 1. Correctness blockers
 - **Generated Drizzle migration files in `packages/db/drizzle/<n>_*.sql` (or `drizzle/meta/`) modified rather than added**. This is forbidden — Drizzle's migrator records applied filenames in `__drizzle_migrations`; mutating an applied migration breaks idempotency. Demand a new schema edit + `pnpm --filter @twy/db db:generate`.
 - **Catch blocks typed as `any` or untyped**. Must use `catch (err) { const e = toError(err); ... }`. `toError` is exported from `@twy/lambda-shared`.
-- **`process.env.X!` non-null assertions**. Replace with `requireEnv("X")` from `@twy/lambda-shared`. In `apps/ui/**` `noNonNullAssertion` is `error`; in Lambda code it is `warn` but the codebase has converged on `requireEnv`.
+- **`process.env.X!` non-null assertions**. Replace with `requireEnv("X")` from `@twy/lambda-shared`. In `apps/dashboard/**` `noNonNullAssertion` is `error`; in Lambda code it is `warn` but the codebase has converged on `requireEnv`.
 - **Middy handler shape**. Handlers must be wrapped with `middyfy(handler, opts?)` from `@twy/lambda-shared`. The middleware stack already includes `jsonErrorHandler → bodyParser → httpJwtExtractor → addAwsRequestId → optional httpZodHandler`. Don't re-add these manually. If `requiresAuth` is true on the route, the handler may read `event.requestContext.authUser.userId` — flag any direct `event.headers.authorization` parsing.
 - **Zod schema mode**. `middyfy` with `mode: "parse"` *replaces* the event with the parsed shape; `mode: "validate"` does not. Mismatched mode + downstream typing is a common silent bug — verify the handler reads the shape that was promised.
 
-### 2. UI-specific (apps/ui only)
+### 2. UI-specific (apps/dashboard only)
 - `useNonNullAssertion` is `error` — flag every `!`.
 - `useExhaustiveDependencies` is `error` — every `useEffect`, `useCallback`, `useMemo` dep array must list every reactive value referenced. Fetchers used in effects must be wrapped in `useCallback` with their own complete dep list.
 - `useHookAtTopLevel` is `error` — no conditional hooks.
 - AntD components must come from `antd` v6, icons from `@ant-design/icons` v6, never from older paths.
-- New API calls go through `apps/ui/src/shared/api/ApiClient.ts` — never raw `axios`/`fetch`.
-- Token storage is **cookies via `js-cookie`** in `apps/ui/src/shared/utils/jwt.ts` — never `localStorage` (the CLAUDE.md note about localStorage is historical; current code uses cookies — verify).
+- New API calls go through `apps/dashboard/src/shared/api/ApiClient.ts` — never raw `axios`/`fetch`.
+- Token storage is **cookies via `js-cookie`** in `apps/dashboard/src/shared/utils/jwt.ts` — never `localStorage` (the CLAUDE.md note about localStorage is historical; current code uses cookies — verify).
 
 ### 3. Style / convention
 - `useImportType: error` everywhere — type-only imports use `import type { ... }`.
