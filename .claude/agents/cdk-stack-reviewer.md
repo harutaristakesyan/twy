@@ -1,6 +1,6 @@
 ---
 name: cdk-stack-reviewer
-description: Reviews SST infra changes (sst.config.ts, infra/**) for the deploy-time pitfalls specific to twy — link[] coverage, multi-domain alias mistakes, Resource SDK consumption, IAM auto-derivation, Aurora DSQL bindings. Use after any edit under sst.config.ts or infra/.
+description: Reviews SST infra changes (sst.config.ts, infra/**) for the deploy-time pitfalls specific to twy — link[] coverage, multi-domain alias mistakes, Resource SDK consumption, IAM auto-derivation, Aurora Serverless v2 (Data API) bindings. Use after any edit under sst.config.ts or infra/.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
@@ -45,9 +45,11 @@ You review SST changes for deploy-time correctness. SST/Pulumi failures cost 5�
 - `infra/web.ts` should call `router.routeUrl("/api/*", api.api.url)` — without it, the SPA's relative `/api` calls hit a 404.
 - Adding a custom domain directly to `sst.aws.ApiGatewayV2` while still routing through Router → leaks the API origin and breaks same-origin requests. Pick one model.
 
-### 6. Aurora DSQL
-- Cluster removal policy: `prod` stage uses `app.removal: "retain"` (set in `sst.config.ts`); a per-component override of `removal: "remove"` on the Dsql cluster in prod is a **BLOCKER** (data loss).
-- `Resource.Cluster.host` and `Resource.Cluster.region` are the only safe reads in the DB client. Any other shape (`Resource.Cluster.endpoint`, `.url`) → flag, the actual SDK fields differ.
+### 6. Aurora Serverless v2 (Data API)
+- Cluster removal policy: `prod` stage uses `app.removal: "retain"` (set in `sst.config.ts`); a per-component override of `removal: "remove"` on the Aurora cluster in prod is a **BLOCKER** (data loss).
+- `Resource.Cluster.{clusterArn,secretArn,database}` are the fields the Drizzle Data API client reads in `packages/db/src/client.ts`. Any other shape (`Resource.Cluster.endpoint`, `.url`, `.host` for client purposes) → flag.
+- `dataApi: true` must stay on `sst.aws.Aurora` — flipping it off would force every consumer Lambda to be VPC-attached, which we deliberately avoid for cold-start reasons.
+- Per-stage scaling: `min: 0.5 ACU` on prod, `min: 0 ACU` on dev/personal stages. A diff that flips dev to non-zero or prod below 0.5 should be called out.
 
 ### 7. Cognito
 - Removing `UserPoolClient` properties that are part of the resource hash → forces replacement → all users must re-authenticate. Check and warn.
@@ -57,7 +59,7 @@ You review SST changes for deploy-time correctness. SST/Pulumi failures cost 5�
 - `sst.config.ts → app()` rejects unknown stages. Don't suggest adding stages without also adding the matching record in `infra/domain.ts`.
 
 ### 9. CI/CD shape
-- The workflow runs `sst deploy --stage <env>` once per env, then `sst shell -- pnpm --filter @twy/functions migrate`. A new dependency that needs a one-shot bootstrap step (e.g., a seed) should fit into the same `sst shell` model — don't suggest a new ad-hoc deploy step.
+- The workflow runs `sst deploy --stage <env>` once per env, then `sst shell -- pnpm --filter @twy/db migrate`. A new dependency that needs a one-shot bootstrap step (e.g., a seed) should fit into the same `sst shell` model — don't suggest a new ad-hoc deploy step.
 - The OIDC role (`github-deploy-role`) needs Pulumi-friendly perms (S3 state bucket + DynamoDB lock table + the resource creation perms). If a review introduces a new AWS service, remind the user to extend that role.
 
 ### 10. Output format

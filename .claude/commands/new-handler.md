@@ -1,5 +1,5 @@
 ---
-description: Scaffold a new HTTP handler (auth or functions app) with contract, route wiring, and optional Kysely operation.
+description: Scaffold a new HTTP handler (auth or functions app) with contract, route wiring, and optional Drizzle operation.
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob
 argument-hint: "<METHOD> <PATH>  e.g. GET /loads/{id}  or  POST /auth/login"
 ---

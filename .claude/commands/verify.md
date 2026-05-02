@@ -44,5 +44,5 @@ If anything red: `Failures: <count>. Run /debug-test to diagnose.`
 
 ## Hard rules
 
-- Do not run `pnpm --filter @twy/functions migrate` here. Migrations are an explicit user decision.
+- Do not run `pnpm --filter @twy/db migrate` here. Migrations are an explicit user decision.
 - Do not run `cdk deploy` here. Deploys are gated on `/ship` + push + CI.

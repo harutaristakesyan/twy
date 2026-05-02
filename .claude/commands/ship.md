@@ -33,4 +33,4 @@ You are running the SHIP workflow. Goal: take the working tree from "feature don
 
 - Never bypass the gate with `--no-verify`.
 - Never amend a commit that's already on `main` or already pushed (deny list catches `git push --force` either way).
-- If the diff includes a new `V<n>__*.sql` migration, remind the user to run `pnpm --filter @twy/functions migrate` against dev BEFORE the deploy job runs.
+- If the diff includes a new `packages/db/drizzle/<n>_*.sql` migration, remind the user to run `pnpm sst shell --stage dev -- pnpm --filter @twy/db migrate` BEFORE the deploy job runs.

@@ -1,6 +1,6 @@
 ---
 name: test-writer
-description: Generate Vitest tests for a Lambda handler, a Kysely operation, a React hook, or a UI component, following twy conventions (Vitest 4, no test runner-specific globals beyond Vitest's, AAA structure, Zod-derived fixtures). Use after writing new code or when /verify reveals an uncovered branch.
+description: Generate Vitest tests for a Lambda handler, a Drizzle operation, a React hook, or a UI component, following twy conventions (Vitest 4, no test runner-specific globals beyond Vitest's, AAA structure, Zod-derived fixtures). Use after writing new code or when /verify reveals an uncovered branch.
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---
@@ -24,9 +24,9 @@ You write tests that match the existing patterns in the twy monorepo. You do not
 3. Build the event with the Zod EventSchema in the contract file. Inject `requestContext.authUser = { userId }` for authed routes.
 4. Assert the response shape, not the JSON envelope (`addAwsRequestId` wraps after the handler).
 
-### Kysely operation test
-1. Don't hit a real DB. Use `kysely-mock` patterns: build a `Kysely<Database>` with a stub query executor, or hand-construct expected SQL.
-2. For complex query logic, prefer asserting the compiled SQL via `db.selectFrom(...).compile()`.
+### Drizzle operation test
+1. Don't hit a real DB. Mock the module-scope client with `vi.mock("@twy/db", () => ({ db: { select: vi.fn().mockReturnThis(), from: vi.fn().mockReturnThis(), where: vi.fn().mockResolvedValue([{ ... }]) } }))` — adapt the chained methods to whatever the operation calls.
+2. For complex query logic, prefer asserting the compiled SQL via `db.select().from(...).toSQL()` (Drizzle exposes `.toSQL()` on every builder).
 
 ### React component / hook test
 1. `@testing-library/react` for components. The repo doesn't yet have it as a dep — check `apps/ui/package.json`. If absent, ask the user before adding (lockfile is gitignored from edits).

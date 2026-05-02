@@ -87,5 +87,5 @@ pnpm sst shell --stage <stage>      # open a shell with Resource.* env vars
 
 For migrations:
 ```
-pnpm sst shell --stage dev -- pnpm --filter @twy/functions migrate
+pnpm sst shell --stage dev -- pnpm --filter @twy/db migrate
 ```

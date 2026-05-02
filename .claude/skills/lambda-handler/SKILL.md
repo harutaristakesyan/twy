@@ -88,6 +88,20 @@ In `apps/<app>/bin/functionStack.ts`:
 - **Setting CORS headers manually** — API Gateway handles CORS at the route level.
 - **Catching errors and returning `{ statusCode: 500 }` manually** — let `jsonErrorHandler` do it. If you catch, narrow with `toError(err)`, log, and rethrow as an `http-errors` instance.
 
+## DB access
+
+If the handler reads/writes the cluster, import the shared Drizzle instance — never construct your own client:
+
+```typescript
+import { db } from "@twy/db";
+import { users } from "@twy/db";
+import { eq } from "drizzle-orm";
+
+const [user] = await db.select().from(users).where(eq(users.id, userId));
+```
+
+`db` is built once at module scope on top of `RDSDataClient`. The route in `infra/routes.ts` must include `"cluster"` in `linkKeys` for `Resource.Cluster.{clusterArn,secretArn,database}` to resolve and the IAM grants to attach.
+
 ## Testing
 
 Co-located `<verb>.test.ts`. Import the inner function (export it explicitly: `export const xHandler = ...`). Mock AWS SDK clients. Build the event from the EventSchema.

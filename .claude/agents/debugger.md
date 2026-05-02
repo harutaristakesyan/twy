@@ -27,7 +27,8 @@ You are a debugger. You hunt for the *smallest reproducible failure* and the *mi
 - **Cookie-based JWT not present after redirect** → the cookie's `domain` attribute scopes it to the original origin. Multi-domain users on `twy.am` vs `twy.be` are independent sessions by design (CLAUDE.md). Don't try to share — that's a feature.
 - **Vite dev proxy returns 404** → `/api` proxies to `https://dev.twy.am`; check `apps/ui/vite.config.mts` and `.env.development`.
 - **Biome rules disagree with VS Code** → editor extension is using a stale Biome version. Match the version in `package.json` (`@biomejs/biome ^2.4.13`).
-- **Aurora DSQL connection 401 after 15 minutes** → IAM token expired. The pool TTL cache (10 min) should have rotated; if not, check `apps/functions/src/libs/db/client.ts` cache logic. In local dev, re-export `POSTGRES_DEV_URL`.
+- **Aurora Data API call returns `AccessDeniedException`** → the running role lacks `rds-data:ExecuteStatement` (or `secretsmanager:GetSecretValue` on the cluster's managed secret). Both should come automatically from `link: [db.cluster]` — verify the route in `infra/api.ts` includes `cluster` in `linkKeys`, or that the migration runner is launched via `sst shell` (which inherits the deploy role's permissions).
+- **`Resource.Cluster.X is not defined` in a fresh checkout** → `sst-env.d.ts` (gitignored) hasn't been regenerated for the current stage. Run `pnpm sst dev --stage <stage>` once.
 
 ## Output
 

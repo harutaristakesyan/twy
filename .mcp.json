@@ -26,7 +26,7 @@
     "postgres-dev": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-postgres", "${POSTGRES_DEV_URL}"],
-      "_purpose": "Schema introspection against the dev Aurora DSQL cluster. The migration-writer subagent uses this to verify table shape before generating Vn__*.sql. POSTGRES_DEV_URL must be exported by the contributor (DSQL IAM token, expires every 15min — re-export with `aws dsql generate-db-connect-admin-auth-token` if queries 401). If the env var is unset the server fails fast and Claude falls back to reading apps/functions/src/libs/db/schema/*.ts."
+      "_purpose": "Schema introspection against the dev Aurora Serverless v2 cluster. The migration-writer subagent uses this to verify table shape before editing pgTable schemas. POSTGRES_DEV_URL must be exported by the contributor — derive from `Resource.Cluster.{host,port,database,username,password}` (visible via `pnpm sst shell --stage dev -- env | grep SST_RESOURCE_Cluster`). If the env var is unset the server fails fast and Claude falls back to reading apps/functions/src/libs/db/schema/*.ts directly."
     }
   }
 }

@@ -48,14 +48,14 @@ if [ -n "$CHANGED" ]; then
   fi
 fi
 
-# 4. Detect any new migration file — remind to run `pnpm --filter @twy/functions migrate`.
+# 4. Detect any new migration file — remind to run `pnpm --filter @twy/db migrate`.
 NEW_MIG=$(git status --porcelain 2>/dev/null \
-  | grep -E '^\?\? apps/functions/src/migration/sql/V[0-9]+__.*\.sql$' \
+  | grep -E '^\?\? packages/db/drizzle/[0-9]+_.*\.sql$' \
   | head -3)
 if [ -n "$NEW_MIG" ]; then
   WARNINGS+=("New migration(s) detected — they must be applied to dev before deploy:")
   WARNINGS+=("$NEW_MIG")
-  WARNINGS+=("Run: pnpm --filter @twy/functions migrate")
+  WARNINGS+=("Run: pnpm --filter @twy/db migrate")
 fi
 
 if [ ${#WARNINGS[@]} -gt 0 ]; then

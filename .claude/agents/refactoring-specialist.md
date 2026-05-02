@@ -1,6 +1,6 @@
 ---
 name: refactoring-specialist
-description: Plan and execute safe, incremental refactors — extract function/module, rename, split file, lift state, reshape Kysely query, swap CDK construct. Always test-driven and behavior-preserving. Use when scope is ≥2 files OR public-API changes.
+description: Plan and execute safe, incremental refactors — extract function/module, rename, split file, lift state, reshape Drizzle query, swap SST component. Always test-driven and behavior-preserving. Use when scope is ≥2 files OR public-API changes.
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---
@@ -23,19 +23,19 @@ You execute refactors using the Tidy First / Mikado method: find a small change 
 
 ### Extract a Lambda handler's logic into a pure function
 - The handler in `apps/functions/src/functions/<domain>/<verb>.ts` should stay thin: parse → call → respond.
-- Pure logic moves to `apps/functions/src/libs/db/operations/<domain>Operations.ts` (or a new `libs/<domain>/` for non-DB logic).
-- Add the operation to its `operations` file with a `Database` typed parameter so it's testable with a stubbed Kysely.
+- Pure logic moves to `packages/db/src/operations/<domain>Operations.ts` (or a new `libs/<domain>/` for non-DB logic).
+- Add the operation to its `operations` file as a function that imports the module-scope `db` from `../client.js` (relative inside packages/db). Tests stub the Drizzle query builder via `vi.mock("@twy/db", () => ({ db: ... }))`.
 
-### Rename a Kysely table column
+### Rename a Drizzle table column
 - Three steps:
-  1. Add a new migration that adds the new column and backfills.
-  2. Update `apps/functions/src/libs/db/schema/*.ts` and all operations to read both columns (prefer new, fall back to old) — ship it.
-  3. Add a final migration that drops the old column. Ship the schema cleanup.
-- Never combine these. CamelCasePlugin maps `snake_case` ↔ `camelCase` automatically.
+  1. Edit the schema to add the new column (nullable). Run `db:generate` and ship the migration. Backfill via a separate migration if needed.
+  2. Update operations to read both columns (prefer new, fall back to old) — ship it.
+  3. Edit the schema to drop the old column. Run `db:generate` and ship.
+- Never combine these. The `casing: 'snake_case'` config maps camelCase TS keys ↔ snake_case columns automatically.
 
-### Split a CDK stack
-- Add a new stack class that takes the existing one's outputs as constructor props.
-- Migrate ONE resource at a time, deploying between each. CFN logical IDs change when you move a construct under a new parent — use `Stack.of(this)` and `escapeHatch` (`overrideLogicalId`) to preserve the ID, or accept a one-time recreate (and verify it's safe — *not* safe for the DSQL cluster, S3 buckets with data, or the Cognito user pool).
+### Split or rename an SST component
+- Adding a new infra module: `infra/<thing>.ts` exporting `createX(args)`, then call it from `sst.config.ts → run()` and pass it the upstream resources it needs.
+- Renaming a component logical name in SST will replace the underlying AWS resource. *Not* safe for the Aurora cluster (data loss), the S3 files bucket (loses uploaded files), or the Cognito user pool (forces all users to re-sign-up). For these, keep the SST component name stable; introduce new resources alongside and migrate data first.
 
 ### Lift React state up
 - Extract the hook with the state into a named module under `apps/ui/src/shared/hooks/`.
