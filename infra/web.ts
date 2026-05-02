@@ -39,7 +39,7 @@ export function createWeb(args: CreateWebArgs) {
     router: { instance: marketingRouter },
   });
 
-  const appRouter = new sst.aws.Router("App", {
+  const appRouter = new sst.aws.Router("AppRouter", {
     domain: {
       name: cfg.appDomain,
       aliases: cfg.appAliases,

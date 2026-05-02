@@ -62,6 +62,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run build
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ vars[matrix.environment.account_var] }}:role/github-deploy-role
