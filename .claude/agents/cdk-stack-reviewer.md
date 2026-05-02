@@ -25,7 +25,7 @@ You review SST changes for deploy-time correctness. SST/Pulumi failures cost 5�
 - Any new manual `iam.PolicyStatement` / `permissions:` block on a Function that duplicates what `link[]` already grants — **flag** as redundant.
 
 ### 2. `link[]` coverage in `infra/api.ts`
-- Every new handler under `apps/auth/src/functions/` or `apps/functions/src/functions/**` must have a corresponding `RouteDef` in `infra/routes.ts` with the right `linkKeys`.
+- Every new handler under `packages/functions/src/api/auth/` or `packages/functions/src/api/**` must have a corresponding `RouteDef` in `infra/routes.ts` with the right `linkKeys`.
 - If the handler reads `Resource.Cluster.host` → `linkKeys` must include `"cluster"`.
 - If the handler reads `Resource.UserPool.id` → `linkKeys` must include `"userPool"`.
 - If the handler reads `Resource.UserPoolClient.id` → `linkKeys` must include `"userPoolClient"`.
@@ -53,7 +53,7 @@ You review SST changes for deploy-time correctness. SST/Pulumi failures cost 5�
 
 ### 7. Cognito
 - Removing `UserPoolClient` properties that are part of the resource hash → forces replacement → all users must re-authenticate. Check and warn.
-- Adding/removing `triggers.postConfirmation` → invokes a one-time replacement of the trigger Lambda. Make sure the new handler path resolves (it lives at `apps/functions/src/functions/postConfirmation.ts`).
+- Adding/removing `triggers.postConfirmation` → invokes a one-time replacement of the trigger Lambda. Make sure the new handler path resolves (it lives at `packages/functions/src/events/postConfirmation.ts`).
 
 ### 8. Stage assertions
 - `sst.config.ts → app()` rejects unknown stages. Don't suggest adding stages without also adding the matching record in `infra/domain.ts`.

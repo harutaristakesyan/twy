@@ -11,11 +11,10 @@ twy/
 │   ├── domain.ts, database.ts, storage.ts,
 │   ├── email.ts, auth.ts, api.ts, web.ts, routes.ts
 ├── apps/
-│   ├── dashboard/         @twy/dashboard       Vite + React 19 SPA (deployed by infra/web.ts)
-│   ├── auth/              @twy/auth            Cognito flow Lambdas
-│   └── functions/         @twy/functions       Domain Lambdas + Drizzle migrations
+│   └── dashboard/         @twy/dashboard       Vite + React 19 SPA (deployed by infra/web.ts)
 ├── packages/
-│   └── lambda-shared/     @twy/lambda-shared   Middy wrappers, error utils, env helpers
+│   ├── functions/         @twy/functions       Lambda handlers (HTTP + Cognito triggers) + Middy middleware
+│   └── db/                @twy/db              Drizzle schema, operations, migrations
 ├── .github/workflows/ci-cd.yml
 ├── biome.json             unified linter + formatter (Biome 2)
 ├── tsconfig.base.json     strict TS base, extended by every package
@@ -63,9 +62,8 @@ SST deploys need AWS credentials — see [Environments](#environments).
 | Path                     | Name                 | Purpose                                                                |
 | ------------------------ | -------------------- | ---------------------------------------------------------------------- |
 | `apps/dashboard`         | `@twy/dashboard`     | Vite + React 19 SPA (deployed via `sst.aws.StaticSite` + Router)       |
-| `apps/auth`              | `@twy/auth`          | Cognito flow Lambdas (signup/login/verify/forgot-password)             |
-| `apps/functions`         | `@twy/functions`     | Domain Lambdas + Drizzle migrations against Aurora Serverless v2       |
-| `packages/lambda-shared` | `@twy/lambda-shared` | Middy wrappers (`middyfy`, `httpZodHandler`, `jsonErrorHandler`), `toError` |
+| `packages/functions`     | `@twy/functions`     | All Lambda handlers (HTTP API + Cognito triggers) + Lambda-runtime middleware |
+| `packages/db`            | `@twy/db`            | Drizzle schema + repository operations + migrations (Aurora Data API)  |
 
 All packages are `private: true`. Cross-package deps use `workspace:*`.
 
@@ -105,13 +103,13 @@ Vite 8 (Rolldown), React 19, Ant Design 6, TanStack Query, Axios. Deployed by `i
 pnpm --filter @twy/dashboard dev | build | preview | test
 ```
 
-### `@twy/auth` — Cognito + Auth Lambdas
+### `@twy/functions` — All Lambda handlers
 
-AWS SDK Cognito client + Middy + Zod, sharing helpers with `@twy/lambda-shared`. Routes (signup/login/verify/refresh/forgot-password/create-password) are declared in `infra/routes.ts` `authRoutes` and provisioned by `infra/api.ts`. The Cognito user pool, app client, and post-confirmation trigger live in `infra/auth.ts`.
+Layout: `src/{api,events,shared,contracts,libs,utils}`. HTTP handlers live under `src/api/<domain>/` (`auth`, `user`, `branch`, `load`, `file`); the Cognito post-confirmation trigger lives at `src/events/postConfirmation.ts`. Lambda-runtime middleware (`middyfy`, `httpZodHandler`, `jsonErrorHandler`, `toError`, `requireEnv`) lives at `src/shared/`. Routes are wired in `infra/routes.ts` (`authRoutes` for public Cognito flows, `appRoutes` for JWT-protected) and provisioned by `infra/api.ts`. The Cognito user pool, app client, and post-confirmation trigger themselves live in `infra/auth.ts`.
 
-### `@twy/functions` — Business Lambdas + Migrations
+### `@twy/db` — Schema, operations, migrations
 
-Layout: `src/{contracts,functions,libs,migration,utils}` + `drizzle/` (committed migration SQL + meta snapshots). DB is **Drizzle ORM** against **Aurora Serverless v2 (Postgres)** via the **RDS Data API** (`drizzle-orm/aws-data-api/pg`) — no VPC, no NAT, no static credentials. CI runs migrations after `sst deploy`.
+DB is **Drizzle ORM** against **Aurora Serverless v2 (Postgres)** via the **RDS Data API** (`drizzle-orm/aws-data-api/pg`) — no VPC, no NAT, no static credentials. Schema under `src/schema/`, query operations under `src/operations/`, migration runner at `src/migration/run-migrations.ts`. CI runs migrations after `sst deploy`.
 
 ```bash
 pnpm --filter @twy/functions build
@@ -134,10 +132,6 @@ Per-component factories called from `sst.config.ts → run()`. See `infra/CLAUDE
 | `api.ts`       | ApiGatewayV2 + JWT Cognito authorizer + per-route Lambda functions         |
 | `web.ts`       | `sst.aws.Router` (multi-domain CDN) + `sst.aws.StaticSite` for the UI      |
 | `routes.ts`    | Single typed route table (`authRoutes` + `appRoutes` + `linkKeys` per route) |
-
-## Shared Packages
-
-`@twy/lambda-shared` exposes Middy wrappers (`middyfy`, `httpJwtExtractor`, `httpZodHandler`, `jsonErrorHandler`) and `toError`. Built to `dist/` via `tsc`; consumers see the typed `dist/index.js` via the `exports` field. Turbo's `dependsOn: ["^build"]` ensures it builds first.
 
 ## Environments
 

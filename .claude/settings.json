@@ -108,10 +108,8 @@
 
       "Bash(pnpm --filter @twy/db migrate)",
       "Bash(pnpm --filter @twy/db migrate:*)",
-      "Bash(pnpm --filter @twy/auth deploy:*)",
       "Bash(pnpm --filter @twy/dashboard deploy:*)",
       "Bash(pnpm --filter @twy/functions deploy:*)",
-      "Bash(pnpm --filter @twy/infra deploy:*)",
       "Bash(pnpm exec cdk deploy:*)",
       "Bash(pnpm exec cdk destroy:*)",
       "Bash(pnpm exec cdk bootstrap:*)",

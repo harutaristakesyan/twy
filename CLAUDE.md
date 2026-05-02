@@ -55,21 +55,19 @@ Run a single Vitest file: `pnpm --filter @twy/dashboard exec vitest run path/to/
 
 ## Architecture
 
-A pnpm + Turborepo workspace with three runtime packages and one shared library, deployed by a single SST app at the repo root:
+A pnpm + Turborepo workspace deployed by a single SST app at the repo root:
 
 ```
 sst.config.ts                # SST entrypoint — see app() and run()
 infra/                       # SST components, one module per concern
   domain.ts, database.ts, storage.ts, email.ts,
   auth.ts, api.ts, web.ts, routes.ts
-apps/dashboard   @twy/dashboard     React 19 + Vite SPA, deployed via sst.aws.StaticSite + sst.aws.Router
-apps/auth        @twy/auth          Cognito flow Lambdas (Middy + Zod) — handlers only, infra in infra/auth.ts
-apps/functions   @twy/functions     Domain Lambdas — handlers + contracts; consumes @twy/db for all DB access
-packages/db          @twy/db              Drizzle schema, query operations, migration runner (Aurora Data API)
-packages/lambda-shared @twy/lambda-shared  middy wrappers, error utils
+apps/dashboard       @twy/dashboard   React 19 + Vite SPA, deployed via sst.aws.StaticSite + sst.aws.Router
+packages/functions   @twy/functions   All Lambda handlers (HTTP + Cognito) + Middy middleware (src/{api,events,shared,contracts,libs,utils})
+packages/db          @twy/db          Drizzle schema, query operations, migration runner (Aurora Data API)
 ```
 
-Cross-package deps are `workspace:*`. `lambda-shared` and `db` build first (Turbo `^build`); SST handles bundling each handler with esbuild on `sst deploy`.
+Cross-package deps are `workspace:*`. `db` builds first (Turbo `^build`); SST handles bundling each handler with esbuild on `sst deploy`.
 
 ### Stages
 
@@ -80,7 +78,7 @@ Two stages are configured: `dev` (DEV_ACCOUNT_ID, dev.twy.am + dev.twy.be) and `
 Cross-component values flow through SST's `link[]` — there are no SSM parameters, no env vars, no IAM helpers in handler code. Producer side, in `infra/api.ts`:
 
 ```ts
-api.route("GET /api/user", "apps/functions/src/functions/user/get.handler", {
+api.route("GET /api/user", "packages/functions/src/api/user/get.handler", {
   auth: { jwt: { authorizer: jwt.id } },
   transform: { function: { link: [db.cluster] } },
 });
@@ -105,12 +103,12 @@ To add a new alias domain: (1) create the Route53 hosted zone in the matching AW
 
 ### Lambda runtime pattern
 
-All Lambdas wrap their handlers with helpers from `@twy/lambda-shared`:
+All Lambdas wrap their handlers with helpers from `@shared/index` (path alias inside `@twy/functions` → `packages/functions/src/shared/`):
 - `middyfy` / `httpZodHandler` / `httpJwtExtractor` — composed Middy stacks for HTTP + JWT + Zod validation.
 - `jsonErrorHandler` — converts `http-errors` and unknown throws into JSON.
 - `toError` — narrows `unknown` from catch blocks (use this; do not type catches as `any`).
 
-Handlers read configuration via `Resource.X` (the SST SDK), **not** `process.env.X` and **not** `requireEnv("X")`. The `requireEnv` helper still exists in `@twy/lambda-shared` but should not be used in new code — it's a holdover.
+Handlers read configuration via `Resource.X` (the SST SDK), **not** `process.env.X` and **not** `requireEnv("X")`. The `requireEnv` helper still exists in `@shared/index` but should not be used in new code — it's a holdover.
 
 ### DB / migrations
 

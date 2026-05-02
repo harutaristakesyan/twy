@@ -34,7 +34,7 @@ Single-source-of-truth for every AWS resource the twy app provisions. Imported l
 
 ## Adding a new HTTP route
 
-1. Author the handler in `apps/auth/src/functions/` (Cognito flows) or `apps/functions/src/functions/<domain>/` (JWT-protected business logic).
+1. Author the handler in `packages/functions/src/api/auth/` (public Cognito flows) or `packages/functions/src/api/<domain>/` (JWT-protected business logic).
 2. Append a `RouteDef` to `infra/routes.ts` — `authRoutes` for public, `appRoutes` for JWT.
 3. Set `linkKeys` to the resources the handler needs. The IAM permissions are derived; you don't write any policy.
 4. `pnpm sst deploy --stage dev` (or push and let CI deploy).

@@ -2,7 +2,7 @@
 
 ESM-only package providing the Drizzle ORM client, schema, query operations, and migration runner for the project's **Aurora Serverless v2 (Postgres)** cluster, accessed over the **RDS Data API**.
 
-> This package is at the bottom of the dependency graph (alongside `@twy/lambda-shared`). It must be built before any consumer can be bundled. Turbo's `dependsOn: ["^build"]` handles this automatically.
+> This package is at the bottom of the dependency graph. It must be built before any consumer can be bundled. Turbo's `dependsOn: ["^build"]` handles this automatically.
 
 ## Public surface (from `src/index.ts`)
 

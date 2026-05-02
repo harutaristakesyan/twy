@@ -16,15 +16,6 @@ interface CreateApiArgs {
 /**
  * ApiGatewayV2 + JWT (Cognito) authorizer + auto-wired routes.
  *
- * Replaces:
- *   - apps/infra/bin/stacks/gateway-stack.ts (HttpApi + JWT authorizer + SSM
- *     publishing of /${envName}/lambda/http-api-id and
- *     /${envName}/cognito/jwt-authorizer-id).
- *   - apps/auth/bin/{cdk,functionStack}.ts and
- *     apps/functions/bin/{cdk,functionStack}.ts (the duplicated
- *     HttpLambdaRouter + LambdaRouteDefinition + per-route NodejsFunction
- *     instantiation + manual IAM policy attachments).
- *
  * The single typed table at infra/routes.ts drives every Function and
  * api.route() call.
  */

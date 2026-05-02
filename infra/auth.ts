@@ -29,7 +29,7 @@ export function createAuth(args: { db: { cluster: sst.aws.Aurora } }) {
     },
     triggers: {
       postConfirmation: {
-        handler: "apps/functions/src/functions/postConfirmation.handler",
+        handler: "packages/functions/src/events/postConfirmation.handler",
         link: [args.db.cluster],
         permissions: [
           {

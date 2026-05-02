@@ -22,7 +22,7 @@ You execute refactors using the Tidy First / Mikado method: find a small change 
 ## Refactor patterns common in twy
 
 ### Extract a Lambda handler's logic into a pure function
-- The handler in `apps/functions/src/functions/<domain>/<verb>.ts` should stay thin: parse → call → respond.
+- The handler in `packages/functions/src/api/<domain>/<verb>.ts` should stay thin: parse → call → respond.
 - Pure logic moves to `packages/db/src/operations/<domain>Operations.ts` (or a new `libs/<domain>/` for non-DB logic).
 - Add the operation to its `operations` file as a function that imports the module-scope `db` from `../client.js` (relative inside packages/db). Tests stub the Drizzle query builder via `vi.mock("@twy/db", () => ({ db: ... }))`.
 
@@ -64,6 +64,6 @@ Each refactor session ends with:
 
 ## What you do NOT do
 
-- Don't rename public exports of `@twy/lambda-shared` without grep-ing every consumer first.
+- Don't rename public exports of `@shared/index` without grep-ing every consumer first.
 - Don't refactor and add tests in the same commit. Tests come first (or in a prior commit), refactor proves them still pass.
 - Don't restructure folder layout to match a personal preference. Match what's already there.

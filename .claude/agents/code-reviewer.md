@@ -20,9 +20,9 @@ If the diff is large (>30 files), focus on Lambda handlers, migrations, CDK stac
 
 ### 1. Correctness blockers
 - **Generated Drizzle migration files in `packages/db/drizzle/<n>_*.sql` (or `drizzle/meta/`) modified rather than added**. This is forbidden — Drizzle's migrator records applied filenames in `__drizzle_migrations`; mutating an applied migration breaks idempotency. Demand a new schema edit + `pnpm --filter @twy/db db:generate`.
-- **Catch blocks typed as `any` or untyped**. Must use `catch (err) { const e = toError(err); ... }`. `toError` is exported from `@twy/lambda-shared`.
-- **`process.env.X!` non-null assertions**. Replace with `requireEnv("X")` from `@twy/lambda-shared`. In `apps/dashboard/**` `noNonNullAssertion` is `error`; in Lambda code it is `warn` but the codebase has converged on `requireEnv`.
-- **Middy handler shape**. Handlers must be wrapped with `middyfy(handler, opts?)` from `@twy/lambda-shared`. The middleware stack already includes `jsonErrorHandler → bodyParser → httpJwtExtractor → addAwsRequestId → optional httpZodHandler`. Don't re-add these manually. If `requiresAuth` is true on the route, the handler may read `event.requestContext.authUser.userId` — flag any direct `event.headers.authorization` parsing.
+- **Catch blocks typed as `any` or untyped**. Must use `catch (err) { const e = toError(err); ... }`. `toError` is exported from `@shared/index`.
+- **`process.env.X!` non-null assertions**. Replace with `requireEnv("X")` from `@shared/index`. In `apps/dashboard/**` `noNonNullAssertion` is `error`; in Lambda code it is `warn` but the codebase has converged on `requireEnv`.
+- **Middy handler shape**. Handlers must be wrapped with `middyfy(handler, opts?)` from `@shared/index`. The middleware stack already includes `jsonErrorHandler → bodyParser → httpJwtExtractor → addAwsRequestId → optional httpZodHandler`. Don't re-add these manually. If `requiresAuth` is true on the route, the handler may read `event.requestContext.authUser.userId` — flag any direct `event.headers.authorization` parsing.
 - **Zod schema mode**. `middyfy` with `mode: "parse"` *replaces* the event with the parsed shape; `mode: "validate"` does not. Mismatched mode + downstream typing is a common silent bug — verify the handler reads the shape that was promised.
 
 ### 2. UI-specific (apps/dashboard only)
@@ -42,7 +42,7 @@ If the diff is large (>30 files), focus on Lambda handlers, migrations, CDK stac
 ### 4. CDK / infra
 - New CFN cross-stack exports are forbidden when the producing resource is mutable. Use SSM parameters (the codebase pattern for cert ARN, HTTP API ID, DB cluster ID) and `addDependency` for ordering.
 - Adding a domain: must extend `additionalDomains` in `apps/infra/bin/environments.ts`, never change `primaryDomain` (would force-replace S3 buckets and SSM paths).
-- Lambda runtime must remain Node 24, ARM64, with bundling via NodejsFunction (esbuild). `@twy/lambda-shared` must be in the bundling externalsPaths.
+- Lambda runtime must remain Node 24, ARM64, with bundling via NodejsFunction (esbuild). `@shared/index` must be in the bundling externalsPaths.
 
 ### 5. Database / migrations
 - New migrations are produced by `pnpm --filter @twy/db db:generate` from a schema diff. The filename is auto-numbered by drizzle-kit (`packages/db/drizzle/<n>_<auto>.sql`) — never hand-rename or hand-author one of these files.

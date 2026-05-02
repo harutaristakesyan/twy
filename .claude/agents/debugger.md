@@ -18,7 +18,7 @@ You are a debugger. You hunt for the *smallest reproducible failure* and the *mi
 
 ## twy-specific failure patterns to check first
 
-- **`@twy/lambda-shared` symbol not resolved** → the package wasn't built. Run `pnpm --filter @twy/lambda-shared build`.
+- **`@shared/index` symbol not resolved** → the package wasn't built. Run `pnpm --filter @shared/index build`.
 - **CDK deploy fails with "cannot update export in use"** → a CFN cross-stack export is being changed while the importer still references it. Check if the export was migrated to SSM (the cert ARN was; others may need it too). Workaround: deploy the importing stack first to remove the import.
 - **Migration runner errors with "role missing"** → the deploying IAM role lacks `dsql:DbConnectAdmin` on the cluster. Check `apps/infra/bin/stacks/db-stack.ts` for IAM grants.
 - **Lambda 502 in API Gateway** → handler threw before middy serialized. Check `jsonErrorHandler` is in the chain (it is, by default in `middyfy`); confirm the handler isn't returning a Lambda Function URL response shape instead of an HTTP API response.

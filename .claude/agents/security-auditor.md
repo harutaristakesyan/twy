@@ -20,7 +20,7 @@ You audit pending changes for security regressions. You are deeply familiar with
 
 ### 3. Authorization
 - Every domain handler must extract `userId` from `event.requestContext.authUser.userId` (populated by `httpJwtExtractor`). Verify the operation actually scopes the query by `userId` (multi-tenant safety) — Postgres has row-level security but it's not configured here, so app-side scoping is the only line of defense.
-- Look at `requiresAuth: false` routes in `functionStack.ts`: are they actually safe to be public? Login/signup/forgot-password should be the only public functions in `apps/auth`.
+- Look at `requiresAuth: false` routes in `infra/routes.ts`: are they actually safe to be public? Login/signup/forgot-password should be the only public handlers under `packages/functions/src/api/auth/`.
 - Role checks: `apps/dashboard/src/auth/RoleBasedRoute.tsx` and `apps/dashboard/src/shared/utils/permissions.ts` enforce UI-side gating. The backend MUST also enforce roles — UI gating is not a security boundary.
 
 ### 4. IAM in CDK

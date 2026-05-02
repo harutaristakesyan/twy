@@ -1,8 +1,7 @@
 /// <reference path="../.sst/platform/config.d.ts" />
 
 /**
- * Single typed route table — replaces the duplicated route definitions in
- * apps/auth/bin/functionStack.ts and apps/functions/bin/functionStack.ts.
+ * Single typed route table consumed by infra/api.ts.
  *
  * `linkKeys` names the resources from infra/api.ts that this handler needs.
  * `requiresAuth: true` attaches the Cognito JWT authorizer; `false` (or
@@ -21,149 +20,149 @@ export interface RouteDef {
   linkKeys: LinkKey[];
 }
 
-/** Public Cognito flows — apps/auth/src/functions/*.ts handlers. */
+/** Public Cognito flows — packages/functions/src/api/auth/*.ts handlers. */
 export const authRoutes: RouteDef[] = [
   {
-    handler: "apps/auth/src/functions/signUp.handler",
+    handler: "packages/functions/src/api/auth/signUp.handler",
     routeKey: "POST /api/signup",
     linkKeys: ["userPoolClient"],
   },
   {
-    handler: "apps/auth/src/functions/login.handler",
+    handler: "packages/functions/src/api/auth/login.handler",
     routeKey: "POST /api/login",
     linkKeys: ["userPoolClient"],
   },
   {
-    handler: "apps/auth/src/functions/verify.handler",
+    handler: "packages/functions/src/api/auth/verify.handler",
     routeKey: "POST /api/verify",
     linkKeys: ["userPoolClient"],
   },
   {
-    handler: "apps/auth/src/functions/resendVerificationCode.handler",
+    handler: "packages/functions/src/api/auth/resendVerificationCode.handler",
     routeKey: "POST /api/resend-code",
     linkKeys: ["userPoolClient"],
   },
   {
-    handler: "apps/auth/src/functions/forgotPassword.handler",
+    handler: "packages/functions/src/api/auth/forgotPassword.handler",
     routeKey: "POST /api/forgot-password",
     linkKeys: ["userPoolClient"],
   },
   {
-    handler: "apps/auth/src/functions/confirmForgotPassword.handler",
+    handler: "packages/functions/src/api/auth/confirmForgotPassword.handler",
     routeKey: "POST /api/create-password",
     linkKeys: ["userPoolClient"],
   },
   {
-    handler: "apps/auth/src/functions/refreshToken.handler",
+    handler: "packages/functions/src/api/auth/refreshToken.handler",
     routeKey: "POST /api/refresh-token",
     linkKeys: ["userPoolClient"],
   },
 ];
 
-/** JWT-protected domain endpoints — handlers under apps/functions/src/functions/. */
+/** JWT-protected domain endpoints — handlers under packages/functions/src/api/. */
 export const appRoutes: RouteDef[] = [
   // user
   {
-    handler: "apps/functions/src/functions/user/get.handler",
+    handler: "packages/functions/src/api/user/get.handler",
     routeKey: "GET /api/user",
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
   {
-    handler: "apps/functions/src/functions/user/self-update.handler",
+    handler: "packages/functions/src/api/user/self-update.handler",
     routeKey: "PATCH /api/user",
     requiresAuth: true,
     linkKeys: ["cluster", "userPool"],
   },
   {
-    handler: "apps/functions/src/functions/user/list.handler",
+    handler: "packages/functions/src/api/user/list.handler",
     routeKey: "GET /api/users",
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
   {
-    handler: "apps/functions/src/functions/user/update.handler",
+    handler: "packages/functions/src/api/user/update.handler",
     routeKey: "PATCH /api/users/{userId}",
     requiresAuth: true,
     linkKeys: ["cluster", "userPool"],
   },
   {
-    handler: "apps/functions/src/functions/user/delete.handler",
+    handler: "packages/functions/src/api/user/delete.handler",
     routeKey: "DELETE /api/users/{userId}",
     requiresAuth: true,
     linkKeys: ["cluster", "userPool"],
   },
   // branch
   {
-    handler: "apps/functions/src/functions/branch/list.handler",
+    handler: "packages/functions/src/api/branch/list.handler",
     routeKey: "GET /api/branches",
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
   {
-    handler: "apps/functions/src/functions/branch/create.handler",
+    handler: "packages/functions/src/api/branch/create.handler",
     routeKey: "POST /api/branches",
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
   {
-    handler: "apps/functions/src/functions/branch/update.handler",
+    handler: "packages/functions/src/api/branch/update.handler",
     routeKey: "PUT /api/branches/{branchId}",
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
   {
-    handler: "apps/functions/src/functions/branch/delete.handler",
+    handler: "packages/functions/src/api/branch/delete.handler",
     routeKey: "DELETE /api/branches/{branchId}",
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
   // file
   {
-    handler: "apps/functions/src/functions/file/upload.handler",
+    handler: "packages/functions/src/api/file/upload.handler",
     routeKey: "POST /api/files",
     requiresAuth: true,
     linkKeys: ["filesBucket"],
   },
   {
-    handler: "apps/functions/src/functions/file/delete.handler",
+    handler: "packages/functions/src/api/file/delete.handler",
     routeKey: "DELETE /api/files/{fileId}",
     requiresAuth: true,
     linkKeys: ["filesBucket"],
   },
   {
-    handler: "apps/functions/src/functions/file/download.handler",
+    handler: "packages/functions/src/api/file/download.handler",
     routeKey: "GET /api/files/{fileId}",
     requiresAuth: true,
     linkKeys: ["filesBucket"],
   },
   // load
   {
-    handler: "apps/functions/src/functions/load/create.handler",
+    handler: "packages/functions/src/api/load/create.handler",
     routeKey: "POST /api/loads",
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
   {
-    handler: "apps/functions/src/functions/load/list.handler",
+    handler: "packages/functions/src/api/load/list.handler",
     routeKey: "GET /api/loads",
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
   {
-    handler: "apps/functions/src/functions/load/update.handler",
+    handler: "packages/functions/src/api/load/update.handler",
     routeKey: "PUT /api/loads/{loadId}",
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
   {
-    handler: "apps/functions/src/functions/load/changeStatus.handler",
+    handler: "packages/functions/src/api/load/changeStatus.handler",
     routeKey: "PATCH /api/loads/{loadId}/status",
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
   {
-    handler: "apps/functions/src/functions/load/delete.handler",
+    handler: "packages/functions/src/api/load/delete.handler",
     routeKey: "DELETE /api/loads/{loadId}",
     requiresAuth: true,
     linkKeys: ["cluster"],

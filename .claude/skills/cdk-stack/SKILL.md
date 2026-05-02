@@ -26,7 +26,7 @@ description: Use when authoring or modifying an SST infrastructure module under 
 
 ```typescript
 // In infra/api.ts — producer side
-api.route("GET /api/user", "apps/functions/src/functions/user/get.handler", {
+api.route("GET /api/user", "packages/functions/src/api/user/get.handler", {
   auth: { jwt: { authorizer: jwt.id } },
   transform: {
     function: {
@@ -45,11 +45,11 @@ const userPoolId = Resource.UserPool.id;
 
 ## Adding a new HTTP route (cookbook)
 
-1. Author the handler under `apps/auth/src/functions/` (Cognito flows) or `apps/functions/src/functions/<domain>/` (JWT-protected business logic). Read configuration via `Resource.X` only.
+1. Author the handler under `packages/functions/src/api/auth/` (Cognito flows) or `packages/functions/src/api/<domain>/` (JWT-protected business logic). Read configuration via `Resource.X` only.
 2. Append a `RouteDef` to `infra/routes.ts`:
    ```ts
    {
-     handler: "apps/functions/src/functions/<domain>/<verb>.handler",
+     handler: "packages/functions/src/api/<domain>/<verb>.handler",
      routeKey: "POST /api/<domain>",
      requiresAuth: true,
      linkKeys: ["cluster"],

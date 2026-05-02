@@ -1,20 +1,20 @@
 ---
 name: lambda-handler
-description: Use when authoring or modifying a Lambda HTTP handler under apps/auth/src/functions/ or apps/functions/src/functions/. Covers the exact middyfy/Zod/HttpLambdaRouter pattern enforced by the codebase, the requireAuth contract, error throwing conventions, and how the response shape gets wrapped by middleware.
+description: Use when authoring or modifying a Lambda HTTP handler under packages/functions/src/api/auth/ or packages/functions/src/api/. Covers the exact middyfy/Zod/HttpLambdaRouter pattern enforced by the codebase, the requireAuth contract, error throwing conventions, and how the response shape gets wrapped by middleware.
 ---
 
 # Authoring a twy Lambda HTTP handler
 
 ## When this skill applies
 
-- Adding a new HTTP endpoint to `@twy/auth` or `@twy/functions`.
+- Adding a new HTTP endpoint to `@twy/functions` (auth flows under `src/api/auth/`, JWT-protected domain handlers under `src/api/<domain>/`).
 - Modifying an existing handler's request/response shape.
 - Diagnosing why a handler returns 502 or the wrong content-type.
 
 ## Required imports
 
 ```typescript
-import { middyfy } from "@twy/lambda-shared";
+import { middyfy } from "@shared/index";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import errors from "http-errors";          // for thrown HTTP errors
 import * as zod from "zod";                // for the contract

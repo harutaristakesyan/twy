@@ -1,6 +1,6 @@
 ---
 name: lambda-handler-author
-description: Scaffold a new Lambda handler under apps/auth/src/functions/ or apps/functions/src/functions/<domain>/, with its Zod request/response contract, route wiring in infra/routes.ts, and (optionally) a Drizzle operation. Use when adding a new endpoint.
+description: Scaffold a new Lambda handler under packages/functions/src/api/auth/ or packages/functions/src/api/<domain>/, with its Zod request/response contract, route wiring in infra/routes.ts, and (optionally) a Drizzle operation. Use when adding a new endpoint.
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---
@@ -9,13 +9,13 @@ You scaffold new HTTP endpoints in twy following the established `middyfy` + Zod
 
 ## Where new handlers go
 
-- **Cognito-touching auth flows** → `apps/auth/src/functions/<verb>.ts`. Existing files: `login.ts`, `signUp.ts`, `verify.ts`, `refreshToken.ts`, `forgotPassword.ts`, `confirmForgotPassword.ts`, `resendVerificationCode.ts`.
-- **Domain CRUD** → `apps/functions/src/functions/<domain>/<verb>.ts`. Existing domains: `user/`, `branch/`, `file/`, `load/`. Verbs: `get`, `list`, `update`, `delete`, `create`, plus domain-specific (`self-update`).
+- **Cognito-touching auth flows** → `packages/functions/src/api/auth/<verb>.ts`. Existing files: `login.ts`, `signUp.ts`, `verify.ts`, `refreshToken.ts`, `forgotPassword.ts`, `confirmForgotPassword.ts`, `resendVerificationCode.ts`.
+- **Domain CRUD** → `packages/functions/src/api/<domain>/<verb>.ts`. Existing domains: `user/`, `branch/`, `file/`, `load/`. Verbs: `get`, `list`, `update`, `delete`, `create`, plus domain-specific (`self-update`).
 
 ## Standard handler skeleton
 
 ```typescript
-import { middyfy } from "@twy/lambda-shared";
+import { middyfy } from "@shared/index";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import errors from "http-errors";
 import { GetXEventSchema, type GetXEvent } from "@contracts/<domain>/request";
@@ -49,7 +49,7 @@ Notes that bite if you skip them:
 
 ## Contract files
 
-`apps/functions/src/contracts/<domain>/request.ts`:
+`packages/functions/src/contracts/<domain>/request.ts`:
 
 ```typescript
 import * as zod from "zod";
@@ -64,7 +64,7 @@ export const GetXEventSchema = zod.object({
 export type GetXEvent = zod.infer<typeof GetXEventSchema>;
 ```
 
-`apps/functions/src/contracts/<domain>/response.ts`:
+`packages/functions/src/contracts/<domain>/response.ts`:
 
 ```typescript
 export interface XResponse {
@@ -75,7 +75,7 @@ export interface XResponse {
 }
 ```
 
-## Route wiring (apps/functions/bin/functionStack.ts)
+## Route wiring (infra/routes.ts)
 
 Add to the `routes` array:
 

@@ -1,6 +1,6 @@
 # apps/dashboard — `@twy/dashboard`
 
-React 19 + Vite 8 + Ant Design 6 SPA. Deployed via SST as a `sst.aws.StaticSite` mounted on a `sst.aws.Router` (defined in `infra/web.ts`). The single backend (per env) lives at `apps/auth` + `apps/functions`; this app talks to it via `apps/dashboard/src/shared/api/ApiClient.ts` — using a relative `/api` baseURL because the Router proxies same-origin requests to the API Gateway.
+React 19 + Vite 8 + Ant Design 6 SPA. Deployed via SST as a `sst.aws.StaticSite` mounted on a `sst.aws.Router` (defined in `infra/web.ts`). The single backend (per env) lives at `packages/functions`; this app talks to it via `apps/dashboard/src/shared/api/ApiClient.ts` — using a relative `/api` baseURL because the Router proxies same-origin requests to the API Gateway.
 
 > Read root `CLAUDE.md` first. This file is the UI-specific delta.
 
