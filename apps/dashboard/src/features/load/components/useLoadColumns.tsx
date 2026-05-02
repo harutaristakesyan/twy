@@ -177,7 +177,7 @@ export function useLoadColumns(
               onClick={() => openStatusUpdate({ load: record }, () => refresh())}
               style={{ padding: "4px 8px", whiteSpace: "nowrap" }}
             >
-              Status
+              Update Status Approval
             </Button>
             <Button
               type="link"

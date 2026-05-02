@@ -23,6 +23,8 @@ export interface Load {
   carrierPaymentMethod?: string | null;
   carrierRate?: number | null;
   chargeServiceFeeToOffice: boolean;
+  isChargable: boolean;
+  chargeAmount?: number | null;
   loadType: string;
   serviceType: string;
   serviceGivenAs: string;
@@ -67,6 +69,8 @@ export type UpdateLoadDto = Partial<CreateLoadDto>;
 
 export interface ChangeLoadStatusDto {
   status: LoadStatus;
+  isChargable: boolean;
+  chargeAmount?: number | null;
 }
 
 export interface GetLoadsParams {

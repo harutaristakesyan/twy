@@ -19,6 +19,8 @@ export interface LoadResponse {
   carrierPaymentMethod: string | null;
   carrierRate: number;
   chargeServiceFeeToOffice: boolean;
+  isChargable: boolean;
+  chargeAmount: number | null;
   loadType: string;
   serviceType: string;
   serviceGivenAs: string;

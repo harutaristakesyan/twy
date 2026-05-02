@@ -1,4 +1,4 @@
-import { App, Button, Modal, Select, Space } from "antd";
+import { App, Button, Checkbox, InputNumber, Modal, Select, Space } from "antd";
 import React, { useState } from "react";
 import { loadApi } from "@/features/load/api/loadApi";
 import type { Load, LoadStatus } from "@/features/load/types/load";
@@ -22,28 +22,45 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
   const { message: antMessage } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<LoadStatus | null>(null);
+  const [isChargable, setIsChargable] = useState(false);
+  const [chargeAmount, setChargeAmount] = useState<number | null>(null);
 
-  // Reset selected status when modal opens/closes or load changes
   React.useEffect(() => {
     if (open && load) {
       setSelectedStatus(load.status);
+      setIsChargable(load.isChargable ?? false);
+      setChargeAmount(load.chargeAmount ?? null);
     } else {
       setSelectedStatus(null);
+      setIsChargable(false);
+      setChargeAmount(null);
     }
   }, [open, load]);
 
   const handleSubmit = async () => {
     if (!load || !selectedStatus) return;
 
-    // Don't submit if status hasn't changed
-    if (selectedStatus === load.status) {
+    if (
+      selectedStatus === load.status &&
+      isChargable === load.isChargable &&
+      chargeAmount === (load.chargeAmount ?? null)
+    ) {
       onCancel();
+      return;
+    }
+
+    if (isChargable && (chargeAmount === null || chargeAmount <= 0)) {
+      antMessage.error("Please enter a valid charge amount");
       return;
     }
 
     setLoading(true);
     try {
-      await loadApi.changeStatus(load.id, { status: selectedStatus });
+      await loadApi.changeStatus(load.id, {
+        status: selectedStatus,
+        isChargable,
+        chargeAmount: isChargable ? chargeAmount : null,
+      });
       antMessage.success("Load status updated successfully");
       onSuccess();
     } catch (error) {
@@ -56,6 +73,8 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
 
   const handleCancel = () => {
     setSelectedStatus(null);
+    setIsChargable(false);
+    setChargeAmount(null);
     onCancel();
   };
 
@@ -72,18 +91,13 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
 
   return (
     <Modal
-      title="Update Load Status"
+      title="Update Status Approval"
       open={open}
       onCancel={handleCancel}
       footer={
         <Space>
           <Button onClick={handleCancel}>Cancel</Button>
-          <Button
-            type="primary"
-            onClick={handleSubmit}
-            loading={loading}
-            disabled={selectedStatus === load.status}
-          >
+          <Button type="primary" onClick={handleSubmit} loading={loading}>
             Update Status
           </Button>
         </Space>
@@ -110,7 +124,7 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
             </span>
           </span>
         </div>
-        <div>
+        <div style={{ marginBottom: 16 }}>
           <strong style={{ display: "block", marginBottom: 8 }}>New Status:</strong>
           <Select
             value={selectedStatus}
@@ -129,6 +143,32 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
             </Option>
           </Select>
         </div>
+        <div style={{ marginBottom: isChargable ? 16 : 0 }}>
+          <Checkbox
+            checked={isChargable}
+            onChange={(e) => {
+              setIsChargable(e.target.checked);
+              if (!e.target.checked) setChargeAmount(null);
+            }}
+          >
+            <strong>Is Chargable</strong>
+          </Checkbox>
+        </div>
+        {isChargable && (
+          <div>
+            <strong style={{ display: "block", marginBottom: 8 }}>Charge Amount:</strong>
+            <InputNumber
+              value={chargeAmount}
+              onChange={setChargeAmount}
+              min={0}
+              precision={2}
+              prefix="$"
+              style={{ width: "100%" }}
+              size="large"
+              placeholder="Enter charge amount"
+            />
+          </div>
+        )}
       </div>
     </Modal>
   );

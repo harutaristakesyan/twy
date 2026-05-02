@@ -109,6 +109,8 @@ export const ChangeLoadStatusEventSchema = z.object({
   }),
   body: z.object({
     status: loadStatusEnum,
+    isChargable: z.boolean().optional().default(false),
+    chargeAmount: z.number().nonnegative().nullable().optional(),
   }),
 });
 

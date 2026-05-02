@@ -46,6 +46,8 @@ export interface LoadRecord {
   carrierPaymentMethod: string | null;
   carrierRate: number;
   chargeServiceFeeToOffice: boolean;
+  isChargable: boolean;
+  chargeAmount: number | null;
   loadType: string;
   serviceType: string;
   serviceGivenAs: string;
@@ -202,6 +204,8 @@ const mapLoadRow = (row: LoadRow, files: LoadFileRecord[]): LoadRecord => ({
   carrierPaymentMethod: row.carrierPaymentMethod ?? null,
   carrierRate: Number(row.carrierRate),
   chargeServiceFeeToOffice: Boolean(row.chargeServiceFeeToOffice),
+  isChargable: Boolean(row.isChargable),
+  chargeAmount: numericToNumber(row.chargeAmount),
   loadType: row.loadType,
   serviceType: row.serviceType,
   serviceGivenAs: row.serviceGivenAs,
@@ -425,12 +429,20 @@ export const changeLoadStatus = async (
   loadId: string,
   status: LoadStatus,
   changedBy: string,
+  isChargable: boolean,
+  chargeAmount: number | null,
 ): Promise<{ updated: boolean; statusChangedByEmail: string | null }> =>
   db.transaction(async (tx) => {
     const [updateResult, userRow] = await Promise.all([
       tx
         .update(load)
-        .set({ status, statusChangedBy: changedBy, updatedAt: new Date() })
+        .set({
+          status,
+          statusChangedBy: changedBy,
+          isChargable,
+          chargeAmount: isChargable && chargeAmount != null ? chargeAmount.toString() : null,
+          updatedAt: new Date(),
+        })
         .where(eq(load.id, loadId))
         .returning({ id: load.id }),
       tx.select({ email: users.email }).from(users).where(eq(users.id, changedBy)),

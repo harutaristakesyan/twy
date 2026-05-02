@@ -26,6 +26,8 @@ export const load = pgTable("load", {
   carrierPaymentMethod: text(),
   carrierRate: numeric({ precision: 10, scale: 2 }).notNull(),
   chargeServiceFeeToOffice: boolean().default(false),
+  isChargable: boolean().notNull().default(false),
+  chargeAmount: numeric({ precision: 10, scale: 2 }),
 
   loadType: text().notNull(),
   serviceType: text().notNull(),
