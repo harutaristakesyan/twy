@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { type BranchRow, branch, db, type OrderDirection, Roles, users } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, ne, or } from "drizzle-orm";
 import createError from "http-errors";
-import { db } from "../client.js";
-import { type BranchRow, branch, type OrderDirection, Roles, users } from "../schema/index.js";
 
 export interface BranchOwnerRecord {
   id: string;

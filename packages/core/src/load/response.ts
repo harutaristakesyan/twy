@@ -1,5 +1,5 @@
-import type { MessageResponse } from "@contracts/common/response";
 import type { LoadStatus } from "@twy/db";
+import type { MessageResponse } from "../shared/response.js";
 
 export interface LoadLocationResponse {
   cityZipCode: string | null;

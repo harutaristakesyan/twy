@@ -1,6 +1,6 @@
-import { AuthContext } from "@contracts/common/auth";
 import { Roles } from "@twy/db";
 import z from "zod";
+import { AuthContext } from "../shared/auth.js";
 
 export const GetUserEventSchema = z.object({
   requestContext: AuthContext,

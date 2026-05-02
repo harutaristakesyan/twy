@@ -1,7 +1,10 @@
-import type { MessageResponse } from "@contracts/common/response";
-import { type DeleteLoadEvent, DeleteLoadEventSchema } from "@contracts/load/request";
 import { middyfy } from "@shared/index";
-import { deleteLoad as deleteLoadRecord } from "@twy/db";
+import type { MessageResponse } from "@twy/core";
+import {
+  type DeleteLoadEvent,
+  DeleteLoadEventSchema,
+  deleteLoad as deleteLoadRecord,
+} from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
 

@@ -1,7 +1,10 @@
-import { type UpdateBranchEvent, UpdateBranchEventSchema } from "@contracts/branch/request";
-import type { MessageResponse } from "@contracts/common/response";
 import { middyfy } from "@shared/index";
-import { updateBranch as updateBranchRecord } from "@twy/db";
+import type { MessageResponse } from "@twy/core";
+import {
+  type UpdateBranchEvent,
+  UpdateBranchEventSchema,
+  updateBranch as updateBranchRecord,
+} from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
 const updateBranch = async (event: UpdateBranchEvent): Promise<MessageResponse> => {

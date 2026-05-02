@@ -1,7 +1,10 @@
-import type { MessageResponse } from "@contracts/common/response";
-import { type DeleteFileEvent, DeleteFileEventSchema } from "@contracts/file/request";
-import { deleteFile as deleteFromStorage } from "@libs/s3";
 import { middyfy } from "@shared/index";
+import type { MessageResponse } from "@twy/core";
+import {
+  type DeleteFileEvent,
+  DeleteFileEventSchema,
+  deleteFile as deleteFromStorage,
+} from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
 const deleteFile = async (event: DeleteFileEvent): Promise<MessageResponse> => {

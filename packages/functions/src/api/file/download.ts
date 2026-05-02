@@ -1,7 +1,6 @@
-import { type GetDownloadUrlEvent, GetDownloadUrlEventSchema } from "@contracts/file/request";
-import type { DownloadFileResponse } from "@contracts/file/response";
-import { createDownloadUrl } from "@libs/s3";
 import { middyfy } from "@shared/index";
+import type { DownloadFileResponse } from "@twy/core";
+import { createDownloadUrl, type GetDownloadUrlEvent, GetDownloadUrlEventSchema } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
 const getDownloadUrl = async (event: GetDownloadUrlEvent): Promise<DownloadFileResponse> => {

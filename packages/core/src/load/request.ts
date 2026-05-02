@@ -1,6 +1,6 @@
-import { AuthContext } from "@contracts/common/auth";
 import { loadStatusValues } from "@twy/db";
 import z from "zod";
+import { AuthContext } from "../shared/auth.js";
 
 const loadStatusEnum = z.enum([...loadStatusValues] as [
   (typeof loadStatusValues)[number],

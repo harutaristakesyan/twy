@@ -1,5 +1,5 @@
-import { AuthContext } from "@contracts/common/auth";
 import z from "zod";
+import { AuthContext } from "../shared/auth.js";
 
 const UploadFilePayloadSchema = z.object({
   fileName: z.string().trim().min(1, "fileName is required"),

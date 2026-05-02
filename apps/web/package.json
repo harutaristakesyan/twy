@@ -1,0 +1,7 @@
+{
+  "name": "@twy/web",
+  "version": "0.0.0",
+  "description": "Marketing site (Astro) — placeholder, not yet wired into SST",
+  "private": true,
+  "type": "module"
+}

@@ -1,7 +1,6 @@
-import { type UploadFileEvent, UploadFileEventSchema } from "@contracts/file/request";
-import type { UploadFileResponse } from "@contracts/file/response";
-import { createUploadUrl } from "@libs/s3";
 import { middyfy } from "@shared/index";
+import type { UploadFileResponse } from "@twy/core";
+import { createUploadUrl, type UploadFileEvent, UploadFileEventSchema } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
 const uploadFile = async (event: UploadFileEvent): Promise<UploadFileResponse> => {

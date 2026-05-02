@@ -1,7 +1,12 @@
-import { type CreateLoadEvent, CreateLoadEventSchema } from "@contracts/load/request";
-import type { CreateLoadResponse } from "@contracts/load/response";
 import { middyfy } from "@shared/index";
-import { createLoad as createLoadRecord, getFullUserInfoById, type LoadFileInput } from "@twy/db";
+import type { CreateLoadResponse } from "@twy/core";
+import {
+  type CreateLoadEvent,
+  CreateLoadEventSchema,
+  createLoad as createLoadRecord,
+  getFullUserInfoById,
+  type LoadFileInput,
+} from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
 
@@ -42,7 +47,7 @@ const createLoad = async (event: CreateLoadEvent): Promise<CreateLoadResponse> =
 
   const branchId = user.branch.id;
 
-  const normalizedFiles: LoadFileInput[] | undefined = files?.map((file) => ({
+  const normalizedFiles: LoadFileInput[] | undefined = files?.map((file: LoadFileInput) => ({
     id: file.id,
     fileName: file.fileName,
   }));

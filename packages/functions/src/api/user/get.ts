@@ -1,7 +1,6 @@
-import { type GetUserEvent, GetUserEventSchema } from "@contracts/user/request";
-import type { UserResponse } from "@contracts/user/response";
 import { middyfy } from "@shared/index";
-import { getFullUserInfoById } from "@twy/db";
+import type { UserResponse } from "@twy/core";
+import { type GetUserEvent, GetUserEventSchema, getFullUserInfoById } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
 const getUserInfo = async (event: GetUserEvent): Promise<UserResponse> => {

@@ -1,7 +1,6 @@
-import { type ListUsersEvent, ListUsersEventSchema } from "@contracts/user/request";
-import type { UserListResponse } from "@contracts/user/response";
 import { middyfy } from "@shared/index";
-import { listUsers as listUserRecords } from "@twy/db";
+import type { UserListResponse } from "@twy/core";
+import { type ListUsersEvent, ListUsersEventSchema, listUsers as listUserRecords } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
 const listUsers = async (event: ListUsersEvent): Promise<UserListResponse> => {

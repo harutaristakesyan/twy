@@ -2,10 +2,13 @@ import {
   AdminDeleteUserCommand,
   CognitoIdentityProviderClient,
 } from "@aws-sdk/client-cognito-identity-provider";
-import type { MessageResponse } from "@contracts/common/response";
-import { type DeleteUserEvent, DeleteUserEventSchema } from "@contracts/user/request";
 import { middyfy } from "@shared/index";
-import { deleteUser as deleteUserRecord } from "@twy/db";
+import type { MessageResponse } from "@twy/core";
+import {
+  type DeleteUserEvent,
+  DeleteUserEventSchema,
+  deleteUser as deleteUserRecord,
+} from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
 import { Resource } from "sst";

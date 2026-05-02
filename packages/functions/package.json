@@ -20,6 +20,7 @@
     "@middy/http-error-handler": "^7.3.3",
     "@middy/http-event-normalizer": "^7.3.3",
     "@middy/http-json-body-parser": "^7.3.3",
+    "@twy/core": "workspace:*",
     "@twy/db": "workspace:*",
     "axios": "^1.15.2",
     "http-errors": "^2.0.0",

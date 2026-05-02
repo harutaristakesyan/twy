@@ -2,7 +2,7 @@ import {
   AdminDisableUserCommand,
   CognitoIdentityProviderClient,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { createUser } from "@twy/db";
+import { createUser } from "@twy/core";
 import type { PostConfirmationTriggerHandler } from "aws-lambda/trigger/cognito-user-pool-trigger/post-confirmation";
 
 const cognitoClient = new CognitoIdentityProviderClient({});

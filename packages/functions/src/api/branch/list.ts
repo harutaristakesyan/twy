@@ -1,7 +1,10 @@
-import { type ListBranchesEvent, ListBranchesEventSchema } from "@contracts/branch/request";
-import type { BranchListResponse } from "@contracts/branch/response";
 import { middyfy } from "@shared/index";
-import { listBranches as listBranchRecords } from "@twy/db";
+import type { BranchListResponse } from "@twy/core";
+import {
+  type ListBranchesEvent,
+  ListBranchesEventSchema,
+  listBranches as listBranchRecords,
+} from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
 const listBranches = async (event: ListBranchesEvent): Promise<BranchListResponse> => {

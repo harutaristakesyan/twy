@@ -1,7 +1,6 @@
-import { type ListLoadsEvent, ListLoadsEventSchema } from "@contracts/load/request";
-import type { LoadListResponse } from "@contracts/load/response";
 import { middyfy } from "@shared/index";
-import { listLoads as listLoadRecords } from "@twy/db";
+import type { LoadListResponse } from "@twy/core";
+import { type ListLoadsEvent, ListLoadsEventSchema, listLoads as listLoadRecords } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
 const listLoads = async (event: ListLoadsEvent): Promise<LoadListResponse> => {

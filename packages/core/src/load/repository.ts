@@ -1,9 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
-import createError from "http-errors";
-import { db } from "../client.js";
 import {
   branch,
+  db,
   file,
   type LoadRow,
   type LoadStatus,
@@ -11,7 +9,9 @@ import {
   loadFiles,
   type OrderDirection,
   users,
-} from "../schema/index.js";
+} from "@twy/db";
+import { asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import createError from "http-errors";
 
 const DEFAULT_LOAD_STATUS: LoadStatus = "Pending";
 

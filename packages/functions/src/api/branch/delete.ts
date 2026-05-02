@@ -1,7 +1,10 @@
-import { type DeleteBranchEvent, DeleteBranchEventSchema } from "@contracts/branch/request";
-import type { MessageResponse } from "@contracts/common/response";
 import { middyfy } from "@shared/index";
-import { deleteBranch as deleteBranchRecord } from "@twy/db";
+import type { MessageResponse } from "@twy/core";
+import {
+  type DeleteBranchEvent,
+  DeleteBranchEventSchema,
+  deleteBranch as deleteBranchRecord,
+} from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
 

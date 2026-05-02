@@ -1,7 +1,12 @@
-import type { MessageResponse } from "@contracts/common/response";
-import { type UpdateLoadEvent, UpdateLoadEventSchema } from "@contracts/load/request";
 import { middyfy } from "@shared/index";
-import { type UpdateLoad, updateLoad as updateLoadRecord } from "@twy/db";
+import type { MessageResponse } from "@twy/core";
+import {
+  type LoadFileInput,
+  type UpdateLoad,
+  type UpdateLoadEvent,
+  UpdateLoadEventSchema,
+  updateLoad as updateLoadRecord,
+} from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
 
@@ -12,7 +17,7 @@ const updateLoad = async (event: UpdateLoadEvent): Promise<MessageResponse> => {
   const payload: UpdateLoad = { ...rest };
 
   if (typeof files !== "undefined") {
-    payload.files = files?.map((file) => ({
+    payload.files = files?.map((file: LoadFileInput) => ({
       id: file.id,
       fileName: file.fileName,
     }));

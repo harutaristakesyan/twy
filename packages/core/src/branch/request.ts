@@ -1,5 +1,5 @@
-import { AuthContext } from "@contracts/common/auth";
 import z from "zod";
+import { AuthContext } from "../shared/auth.js";
 
 const BranchBaseSchema = z.object({
   name: z.string().trim().min(1, "Branch name is required"),
