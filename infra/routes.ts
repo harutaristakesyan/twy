@@ -57,6 +57,11 @@ export const authRoutes: RouteDef[] = [
     routeKey: "POST /api/refresh-token",
     linkKeys: ["userPoolClient"],
   },
+  {
+    handler: "packages/functions/src/api/auth/respondToChallenge.handler",
+    routeKey: "POST /api/respond-to-challenge",
+    linkKeys: ["userPoolClient"],
+  },
 ];
 
 /** JWT-protected domain endpoints — handlers under packages/functions/src/api/. */
@@ -79,6 +84,12 @@ export const appRoutes: RouteDef[] = [
     routeKey: "GET /api/users",
     requiresAuth: true,
     linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/user/create.handler",
+    routeKey: "POST /api/users",
+    requiresAuth: true,
+    linkKeys: ["cluster", "userPool"],
   },
   {
     handler: "packages/functions/src/api/user/update.handler",

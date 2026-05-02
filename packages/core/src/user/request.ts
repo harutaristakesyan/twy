@@ -111,3 +111,19 @@ export const SelfUpdateUserEventSchema = z.object({
 });
 
 export type SelfUpdateUserEvent = z.infer<typeof SelfUpdateUserEventSchema>;
+
+const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+export const CreateUserEventSchema = z.object({
+  requestContext: AuthContext,
+  body: z.object({
+    email: z.string().email("Must be a valid email"),
+    firstName: z.string().trim().min(1, "First name is required"),
+    lastName: z.string().trim().min(1, "Last name is required"),
+    role: z.enum(Roles),
+    branch: z.string().regex(UUID_REGEX, "branch must be a valid UUID").nullable().optional(),
+    isActive: z.boolean(),
+  }),
+});
+
+export type CreateUserEvent = z.infer<typeof CreateUserEventSchema>;

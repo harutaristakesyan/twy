@@ -1,20 +1,21 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import AppLayout from "@/app/layouts/Layout.tsx";
-import ProtectedRoute from "@/auth/ProtectedRoute";
-import RoleBasedRoute from "@/auth/RoleBasedRoute";
-import BranchesPage from "@/pages/BranchesPage";
-import CreateLoadPage from "@/pages/CreateLoadPage";
-import CreatePasswordPage from "@/pages/CreatePasswordPage";
-import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
-import LoadsPage from "@/pages/LoadsPage";
-import LoginPage from "@/pages/LoginPage";
-import OutsideBrokersPage from "@/pages/OutsideBrokersPage";
-import OutsideCarriersPage from "@/pages/OutsideCarriersPage";
-import ProfilePage from "@/pages/ProfilePage";
-import RegistrationPage from "@/pages/RegistrationPage";
-import UsersPage from "@/pages/UsersPage.tsx";
-import VerificationPage from "@/pages/VerificationPage";
-import { MenuFeature } from "@/shared/utils/permissions";
+import CreatePasswordPage from "@/features/auth/pages/CreatePasswordPage";
+import ForgotPasswordPage from "@/features/auth/pages/ForgotPasswordPage";
+import LoginPage from "@/features/auth/pages/LoginPage";
+import RegistrationPage from "@/features/auth/pages/RegistrationPage";
+import SetPasswordPage from "@/features/auth/pages/SetPasswordPage";
+import VerificationPage from "@/features/auth/pages/VerificationPage";
+import BranchesPage from "@/features/branch/pages/BranchesPage";
+import CreateLoadPage from "@/features/load/pages/CreateLoadPage";
+import LoadsPage from "@/features/load/pages/LoadsPage";
+import OutsideBrokersPage from "@/features/outside-broker/pages/OutsideBrokersPage";
+import OutsideCarriersPage from "@/features/outside-carrier/pages/OutsideCarriersPage";
+import ProfilePage from "@/features/user/pages/ProfilePage";
+import UsersPage from "@/features/user/pages/UsersPage";
+import AppLayout from "@/layouts/AppLayout.tsx";
+import ProtectedRoute from "@/routes/ProtectedRoute";
+import RoleBasedRoute from "@/routes/RoleBasedRoute";
+import { MenuFeature } from "@/utils/permissions";
 
 const NotFound = () => <div>Not Found</div>;
 
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/verification", element: <VerificationPage /> },
   { path: "/create-password", element: <CreatePasswordPage /> },
+  { path: "/set-password", element: <SetPasswordPage /> },
   { path: "/register", element: <RegistrationPage /> },
 
   {

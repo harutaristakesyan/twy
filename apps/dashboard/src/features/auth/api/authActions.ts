@@ -1,5 +1,5 @@
-import ApiClient from "@/shared/api/ApiClient.ts";
-import type { ApiResponse } from "@/shared/api/types.ts";
+import ApiClient from "@/libs/ApiClient.ts";
+import type { ApiResponse } from "@/libs/api-types.ts";
 import {
   type AuthMethod,
   clearAuthMethod,
@@ -8,17 +8,26 @@ import {
   setAuthMethod,
   setIdToken,
   setRefreshToken,
-} from "@/shared/utils/jwt";
+} from "@/utils/jwt";
 
-export const login = async (email: string, password: string) => {
-  const res = await ApiClient.post<
-    ApiResponse<{
-      accessToken: string;
-      idToken: string;
-      refreshToken: string;
-    }>
-  >("/login", { email, password }, true);
+type LoginApiResponse =
+  | { accessToken: string; idToken: string; refreshToken: string }
+  | { challengeName: "NEW_PASSWORD_REQUIRED"; session: string; email: string };
+
+export const login = async (
+  email: string,
+  password: string,
+): Promise<
+  { challengeName: "NEW_PASSWORD_REQUIRED"; session: string; email: string } | undefined
+> => {
+  const res = await ApiClient.post<ApiResponse<LoginApiResponse>>(
+    "/login",
+    { email, password },
+    true,
+  );
+  if ("challengeName" in res.data) return res.data;
   applyLogin(res.data, "local");
+  return undefined;
 };
 
 export const logout = async () => {
@@ -27,7 +36,7 @@ export const logout = async () => {
   window.location.href = "/";
 };
 
-const applyLogin = (
+export const applyLogin = (
   authData: { accessToken: string; refreshToken: string; idToken: string },
   method: AuthMethod,
 ) => {

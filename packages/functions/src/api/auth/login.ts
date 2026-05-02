@@ -16,11 +16,9 @@ const EventSchema = zod.object({
 
 type EventSchema = zod.infer<typeof EventSchema>;
 
-interface LoginResponse {
-  accessToken: string;
-  idToken: string;
-  refreshToken: string;
-}
+type LoginResponse =
+  | { accessToken: string; idToken: string; refreshToken: string }
+  | { challengeName: "NEW_PASSWORD_REQUIRED"; session: string; email: string };
 
 const userPoolClientId = Resource.UserPoolClient.id;
 
@@ -40,6 +38,10 @@ const loginHandler = async (event: EventSchema): Promise<LoginResponse> => {
         },
       }),
     );
+
+    if (result.ChallengeName === "NEW_PASSWORD_REQUIRED") {
+      return { challengeName: "NEW_PASSWORD_REQUIRED", session: result.Session ?? "", email };
+    }
 
     const auth = result.AuthenticationResult;
 

@@ -4,7 +4,7 @@ import { useRequest } from "ahooks";
 import { Button, Col, Divider, Form, Input, Row } from "antd";
 import { useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/auth/AuthContext";
+import { useAuth } from "@/providers/AuthProvider";
 
 const LoginForm = () => {
   const { login } = useAuth();
@@ -15,7 +15,11 @@ const LoginForm = () => {
 
   const loginRequest = useCallback(
     async (values: { email: string; password: string }) => {
-      await login(values.email, values.password);
+      const challenge = await login(values.email, values.password);
+      if (challenge?.challengeName === "NEW_PASSWORD_REQUIRED") {
+        navigate("/set-password", { state: challenge });
+        return;
+      }
       navigate(from, { replace: true });
     },
     [navigate, from, login],
