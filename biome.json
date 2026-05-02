@@ -13,6 +13,7 @@
       "!**/dist",
       "!**/build",
       "!**/.turbo",
+      "!**/.sst",
       "!**/cdk.out",
       "!**/.cdk.staging",
       "!**/node_modules",
@@ -102,7 +103,7 @@
   },
   "overrides": [
     {
-      "includes": ["apps/ui/**/*.{ts,tsx,js,jsx}"],
+      "includes": ["apps/dashboard/**/*.{ts,tsx,js,jsx}"],
       "linter": {
         "rules": {
           "correctness": {
@@ -121,28 +122,11 @@
       }
     },
     {
-      "includes": ["apps/auth/bin/**", "apps/infra/bin/**", "apps/functions/bin/**"],
+      "includes": ["sst.config.ts", "infra/**"],
       "linter": {
         "rules": {
-          "suspicious": { "noConsole": "off" },
-          "style": { "noNonNullAssertion": "off" }
-        }
-      }
-    },
-    {
-      "includes": ["apps/infra/bin/stacks/cloudfront-rewrite-function.js"],
-      "linter": {
-        "rules": {
-          "correctness": {
-            "noInnerDeclarations": "off",
-            "noUnusedVariables": "off"
-          },
-          "style": {
-            "useConst": "off",
-            "useTemplate": "off"
-          },
-          "suspicious": { "noVar": "off" },
-          "complexity": { "useOptionalChain": "off" }
+          "suspicious": { "noConsole": "off", "noExplicitAny": "off" },
+          "style": { "noNonNullAssertion": "off", "noDefaultExport": "off" }
         }
       }
     },
@@ -179,6 +163,27 @@
           },
           "suspicious": {
             "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/**/*.astro"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedVariables": "off",
+            "noUnusedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/**/*.css"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnknownAtRules": "off"
           }
         }
       }

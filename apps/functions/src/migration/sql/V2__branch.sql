@@ -1,9 +1,0 @@
--- Create table: branch
-CREATE TABLE IF NOT EXISTS branch
-(
-    id uuid PRIMARY KEY,
-    name text UNIQUE NOT NULL,
-    contact text,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
-);

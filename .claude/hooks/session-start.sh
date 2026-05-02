@@ -15,11 +15,11 @@ echo "branch:  $(git branch --show-current 2>/dev/null || echo '(detached)')"
 echo "head:    $(git log -1 --format='%h %s' 2>/dev/null | head -c 120)"
 echo "status:  $(git status --porcelain 2>/dev/null | wc -l | tr -d ' ') uncommitted files"
 
-# Pending migrations — count V*__*.sql files vs the latest one mentioned in recent migration_log work.
-MIG_DIR="apps/functions/src/migration/sql"
+# Pending migrations — count [0-9]*_*.sql files vs the latest one mentioned in recent migration_log work.
+MIG_DIR="packages/db/drizzle"
 if [ -d "$MIG_DIR" ]; then
-  MIG_COUNT=$(find "$MIG_DIR" -name 'V*__*.sql' 2>/dev/null | wc -l | tr -d ' ')
-  LATEST_MIG=$(find "$MIG_DIR" -name 'V*__*.sql' 2>/dev/null | sort | tail -1 | xargs -I{} basename {})
+  MIG_COUNT=$(find "$MIG_DIR" -name '[0-9]*_*.sql' 2>/dev/null | wc -l | tr -d ' ')
+  LATEST_MIG=$(find "$MIG_DIR" -name '[0-9]*_*.sql' 2>/dev/null | sort | tail -1 | xargs -I{} basename {})
   echo "migrations: $MIG_COUNT files, latest=$LATEST_MIG"
 fi
 

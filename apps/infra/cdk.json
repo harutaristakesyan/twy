@@ -1,6 +1,0 @@
-{
-  "app": "pnpm exec ts-node -r tsconfig-paths/register bin/deploy.ts",
-  "context": {
-    "env": "dev"
-  }
-}

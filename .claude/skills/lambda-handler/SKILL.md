@@ -1,20 +1,20 @@
 ---
 name: lambda-handler
-description: Use when authoring or modifying a Lambda HTTP handler under apps/auth/src/functions/ or apps/functions/src/functions/. Covers the exact middyfy/Zod/HttpLambdaRouter pattern enforced by the codebase, the requireAuth contract, error throwing conventions, and how the response shape gets wrapped by middleware.
+description: Use when authoring or modifying a Lambda HTTP handler under packages/functions/src/api/auth/ or packages/functions/src/api/. Covers the exact middyfy/Zod/HttpLambdaRouter pattern enforced by the codebase, the requireAuth contract, error throwing conventions, and how the response shape gets wrapped by middleware.
 ---
 
 # Authoring a twy Lambda HTTP handler
 
 ## When this skill applies
 
-- Adding a new HTTP endpoint to `@twy/auth` or `@twy/functions`.
+- Adding a new HTTP endpoint to `@twy/functions` (auth flows under `src/api/auth/`, JWT-protected domain handlers under `src/api/<domain>/`).
 - Modifying an existing handler's request/response shape.
 - Diagnosing why a handler returns 502 or the wrong content-type.
 
 ## Required imports
 
 ```typescript
-import { middyfy } from "@twy/lambda-shared";
+import { middyfy } from "@shared/index";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import errors from "http-errors";          // for thrown HTTP errors
 import * as zod from "zod";                // for the contract
@@ -87,6 +87,20 @@ In `apps/<app>/bin/functionStack.ts`:
 - **Using `JSON.stringify` in the handler return** — `serializeResponse` does it; double-stringification breaks parsing on the client.
 - **Setting CORS headers manually** — API Gateway handles CORS at the route level.
 - **Catching errors and returning `{ statusCode: 500 }` manually** — let `jsonErrorHandler` do it. If you catch, narrow with `toError(err)`, log, and rethrow as an `http-errors` instance.
+
+## DB access
+
+If the handler reads/writes the cluster, import the shared Drizzle instance — never construct your own client:
+
+```typescript
+import { db } from "@twy/db";
+import { users } from "@twy/db";
+import { eq } from "drizzle-orm";
+
+const [user] = await db.select().from(users).where(eq(users.id, userId));
+```
+
+`db` is built once at module scope on top of `RDSDataClient`. The route in `infra/routes.ts` must include `"cluster"` in `linkKeys` for `Resource.Cluster.{clusterArn,secretArn,database}` to resolve and the IAM grants to attach.
 
 ## Testing
 

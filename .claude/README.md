@@ -36,7 +36,7 @@ This directory turns a fresh clone into a working Claude Code agent environment.
 │   └── statusline.sh                 # status line renderer
 └── skills/                           # callable skills with detailed procedures
     ├── lambda-handler/SKILL.md
-    ├── kysely-migration/SKILL.md
+    ├── drizzle-migration/SKILL.md
     ├── ui-page-scaffold/SKILL.md
     └── cdk-stack/SKILL.md
 ```
@@ -56,7 +56,7 @@ Subagents are invoked via the `Task` tool (`"subagent_type": "<name>"`). They ru
 | `debugger` | When a test/build/runtime fails. Returns repro + root cause + minimal fix. | opus |
 | `refactoring-specialist` | For ≥2-file refactors or public-API changes. Tidy First / Mikado method. | sonnet |
 | `docs-writer` | When CLAUDE.md/README.md drifts from code. After a feature merges. | sonnet |
-| `migration-writer` | When adding/altering a DB table or column. Enforces V<n+1>__ convention. | sonnet |
+| `migration-writer` | When adding/altering a DB table or column. Edits the Drizzle schema, then `drizzle-kit generate`s the new migration. | sonnet |
 | `lambda-handler-author` | When adding a new HTTP endpoint. Codifies middyfy + Zod + route wiring. | sonnet |
 | `cdk-stack-reviewer` | After any edit to `apps/*/bin/`. Catches CFN/CDK/AWS deploy-time pitfalls. | opus |
 | `security-auditor` | Before merging any change to auth, IAM, env vars, SQL, or Lambda permissions. | opus |
@@ -104,9 +104,9 @@ Hooks fail-soft: a broken hook never blocks Claude unless it intentionally exits
 | `filesystem` | Workspace-scoped file walks | none |
 | `git` | Read-only git inspection | none |
 | `github` | PR/issue ops, /review-pr backing | `GITHUB_PERSONAL_ACCESS_TOKEN` |
-| `postgres-dev` | Schema introspection vs dev DSQL | `POSTGRES_DEV_URL` |
+| `postgres-dev` | Schema introspection vs dev Aurora Serverless v2 cluster | `POSTGRES_DEV_URL` |
 
-A missing optional env var causes the corresponding server to fail fast on first call; Claude falls back to file-based inspection (e.g. reading `apps/functions/src/libs/db/schema/*.ts` instead of querying).
+A missing optional env var causes the corresponding server to fail fast on first call; Claude falls back to file-based inspection (e.g. reading `packages/db/src/schema/*.ts` instead of querying).
 
 ## Personal overrides
 
@@ -155,7 +155,7 @@ Copy `settings.local.example.json` → `settings.local.json` (gitignored). Use i
 ## Forbidden actions (encoded in deny list, hooks, and agent prompts)
 
 - `git push --force` / `--force-with-lease` to any branch.
-- Editing an existing `apps/functions/src/migration/sql/V<n>__*.sql` file.
+- Editing an existing `packages/db/drizzle/<n>_<auto>.sql` file.
 - Editing `pnpm-lock.yaml` directly (use `pnpm install`).
 - Reading `.env` / `.pem` / `.key` / SSH keys.
 - `rm -rf` against `/`, `~`, `..`, or build/cache directories (`node_modules`, `.turbo`, `cdk.out`).
@@ -224,8 +224,8 @@ The configurations above are derived from:
 16. ModelContextProtocol — server-git — https://github.com/modelcontextprotocol/servers/tree/main/src/git
 17. ModelContextProtocol — server-github — https://github.com/modelcontextprotocol/servers/tree/main/src/github
 18. ModelContextProtocol — server-postgres — https://github.com/modelcontextprotocol/servers/tree/main/src/postgres
-19. AWS — "Aurora DSQL: getting started" — https://docs.aws.amazon.com/aurora-dsql/
-20. AWS — "DSQL IAM authentication" — https://docs.aws.amazon.com/aurora-dsql/latest/userguide/SECTION_authentication-token.html
+19. AWS — "Aurora Serverless v2: scaling" — https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.html
+20. AWS — "RDS Data API" — https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
 21. AWS — "CDK NodejsFunction bundling" — https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_nodejs.NodejsFunction.html
 22. AWS — "CloudFront Functions runtime 2.0 features" — https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/functions-javascript-runtime-2.0.html
 23. AWS — "CloudFormation cross-stack reference best practices" — https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/walkthrough-crossstackref.html
@@ -235,8 +235,8 @@ The configurations above are derived from:
 27. Biome — formatter options — https://biomejs.dev/formatter/
 28. Turborepo — turbo.json reference — https://turbo.build/repo/docs/reference/configuration
 29. Turborepo — pipeline best practices — https://turbo.build/repo/docs/crafting-your-repository
-30. Kysely — query builder docs — https://kysely.dev/docs/intro
-31. Kysely — migrations — https://kysely.dev/docs/migrations
+30. Drizzle — query builder + schema docs — https://orm.drizzle.team/docs/overview
+31. Drizzle — drizzle-kit migrations — https://orm.drizzle.team/docs/migrations
 32. Middy — overview — https://middy.js.org/docs/intro/getting-started/
 33. Middy — middlewares — https://middy.js.org/docs/middlewares/intro/
 34. Zod — v4 release notes — https://zod.dev/v4

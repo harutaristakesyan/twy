@@ -1,0 +1,208 @@
+/// <reference path="../.sst/platform/config.d.ts" />
+
+/**
+ * Single typed route table consumed by infra/api.ts.
+ *
+ * `linkKeys` names the resources from infra/api.ts that this handler needs.
+ * `requiresAuth: true` attaches the Cognito JWT authorizer; `false` (or
+ * unset) leaves the route public (Cognito sign-in flows themselves).
+ */
+export type LinkKey = "cluster" | "userPool" | "userPoolClient" | "filesBucket";
+
+export interface RouteDef {
+  /** Path to the handler entry, including the exported name (default `handler`). */
+  handler: string;
+  /** API Gateway v2 route key, e.g. `POST /api/login`. */
+  routeKey: string;
+  /** Whether the JWT authorizer should gate this route. */
+  requiresAuth?: boolean;
+  /** Resources to make available via the SST Resource SDK + IAM. */
+  linkKeys: LinkKey[];
+}
+
+/** Public Cognito flows — packages/functions/src/api/auth/*.ts handlers. */
+export const authRoutes: RouteDef[] = [
+  {
+    handler: "packages/functions/src/api/auth/signUp.handler",
+    routeKey: "POST /api/signup",
+    linkKeys: ["userPoolClient"],
+  },
+  {
+    handler: "packages/functions/src/api/auth/login.handler",
+    routeKey: "POST /api/login",
+    linkKeys: ["userPoolClient"],
+  },
+  {
+    handler: "packages/functions/src/api/auth/verify.handler",
+    routeKey: "POST /api/verify",
+    linkKeys: ["userPoolClient"],
+  },
+  {
+    handler: "packages/functions/src/api/auth/resendVerificationCode.handler",
+    routeKey: "POST /api/resend-code",
+    linkKeys: ["userPoolClient"],
+  },
+  {
+    handler: "packages/functions/src/api/auth/forgotPassword.handler",
+    routeKey: "POST /api/forgot-password",
+    linkKeys: ["userPoolClient"],
+  },
+  {
+    handler: "packages/functions/src/api/auth/confirmForgotPassword.handler",
+    routeKey: "POST /api/create-password",
+    linkKeys: ["userPoolClient"],
+  },
+  {
+    handler: "packages/functions/src/api/auth/refreshToken.handler",
+    routeKey: "POST /api/refresh-token",
+    linkKeys: ["userPoolClient"],
+  },
+  {
+    handler: "packages/functions/src/api/auth/respondToChallenge.handler",
+    routeKey: "POST /api/respond-to-challenge",
+    linkKeys: ["userPoolClient"],
+  },
+];
+
+/** JWT-protected domain endpoints — handlers under packages/functions/src/api/. */
+export const appRoutes: RouteDef[] = [
+  // user
+  {
+    handler: "packages/functions/src/api/user/get.handler",
+    routeKey: "GET /api/user",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/user/self-update.handler",
+    routeKey: "PATCH /api/user",
+    requiresAuth: true,
+    linkKeys: ["cluster", "userPool"],
+  },
+  {
+    handler: "packages/functions/src/api/user/list.handler",
+    routeKey: "GET /api/users",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/user/create.handler",
+    routeKey: "POST /api/users",
+    requiresAuth: true,
+    linkKeys: ["cluster", "userPool"],
+  },
+  {
+    handler: "packages/functions/src/api/user/update.handler",
+    routeKey: "PATCH /api/users/{userId}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "userPool"],
+  },
+  {
+    handler: "packages/functions/src/api/user/delete.handler",
+    routeKey: "DELETE /api/users/{userId}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "userPool"],
+  },
+  // branch
+  {
+    handler: "packages/functions/src/api/branch/list.handler",
+    routeKey: "GET /api/branches",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/branch/create.handler",
+    routeKey: "POST /api/branches",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/branch/update.handler",
+    routeKey: "PUT /api/branches/{branchId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/branch/delete.handler",
+    routeKey: "DELETE /api/branches/{branchId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  // file
+  {
+    handler: "packages/functions/src/api/file/upload.handler",
+    routeKey: "POST /api/files",
+    requiresAuth: true,
+    linkKeys: ["filesBucket"],
+  },
+  {
+    handler: "packages/functions/src/api/file/delete.handler",
+    routeKey: "DELETE /api/files/{fileId}",
+    requiresAuth: true,
+    linkKeys: ["filesBucket"],
+  },
+  {
+    handler: "packages/functions/src/api/file/download.handler",
+    routeKey: "GET /api/files/{fileId}",
+    requiresAuth: true,
+    linkKeys: ["filesBucket"],
+  },
+  // load
+  {
+    handler: "packages/functions/src/api/load/create.handler",
+    routeKey: "POST /api/loads",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/load/list.handler",
+    routeKey: "GET /api/loads",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/load/update.handler",
+    routeKey: "PUT /api/loads/{loadId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/load/changeStatus.handler",
+    routeKey: "PATCH /api/loads/{loadId}/status",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/load/delete.handler",
+    routeKey: "DELETE /api/loads/{loadId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  // outside-broker
+  {
+    handler: "packages/functions/src/api/outside-broker/list.handler",
+    routeKey: "GET /api/outside-brokers",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/outside-broker/create.handler",
+    routeKey: "POST /api/outside-brokers",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/outside-broker/update.handler",
+    routeKey: "PUT /api/outside-brokers/{brokerId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/outside-broker/delete.handler",
+    routeKey: "DELETE /api/outside-brokers/{brokerId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+];
+
+export const allRoutes: RouteDef[] = [...authRoutes, ...appRoutes];

@@ -17,8 +17,8 @@ You are reviewing a pull request. Argument: `$ARGUMENTS` (PR number, branch name
 
 3. **Spawn reviewers in parallel** based on what changed:
    - Always: `code-reviewer` subagent.
-   - If any file under `apps/auth/`, `apps/infra/`, `packages/lambda-shared/src/middy/`, or anything touching IAM/SQL/Cognito → `security-auditor` subagent.
-   - If any file under `apps/*/bin/` → `cdk-stack-reviewer` subagent.
+   - If any file under `packages/functions/src/api/auth/`, `packages/functions/src/shared/middy/`, `infra/`, or anything touching IAM/SQL/Cognito → `security-auditor` subagent.
+   - If any file under `infra/` or `sst.config.ts` → `cdk-stack-reviewer` subagent.
 
 4. **Aggregate** findings into a single ranked list:
    - BLOCKERs first

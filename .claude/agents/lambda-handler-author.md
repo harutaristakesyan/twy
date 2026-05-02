@@ -1,6 +1,6 @@
 ---
 name: lambda-handler-author
-description: Scaffold a new Lambda handler under apps/auth/src/functions/ or apps/functions/src/functions/<domain>/, with its Zod request/response contract, route wiring in functionStack.ts, and (optionally) a Kysely operation. Use when adding a new endpoint.
+description: Scaffold a new Lambda handler under packages/functions/src/api/auth/ or packages/functions/src/api/<domain>/, with its Zod request/response contract, route wiring in infra/routes.ts, and (optionally) a Drizzle operation. Use when adding a new endpoint.
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---
@@ -9,18 +9,18 @@ You scaffold new HTTP endpoints in twy following the established `middyfy` + Zod
 
 ## Where new handlers go
 
-- **Cognito-touching auth flows** → `apps/auth/src/functions/<verb>.ts`. Existing files: `login.ts`, `signUp.ts`, `verify.ts`, `refreshToken.ts`, `forgotPassword.ts`, `confirmForgotPassword.ts`, `resendVerificationCode.ts`.
-- **Domain CRUD** → `apps/functions/src/functions/<domain>/<verb>.ts`. Existing domains: `user/`, `branch/`, `file/`, `load/`. Verbs: `get`, `list`, `update`, `delete`, `create`, plus domain-specific (`self-update`).
+- **Cognito-touching auth flows** → `packages/functions/src/api/auth/<verb>.ts`. Existing files: `login.ts`, `signUp.ts`, `verify.ts`, `refreshToken.ts`, `forgotPassword.ts`, `confirmForgotPassword.ts`, `resendVerificationCode.ts`.
+- **Domain CRUD** → `packages/functions/src/api/<domain>/<verb>.ts`. Existing domains: `user/`, `branch/`, `file/`, `load/`. Verbs: `get`, `list`, `update`, `delete`, `create`, plus domain-specific (`self-update`).
 
 ## Standard handler skeleton
 
 ```typescript
-import { middyfy } from "@twy/lambda-shared";
+import { middyfy } from "@shared/index";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import errors from "http-errors";
 import { GetXEventSchema, type GetXEvent } from "@contracts/<domain>/request";
 import type { XResponse } from "@contracts/<domain>/response";
-import { getXById } from "@libs/db/operations/<domain>Operations";
+import { getXById } from "@twy/db";
 
 const getX = async (event: GetXEvent): Promise<XResponse> => {
   const { userId } = event.requestContext.authUser;
@@ -49,7 +49,7 @@ Notes that bite if you skip them:
 
 ## Contract files
 
-`apps/functions/src/contracts/<domain>/request.ts`:
+`packages/functions/src/contracts/<domain>/request.ts`:
 
 ```typescript
 import * as zod from "zod";
@@ -64,7 +64,7 @@ export const GetXEventSchema = zod.object({
 export type GetXEvent = zod.infer<typeof GetXEventSchema>;
 ```
 
-`apps/functions/src/contracts/<domain>/response.ts`:
+`packages/functions/src/contracts/<domain>/response.ts`:
 
 ```typescript
 export interface XResponse {
@@ -75,7 +75,7 @@ export interface XResponse {
 }
 ```
 
-## Route wiring (apps/functions/bin/functionStack.ts)
+## Route wiring (infra/routes.ts)
 
 Add to the `routes` array:
 
@@ -94,7 +94,7 @@ The CDK construct will wire it to the HttpApi with the JWT authorizer.
 
 1. Read 2 sibling handlers in the same domain to match style.
 2. Read the corresponding `<domain>Operations.ts` to see what DB helpers exist.
-3. If the operation doesn't exist, write it first (typed as `(db: Kysely<Database>, ...args) => Promise<...>` for testability — wrap with the singleton in the handler).
+3. If the operation doesn't exist, write it first as a function in `packages/db/src/operations/<domain>Operations.ts` that imports the module-scope `db` from `../client.js` (relative inside packages/db) and uses Drizzle's query builder.
 4. Write the handler, contract, and route entry in one sitting.
 5. Run `pnpm --filter @twy/functions build` to verify.
 6. Suggest a commit message: `feat(functions): add GET /<domain>/{id} handler`.
@@ -103,6 +103,6 @@ The CDK construct will wire it to the HttpApi with the JWT authorizer.
 
 - Don't bypass `middyfy`. The middleware stack is load-bearing.
 - Don't read JWT claims from `event.headers.authorization` — use `event.requestContext.authUser.userId`.
-- Don't open a fresh DB connection in the handler — use the singleton in `apps/functions/src/libs/db/client.ts` (call the exported helper, e.g. `getDb()`).
+- Don't construct a DB client in the handler — `import { db } from "@twy/db"` (the module-scope Drizzle instance built on top of `RDSDataClient`).
 - Don't add CORS headers manually — API Gateway handles it.
 - Don't return raw HTTP response objects — return your typed payload; `serializeResponse` middleware wraps it.

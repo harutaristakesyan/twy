@@ -13,38 +13,6 @@ env:
   NODE_VERSION: "24"
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      auth: ${{ steps.filter.outputs.auth }}
-      ui: ${{ steps.filter.outputs.ui }}
-      functions: ${{ steps.filter.outputs.functions }}
-      infra: ${{ steps.filter.outputs.infra }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            auth:
-              - 'apps/auth/**'
-              - 'packages/lambda-shared/**'
-              - 'pnpm-lock.yaml'
-              - '.github/workflows/ci-cd.yml'
-            ui:
-              - 'apps/ui/**'
-              - 'pnpm-lock.yaml'
-              - '.github/workflows/ci-cd.yml'
-            functions:
-              - 'apps/functions/**'
-              - 'packages/lambda-shared/**'
-              - 'pnpm-lock.yaml'
-              - '.github/workflows/ci-cd.yml'
-            infra:
-              - 'apps/infra/**'
-              - 'pnpm-lock.yaml'
-              - '.github/workflows/ci-cd.yml'
-
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -58,13 +26,7 @@ jobs:
       - run: pnpm exec biome ci .
 
   build:
-    needs: [changes, lint]
-    if: |
-      needs.changes.outputs.auth == 'true' ||
-      needs.changes.outputs.ui == 'true' ||
-      needs.changes.outputs.functions == 'true' ||
-      needs.changes.outputs.infra == 'true' ||
-      github.event_name == 'workflow_dispatch'
+    needs: [lint]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -75,20 +37,23 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build
+      - run: pnpm turbo run test
 
-  deploy-infra:
-    needs: [changes, build]
-    if: ${{ needs.build.result == 'success' && (needs.changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch') }}
+  deploy:
+    needs: [build]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         environment:
           - { name: dev, account_var: DEV_ACCOUNT_ID, region: us-east-1 }
-          - { name: prod, account_var: PROD_ACCOUNT_ID, region: us-east-1 }
+          # - { name: prod, account_var: PROD_ACCOUNT_ID, region: us-east-1 }
     environment: ${{ matrix.environment.name }}
     concurrency:
-      group: deploy-infra-${{ matrix.environment.name }}-${{ github.ref }}
+      group: deploy-${{ matrix.environment.name }}-${{ github.ref }}
+    env:
+      AWS_REGION: ${{ matrix.environment.region }}
+      STAGE: ${{ matrix.environment.name }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -97,144 +62,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run build --filter @twy/infra...
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ vars[matrix.environment.account_var] }}:role/github-deploy-role
           aws-region: ${{ matrix.environment.region }}
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - name: Deploy CDK
-        run: pnpm exec cdk deploy --all --require-approval never
-        working-directory: apps/infra
-        env:
-          ENV: ${{ matrix.environment.name }}
-          ACCOUNT_ID: ${{ vars[matrix.environment.account_var] }}
-          AWS_REGION: ${{ matrix.environment.region }}
-
-  deploy-auth:
-    needs: [changes, build, deploy-infra]
-    if: |
-      always() &&
-      needs.build.result == 'success' &&
-      (needs.deploy-infra.result == 'success' || needs.deploy-infra.result == 'skipped') &&
-      (needs.changes.outputs.auth == 'true' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        environment:
-          - { name: dev, account_var: DEV_ACCOUNT_ID, region: us-east-1 }
-          - { name: prod, account_var: PROD_ACCOUNT_ID, region: us-east-1 }
-    environment: ${{ matrix.environment.name }}
-    concurrency:
-      group: deploy-auth-${{ matrix.environment.name }}-${{ github.ref }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run build --filter @twy/auth...
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars[matrix.environment.account_var] }}:role/github-deploy-role
-          aws-region: ${{ matrix.environment.region }}
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - name: Deploy CDK
-        run: pnpm exec cdk deploy --all --require-approval never
-        working-directory: apps/auth
-        env:
-          ENV: ${{ matrix.environment.name }}
-          ACCOUNT_ID: ${{ vars[matrix.environment.account_var] }}
-          AWS_REGION: ${{ matrix.environment.region }}
-
-  deploy-ui:
-    needs: [changes, build, deploy-infra]
-    if: |
-      always() &&
-      needs.build.result == 'success' &&
-      (needs.deploy-infra.result == 'success' || needs.deploy-infra.result == 'skipped') &&
-      (needs.changes.outputs.ui == 'true' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        environment:
-          - { name: dev, account_var: DEV_ACCOUNT_ID, region: us-east-1 }
-          - { name: prod, account_var: PROD_ACCOUNT_ID, region: us-east-1 }
-    environment: ${{ matrix.environment.name }}
-    concurrency:
-      group: deploy-ui-${{ matrix.environment.name }}-${{ github.ref }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run build --filter @twy/ui...
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars[matrix.environment.account_var] }}:role/github-deploy-role
-          aws-region: ${{ matrix.environment.region }}
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - name: Deploy CDK
-        run: pnpm exec cdk deploy --all --require-approval never
-        working-directory: apps/ui
-        env:
-          ENV: ${{ matrix.environment.name }}
-          ACCOUNT_ID: ${{ vars[matrix.environment.account_var] }}
-          AWS_REGION: ${{ matrix.environment.region }}
-
-  deploy-functions:
-    needs: [changes, build, deploy-infra]
-    if: |
-      always() &&
-      needs.build.result == 'success' &&
-      (needs.deploy-infra.result == 'success' || needs.deploy-infra.result == 'skipped') &&
-      (needs.changes.outputs.functions == 'true' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        environment:
-          - { name: dev, account_var: DEV_ACCOUNT_ID, region: us-east-1 }
-          - { name: prod, account_var: PROD_ACCOUNT_ID, region: us-east-1 }
-    environment: ${{ matrix.environment.name }}
-    concurrency:
-      group: deploy-functions-${{ matrix.environment.name }}-${{ github.ref }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run build --filter @twy/functions...
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars[matrix.environment.account_var] }}:role/github-deploy-role
-          aws-region: ${{ matrix.environment.region }}
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - name: Run DB Migrations
-        run: pnpm run migrate
-        working-directory: apps/functions
-        env:
-          ENV: ${{ matrix.environment.name }}
-          ACCOUNT_ID: ${{ vars[matrix.environment.account_var] }}
-          AWS_REGION: ${{ matrix.environment.region }}
-      - name: Deploy CDK
-        run: pnpm exec cdk deploy --all --require-approval never
-        working-directory: apps/functions
-        env:
-          ENV: ${{ matrix.environment.name }}
-          ACCOUNT_ID: ${{ vars[matrix.environment.account_var] }}
-          AWS_REGION: ${{ matrix.environment.region }}
+      - name: SST deploy
+        run: pnpm sst deploy --stage "$STAGE"
+      - name: Run DB migrations
+        run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @twy/db migrate

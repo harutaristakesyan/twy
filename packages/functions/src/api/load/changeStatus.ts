@@ -1,0 +1,45 @@
+import { middyfy } from "@shared/index";
+import type { ChangeLoadStatusResponse } from "@twy/core";
+import {
+  type ChangeLoadStatusEvent,
+  ChangeLoadStatusEventSchema,
+  changeLoadStatus as changeLoadStatusRecord,
+} from "@twy/core";
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
+import createError from "http-errors";
+
+const changeLoadStatus = async (
+  event: ChangeLoadStatusEvent,
+): Promise<ChangeLoadStatusResponse> => {
+  const { loadId } = event.pathParameters;
+  const { status, isChargable = false, chargeAmount = null } = event.body;
+  const changedBy = event.requestContext.authUser.userId;
+
+  const { updated, statusChangedByEmail } = await changeLoadStatusRecord(
+    loadId,
+    status,
+    changedBy,
+    isChargable,
+    chargeAmount ?? null,
+  );
+
+  if (!updated) {
+    throw new createError.NotFound("Load not found");
+  }
+
+  return {
+    message: "Load status updated successfully",
+    loadId,
+    status,
+    statusChangedBy: statusChangedByEmail,
+  };
+};
+
+export const handler = middyfy<
+  ChangeLoadStatusEvent,
+  ChangeLoadStatusResponse,
+  APIGatewayProxyEventV2WithJWTAuthorizer
+>(changeLoadStatus, {
+  eventSchema: ChangeLoadStatusEventSchema,
+  mode: "parse",
+});

@@ -37,33 +37,33 @@ case "$TOOL" in
     fi
 
     # Mutating an already-applied migration is the #1 way to break the cluster.
-    if printf '%s' "$CMD" | grep -qE 'apps/functions/src/migration/sql/V[0-9]+__.*\.sql' \
-       && printf '%s' "$CMD" | grep -qE '(^|[[:space:]])(sed|>|>>|tee|truncate|rm)[[:space:]]'; then
-      echo "DENY: migration files under apps/functions/src/migration/sql/ are immutable once committed. Add a new V(n+1)__ migration instead." >&2
-      exit 2
-    fi
+    if printf '%s' "$CMD" | grep -qE 'packages/db/drizzle/[0-9]+_.*\.sql' \
+         && printf '%s' "$CMD" | grep -qE '(^|[[:space:]])(sed|>|>>|tee|truncate|rm)[[:space:]]'; then
+        echo "DENY: Drizzle migration files under packages/db/drizzle/ are immutable once committed. Edit the schema and run 'pnpm --filter @twy/db db:generate' to add a new migration." >&2
+        exit 2
+      fi
 
     # Bash that prints credentials.
     if printf '%s' "$CMD" | grep -qE '(cat|less|head|tail|grep)[[:space:]]+[^|]*\.(env|env\.local|pem|key)([[:space:]]|$)'; then
-      echo "DENY: refusing to read .env/.pem/.key files. Use 'aws ssm get-parameter' for secrets, or ask the user to confirm the value." >&2
-      exit 2
-    fi
-
-    exit 0
-    ;;
-
-  Edit|Write|MultiEdit)
-    FILE=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // empty')
-    [ -z "$FILE" ] && exit 0
-
-    # Protect applied migrations.
-    if printf '%s' "$FILE" | grep -qE 'apps/functions/src/migration/sql/V[0-9]+__.*\.sql$'; then
-      # Allow if the file does not yet exist — that's a brand new migration.
-      if [ -f "$FILE" ]; then
-        echo "DENY: $FILE has been applied to at least one cluster. Add a new V(n+1)__ migration instead of editing this one." >&2
+        echo "DENY: refusing to read .env/.pem/.key files. Use 'aws ssm get-parameter' for secrets, or ask the user to confirm the value." >&2
         exit 2
       fi
-    fi
+
+      exit 0
+      ;;
+
+  Edit|Write|MultiEdit)
+      FILE=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // empty')
+      [ -z "$FILE" ] && exit 0
+
+      # Protect applied Drizzle migrations.
+      if printf '%s' "$FILE" | grep -qE 'packages/db/drizzle/[0-9]+_.*\.sql$'; then
+        # Allow if the file does not yet exist — that's a brand new migration just generated.
+        if [ -f "$FILE" ]; then
+          echo "DENY: $FILE has been applied to at least one cluster. Edit the schema and re-run 'pnpm --filter @twy/db db:generate' to add a new migration." >&2
+          exit 2
+        fi
+      fi
 
     # Block edits to lockfile.
     if printf '%s' "$FILE" | grep -qE '(^|/)pnpm-lock\.yaml$'; then

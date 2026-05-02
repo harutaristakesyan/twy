@@ -8,10 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Need | File |
 |---|---|
-| Per-package conventions (UI, auth, functions, infra, lambda-shared) | `apps/<name>/CLAUDE.md`, `packages/<name>/CLAUDE.md` |
+| Per-package conventions (UI, auth, functions, db, lambda-shared) | `apps/<name>/CLAUDE.md`, `packages/<name>/CLAUDE.md` |
+| Infrastructure modules (SST components — DB, auth, API, web, storage, email, routes) | `sst.config.ts` + `infra/` |
 | Slash commands (`/ship`, `/verify`, `/new-handler`, `/new-migration`, `/debug-test`, `/review-pr`, `/sync-docs`) | `.claude/commands/` |
-| Specialized subagents (code-reviewer, debugger, security-auditor, migration-writer, lambda-handler-author, cdk-stack-reviewer, refactoring-specialist, test-writer, docs-writer) | `.claude/agents/` |
-| Authoring procedures (Lambda handler, Kysely migration, UI page, CDK stack) | `.claude/skills/` |
+| Specialized subagents (code-reviewer, debugger, security-auditor, migration-writer, lambda-handler-author, refactoring-specialist, test-writer, docs-writer) | `.claude/agents/` |
+| Authoring procedures (Lambda handler, Drizzle migration, UI page, SST component) | `.claude/skills/` |
 | Permissions, hooks, model selection | `.claude/settings.json` |
 | Onboarding for the agent infra itself | `.claude/README.md` |
 | Project-scoped MCP servers (filesystem, git, github, postgres-dev) | `.mcp.json` |
@@ -19,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Verification loop
 
 Always end a working session by running, in order:
-1. `/verify` — runs `biome ci`, `turbo build`, `turbo test`, `turbo check` (matches CI exactly).
+1. `/verify` — runs `biome ci`, `turbo build`, `turbo test` (matches CI exactly).
 2. `code-reviewer` subagent on the diff. Address blockers/majors.
 3. `/ship` — guided commit + push (Conventional Commits with required scope, header ≤150).
 
@@ -28,87 +29,127 @@ Never bypass the gate with `--no-verify`. Never `git push --force*` (the deny li
 ## Common commands
 
 ```bash
-pnpm install                         # one hoisted lockfile at the root
-pnpm build                           # turbo run build (respects ^build)
-pnpm check                           # biome check --write . (lint + format + import sort)
-pnpm check:ci                        # biome ci .  (zero-exit gate; matches CI)
-pnpm test                            # turbo run test
-pnpm run:ui                          # alias for pnpm --filter @twy/ui dev
+pnpm install                              # one hoisted lockfile at the root
+pnpm build                                # turbo run build (respects ^build)
+pnpm check                                # biome check --write . (lint + format + import sort)
+pnpm check:ci                             # biome ci .  (zero-exit gate; matches CI)
+pnpm test                                 # turbo run test
+pnpm run:dashboard                        # alias for pnpm --filter @twy/dashboard dev
+
+# SST (infra is now defined in sst.config.ts + infra/)
+pnpm sst dev --stage <username>           # personal live-Lambda dev loop
+pnpm sst deploy --stage dev               # deploy everything to dev
+pnpm sst deploy --stage prod              # deploy everything to prod
+pnpm sst remove --stage <stage>           # tear down a stage
+pnpm sst shell --stage dev                # open a shell with Resource.* env vars
+
+# Apply pending DB migrations against the cluster bound to a stage
+pnpm sst shell --stage dev -- pnpm --filter @twy/db migrate
 
 # Scope to one package
 pnpm --filter @twy/<name> <script>
-pnpm turbo run build --filter @twy/ui...    # `...` includes deps
-
-# Apply pending DB migrations against $ENV (Aurora DSQL via IAM)
-pnpm --filter @twy/functions migrate
-
-# CDK
-ENV=dev pnpm --filter @twy/infra synth | diff | deploy | bootstrap
-pnpm --filter @twy/auth      synth | diff | deploy
-pnpm --filter @twy/functions synth | diff | deploy
-pnpm --filter @twy/ui        synth | diff | deploy
+pnpm turbo run build --filter @twy/dashboard...    # `...` includes deps
 ```
 
-Run a single Vitest file: `pnpm --filter @twy/ui exec vitest run path/to/file.test.ts`.
+Run a single Vitest file: `pnpm --filter @twy/dashboard exec vitest run path/to/file.test.ts`.
 
 ## Architecture
 
-A pnpm + Turborepo workspace with four deployable apps and one shared library:
+A pnpm + Turborepo workspace deployed by a single SST app at the repo root:
 
 ```
-apps/ui          @twy/ui            React 19 + Vite SPA, deployed via CDK to S3 + CloudFront
-apps/auth        @twy/auth          Cognito user pool + auth Lambdas (Middy + Zod)
-apps/functions   @twy/functions     Domain Lambdas + Kysely migrations against Aurora DSQL
-apps/infra       @twy/infra         Shared infra stacks: db, gateway, cloudfront, domain, auth-template
-packages/lambda-shared @twy/lambda-shared   middy wrappers, error utils, requireEnv helper
+sst.config.ts                # SST entrypoint — see app() and run()
+infra/                       # SST components, one module per concern
+  domain.ts, database.ts, storage.ts, email.ts,
+  auth.ts, api.ts, web.ts, routes.ts
+apps/dashboard       @twy/dashboard   React 19 + Vite SPA, deployed via sst.aws.StaticSite + sst.aws.Router
+packages/functions   @twy/functions   All Lambda handlers (HTTP + Cognito) + Middy middleware (src/{api,events,shared,contracts,libs,utils})
+packages/db          @twy/db          Drizzle schema, query operations, migration runner (Aurora Data API)
 ```
 
-Deploy graph (enforced by both Turbo and CI): `lambda-shared → infra → {auth, ui, functions}`. `@twy/functions` additionally runs migrations before `cdk deploy`. Cross-package deps are `workspace:*`.
+Cross-package deps are `workspace:*`. `db` builds first (Turbo `^build`); SST handles bundling each handler with esbuild on `sst deploy`.
 
-Each CDK app keeps stack code under `bin/` and runtime code under `src/`. `apps/infra/bin/stacks/` holds the shared stacks; the others define one stack file plus a `cdk.ts` entrypoint and a `deploy.ts` helper.
+### Stages
 
-DomainStack hands the ACM cert ARN to CloudFrontStack via an SSM parameter (`/${idPrefix}/cert/arn`), not a CFN cross-stack export. CFN exports get pinned to importing stacks — replacing the cert (e.g. when SANs change) fails with "cannot update export in use" until the importer is redeployed first. SSM resolves at deploy time, so the cert can be replaced freely. CloudFrontStack has an explicit `addDependency(domainStack)` to guarantee deploy order.
+Two stages are configured: `dev` (DEV_ACCOUNT_ID, dev.twy.am + dev.twy.be) and `prod` (PROD_ACCOUNT_ID, twy.am + twy.be + www variants). Both pinned to `us-east-1` (CloudFront cert requirement). The `app()` block in `sst.config.ts` rejects unknown stages.
+
+### Linking and the Resource SDK
+
+Cross-component values flow through SST's `link[]` — there are no SSM parameters, no env vars, no IAM helpers in handler code. Producer side, in `infra/api.ts`:
+
+```ts
+api.route("GET /api/user", "packages/functions/src/api/user/get.handler", {
+  auth: { jwt: { authorizer: jwt.id } },
+  transform: { function: { link: [db.cluster] } },
+});
+```
+
+Consumer side, in the handler — never construct a DB client; import the shared one from `@twy/db`:
+
+```ts
+import { db, users, eq } from "@twy/db";
+const [user] = await db.select().from(users).where(eq(users.id, userId));
+```
+
+(In practice handlers call into operation functions — `createUser`, `listLoads`, etc. — which already encapsulate query composition. Reach for `eq`/`and` only when factoring a new operation.)
+
+`link[]` does two things: it injects the resource's runtime values into `Resource.X` (e.g. `Resource.Cluster.{clusterArn,secretArn,database}` for the Aurora component, `Resource.UserPool.id`, `Resource.Files.name`) and grants the matching IAM permissions automatically. There is no longer a `dsqlConnectPolicyFor` / `cognitoUserManagementPolicyFor` / `s3ObjectWritePolicyFor` helper — those were CDK-era and are gone.
 
 ### Domains (multi-domain deploy)
 
-Each environment serves a `primaryDomain` plus optional `additionalDomains` from a single per-env CloudFront distribution and ACM cert (`apps/infra/bin/environments.ts`). Today: dev = `dev.twy.am` + `dev.twy.be` (apex only); prod = `twy.am` + `twy.be` (each with `www`). All domains share the same DSQL cluster, Cognito user pool, API Gateway, and files bucket — there's exactly one backend per env. **Auth is per-origin**: Cognito tokens live in `localStorage`, so a user signed in on `twy.am` is *not* signed in on `twy.be` (same DB, same Cognito account — just no cross-origin token sync). The `primaryDomain` drives `idPrefix`-derived physical names (S3 buckets, SSM paths like `/twy-am/site/bucketName`); changing it would force-replace those resources, so always extend via `additionalDomains` instead.
+Each environment serves a `primaryDomain` plus `aliases` from a single `sst.aws.Router` distribution, shared with the `sst.aws.ApiGatewayV2` via `router.routeUrl("/api/*", api.url)`. Today: dev = `dev.twy.am` + `dev.twy.be`; prod = `twy.am` + `twy.be` (+ `www.*`). All domains share the same Aurora cluster, Cognito user pool, API Gateway, and files bucket — there's exactly one backend per env. **Auth is per-origin**: Cognito tokens live in `localStorage`/cookies, so a user signed in on `twy.am` is *not* signed in on `twy.be`.
 
-To add a new alias domain: (1) create the Route53 hosted zone in the matching AWS account (dev zone in `DEV_ACCOUNT_ID`, prod zone in `PROD_ACCOUNT_ID`); (2) point the registrar's NS records at Route53; (3) append to `additionalDomains` in `environments.ts`. The cert uses `acm.CertificateValidation.fromDnsMultiZone` so cross-zone DNS validation is automatic.
+To add a new alias domain: (1) create the Route53 hosted zone in the matching AWS account; (2) point the registrar's NS records at Route53; (3) append to `aliases` in `infra/domain.ts`. SST's `dns: sst.aws.dns()` adapter handles cross-zone DNS validation and A/AAAA record creation automatically.
 
 ### Lambda runtime pattern
 
-All Lambdas wrap their handlers with helpers from `@twy/lambda-shared`:
+All Lambdas wrap their handlers with helpers from `@shared/index` (path alias inside `@twy/functions` → `packages/functions/src/shared/`):
 - `middyfy` / `httpZodHandler` / `httpJwtExtractor` — composed Middy stacks for HTTP + JWT + Zod validation.
 - `jsonErrorHandler` — converts `http-errors` and unknown throws into JSON.
 - `toError` — narrows `unknown` from catch blocks (use this; do not type catches as `any`).
-- `requireEnv("VAR")` — read env vars; throws on missing. **Use this instead of `process.env.VAR!`** — non-null assertions on env vars are how `noNonNullAssertion` violations were getting reintroduced.
 
-`@twy/lambda-shared` is a real published-style package (`type: module`, `exports` map → `dist/index.js`). It must be built before any consumer can be bundled. Turbo's `dependsOn: ["^build"]` handles this from the root; a bare `cdk deploy` inside a Lambda app will not.
+Handlers read configuration via `Resource.X` (the SST SDK), **not** `process.env.X` and **not** `requireEnv("X")`. The `requireEnv` helper still exists in `@shared/index` but should not be used in new code — it's a holdover.
 
 ### DB / migrations
 
-`@twy/functions` uses Kysely + `pg`. Auth is **Aurora DSQL with IAM** via `@aws-sdk/dsql-signer` — no static passwords. The deploying role needs `dsql:DbConnectAdmin` on the cluster. The migration runner is `apps/functions/src/migration/run-migrations.ts` (run via `pnpm --filter @twy/functions migrate`); CI runs it before `deploy-functions`. Migration scripts must use `process.stdout.write` for output (see linting note below).
+The `@twy/db` package owns the database layer: **Drizzle ORM** against an **Aurora Serverless v2 (Postgres)** cluster via the **RDS Data API** (`drizzle-orm/aws-data-api/pg`). Lambdas are *not* attached to the cluster's VPC — Drizzle talks to the cluster over HTTPS through `RDSDataClient`, which avoids cold-start tax and the NAT-Gateway cost. The cluster credentials come from `Resource.Cluster.{clusterArn,secretArn,database}` (provided by `link: [db.cluster]` in `infra/api.ts` / `infra/auth.ts`).
+
+Schema lives under `packages/db/src/schema/`, one `pgTable` per file, using snake_case columns and camelCase TS keys (Drizzle's `casing: 'snake_case'` does the mapping). `packages/db/drizzle/` holds the generated migration SQL + `meta/` snapshots — both are checked in.
+
+The Drizzle workflow:
+
+```bash
+# 1. Edit a schema file under packages/db/src/schema/
+# 2. Diff schema → new migration SQL under packages/db/drizzle/
+pnpm sst shell --stage dev -- pnpm --filter @twy/db db:generate
+
+# 3. Apply pending migrations against the cluster bound to a stage
+pnpm sst shell --stage dev -- pnpm --filter @twy/db migrate
+```
+
+The runner (`packages/db/src/migration/run-migrations.ts`) is launched via `sst shell` so the same `Resource.Cluster` binding is in scope. CI invokes the same command after `sst deploy` succeeds. Migration scripts must use `process.stdout.write` for output (Biome's `noConsole` rule).
+
+Per-stage scaling: prod stays warm at `min: 0.5 ACU`; dev (and personal stages) auto-pause at `min: 0 ACU` after ~10 min idle.
 
 ### UI
 
-React 19 + Ant Design 6 + TanStack Query + Axios. `apps/ui/.env.{development,production}` are committed via a `.gitignore` exception — they hold **public, build-time** values only (API base URLs, etc.); never put secrets there. Stricter Biome rules apply here (see overrides in `biome.json`): `useExhaustiveDependencies: error`, `useHookAtTopLevel: error`, `noNonNullAssertion: error`. When wiring fetchers used inside `useEffect`, wrap them in `useCallback` to satisfy `useExhaustiveDependencies`.
+React 19 + Ant Design 6 + TanStack Query + Axios. `apps/dashboard/.env.{development,production}` are committed via a `.gitignore` exception — they hold **public, build-time** values only (mock toggle, etc.); never put secrets there. Stricter Biome rules apply here (see overrides in `biome.json`): `useExhaustiveDependencies: error`, `useHookAtTopLevel: error`, `noNonNullAssertion: error`. When wiring fetchers used inside `useEffect`, wrap them in `useCallback` to satisfy `useExhaustiveDependencies`. The Axios client uses relative `/api` — same-origin proxying through the Router means no CORS preflights.
 
 ## Tooling conventions
 
 ### TypeScript
 
-Every package extends `tsconfig.base.json` (`target ES2024`, `module NodeNext`, `strict: true` but `strictNullChecks: false`, `isolatedModules: true`). Per-package `tsconfig.json` sets `outDir`, `rootDir`, and any `paths`. `tsconfig.scripts.json` (functions) loosens the rules so `ts-node` can run migration scripts. `bin/tsconfig.json` for CDK entrypoints needs `"types": ["node"]` — without it, `process` is undefined.
+Every package extends `tsconfig.base.json` (`target ES2024`, `module NodeNext`, `strict: true` but `strictNullChecks: false`, `isolatedModules: true`). Per-package `tsconfig.json` sets `outDir`, `rootDir`, and any `paths`.
 
 ### Biome (single tool — replaces ESLint and Prettier)
 
 Root `biome.json` is authoritative. Format: double quotes, semicolons, trailing commas, 100-col, 2-space, LF. Notable rules and per-folder overrides:
 
-- `noConsole` is `warn` with `["warn", "error"]` allowed. **In CDK CLI scripts (`apps/*/bin/**`) and migration runners, use `process.stdout.write(...)` — not `console.log` — to stay under the rule** (these paths have `noConsole: off` but the convention is to write portable code).
-- `noNonNullAssertion`: `warn` globally, **`error`** in `apps/ui/**`, `off` in `apps/*/bin/**` and tests.
+- `noConsole` is `warn` with `["warn", "error"]` allowed. **In SST infra modules (`sst.config.ts`, `infra/**`) and migration runners, use `process.stdout.write(...)` — not `console.log`** (these paths have `noConsole: off` but the convention is to write portable code).
+- `noNonNullAssertion`: `warn` globally, **`error`** in `apps/dashboard/**`, `off` in `sst.config.ts` + `infra/**` and tests.
 - `noExplicitAny`: `warn`. Replace `any` with `unknown` in catches (then narrow with `toError`) and use proper Ant Design table types in components.
 - `useImportType: error`. Prefer `import type { ... }` for type-only imports.
-- `useExhaustiveDependencies`: `error` in `apps/ui/**`. Memoize fetchers with `useCallback` before passing them to `useEffect`.
-- Biome **does not have a `noVar` rule** — don't reach for it. (The override at `apps/infra/bin/stacks/cloudfront-rewrite-function.js` references `noVar: off`; that's harmless but the rule isn't real.)
+- `useExhaustiveDependencies`: `error` in `apps/dashboard/**`.
 - Tests (`*.test.*`, `*.spec.*`, `__tests__/`, `__mocks__/`) get `noConsole`, `noExplicitAny`, and `noNonNullAssertion` turned off.
 
 CI gate is `biome ci .`. Pre-commit (`.husky/pre-commit`) runs `pnpm lint-staged` → `biome check --write --no-errors-on-unmatched`.
@@ -119,26 +160,24 @@ Conventional Commits, **scope required** (e.g. `feat(ui): add password reset flo
 
 ## CI/CD
 
-Single workflow at `.github/workflows/ci-cd.yml` on push to `master`/`main` and `workflow_dispatch`. The shape:
+Single workflow at `.github/workflows/ci-cd.yml` on push to `master`/`main` and `workflow_dispatch`. Three jobs:
 
 ```
-changes (path filter, dorny/paths-filter)
-  └── lint (biome ci) — blocks everything
-        └── build (turbo run build, all packages)
-              └── deploy-infra            (matrix: dev, prod)
-                    ├── deploy-auth       (matrix: dev, prod)
-                    ├── deploy-ui         (matrix: dev, prod)
-                    └── deploy-functions  (matrix: dev, prod; migrate → deploy)
+lint (biome ci)
+  └── build (turbo run build + test)
+        └── deploy (matrix: dev, prod)
+              ├── sst deploy --stage <env>
+              └── sst shell --stage <env> -- pnpm --filter @twy/db migrate
 ```
 
-Per-environment GitHub vars (`DEV_ACCOUNT_ID`, `PROD_ACCOUNT_ID`) feed `ACCOUNT_ID`; auth is **GitHub OIDC** assuming `arn:aws:iam::<ACCOUNT_ID>:role/github-deploy-role`. `workflow_dispatch` skips path filtering and deploys everything to both envs.
-
-When adding a new deployable app, mirror the `deploy-<name>` job and add the path filter — otherwise it never runs. See README's "Adding a New App or Package" recipe.
+Per-environment GitHub vars (`DEV_ACCOUNT_ID`, `PROD_ACCOUNT_ID`) feed the OIDC role assumption (`arn:aws:iam::<ACCOUNT_ID>:role/github-deploy-role`). The deploy role needs Pulumi-friendly perms (S3 state bucket + DynamoDB lock table + the resource creation perms) — broader than the CDK-era CloudFormation policy.
 
 ## Pitfalls
 
-- **`cdk deploy` from a Lambda app says it can't resolve `@twy/lambda-shared`** — build the shared package first (`pnpm --filter @twy/lambda-shared build`) or run via Turbo, which handles the order.
-- **Migrations fail with auth/role errors** — the deploying IAM role is missing `dsql:DbConnectAdmin` on the cluster.
+- **`Resource.X is not defined` at TypeScript** — types are generated by SST after the first `sst dev` or `sst deploy`. They land in `sst-env.d.ts` (gitignored). Run one of those once before `tsc` will be fully happy.
+- **Migrations fail with auth errors** — the deploying / shell-running IAM role is missing `rds-data:*` on the cluster (or `secretsmanager:GetSecretValue` on the cluster's managed secret). With `link[]` both should be granted automatically; check `infra/api.ts` registers `cluster` in `linkRegistry` and the relevant route's `linkKeys`. The migration runner relies on the same `link[]` because it launches under `sst shell`.
 - **Stale Turbo cache** — `pnpm turbo run build --force` for one run, or `rm -rf .turbo`.
 - **Husky hooks not running** — `pnpm prepare` reinstalls them; check `.husky/{pre-commit,commit-msg}` are executable.
-- **Don't bypass `biome ci`** with `--no-verify` — fix the violation. The codebase has been through deliberate cleanup passes (catch typing, `useCallback` wrapping, `requireEnv` migration); regressions have a way of compounding.
+- **Don't bypass `biome ci`** with `--no-verify` — fix the violation. The codebase has been through deliberate cleanup passes; regressions have a way of compounding.
+- **Don't put secrets in `apps/dashboard/.env.*`** — those files are committed.
+- **Don't rename `primaryDomain`** in `infra/domain.ts` mid-flight — SST will replace the underlying CloudFront/cert/Route53 resources rather than update them.
