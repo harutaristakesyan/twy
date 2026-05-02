@@ -11,11 +11,15 @@
 declare module "sst" {
   interface Resource {
     Cluster: {
-      type: "sst.aws.Dsql";
+      type: "sst.aws.Aurora";
+      clusterArn: string;
+      secretArn: string;
+      database: string;
       host: string;
-      region: string;
-      identifier: string;
-      arn: string;
+      port: number;
+      username: string;
+      password: string;
+      reader: string;
     };
     UserPool: {
       type: "sst.aws.CognitoUserPool";

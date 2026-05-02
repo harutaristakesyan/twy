@@ -1,6 +1,6 @@
 import { type ListBranchesEvent, ListBranchesEventSchema } from "@contracts/branch/request";
 import type { BranchListResponse } from "@contracts/branch/response";
-import { listBranches as listBranchRecords } from "@libs/db/operations/branchOperations";
+import { listBranches as listBranchRecords } from "@twy/db";
 import { middyfy } from "@twy/lambda-shared";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 

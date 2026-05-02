@@ -5,7 +5,7 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 import type { MessageResponse } from "@contracts/common/response";
 import { type UpdateUserEvent, UpdateUserEventSchema } from "@contracts/user/request";
-import { updateUser as updateUserRecord } from "@libs/db/operations/userOperations";
+import { updateUser as updateUserRecord } from "@twy/db";
 import { middyfy } from "@twy/lambda-shared";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";

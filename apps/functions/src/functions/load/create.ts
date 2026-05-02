@@ -1,10 +1,6 @@
 import { type CreateLoadEvent, CreateLoadEventSchema } from "@contracts/load/request";
 import type { CreateLoadResponse } from "@contracts/load/response";
-import {
-  createLoad as createLoadRecord,
-  type LoadFileInput,
-} from "@libs/db/operations/loadOperations";
-import { getFullUserInfoById } from "@libs/db/operations/userOperations";
+import { createLoad as createLoadRecord, getFullUserInfoById, type LoadFileInput } from "@twy/db";
 import { middyfy } from "@twy/lambda-shared";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";

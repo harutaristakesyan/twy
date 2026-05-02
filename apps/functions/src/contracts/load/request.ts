@@ -1,5 +1,5 @@
 import { AuthContext } from "@contracts/common/auth";
-import { loadStatusValues } from "@libs/db";
+import { loadStatusValues } from "@twy/db";
 import z from "zod";
 
 const loadStatusEnum = z.enum([...loadStatusValues] as [

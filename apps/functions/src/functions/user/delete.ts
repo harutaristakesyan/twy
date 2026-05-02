@@ -4,7 +4,7 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 import type { MessageResponse } from "@contracts/common/response";
 import { type DeleteUserEvent, DeleteUserEventSchema } from "@contracts/user/request";
-import { deleteUser as deleteUserRecord } from "@libs/db/operations/userOperations";
+import { deleteUser as deleteUserRecord } from "@twy/db";
 import { middyfy } from "@twy/lambda-shared";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";

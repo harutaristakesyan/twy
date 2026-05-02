@@ -8,11 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Need | File |
 |---|---|
-| Per-package conventions (UI, auth, functions, lambda-shared) | `apps/<name>/CLAUDE.md`, `packages/<name>/CLAUDE.md` |
+| Per-package conventions (UI, auth, functions, db, lambda-shared) | `apps/<name>/CLAUDE.md`, `packages/<name>/CLAUDE.md` |
 | Infrastructure modules (SST components — DB, auth, API, web, storage, email, routes) | `sst.config.ts` + `infra/` |
 | Slash commands (`/ship`, `/verify`, `/new-handler`, `/new-migration`, `/debug-test`, `/review-pr`, `/sync-docs`) | `.claude/commands/` |
 | Specialized subagents (code-reviewer, debugger, security-auditor, migration-writer, lambda-handler-author, refactoring-specialist, test-writer, docs-writer) | `.claude/agents/` |
-| Authoring procedures (Lambda handler, Kysely migration, UI page, SST component) | `.claude/skills/` |
+| Authoring procedures (Lambda handler, Drizzle migration, UI page, SST component) | `.claude/skills/` |
 | Permissions, hooks, model selection | `.claude/settings.json` |
 | Onboarding for the agent infra itself | `.claude/README.md` |
 | Project-scoped MCP servers (filesystem, git, github, postgres-dev) | `.mcp.json` |
@@ -44,7 +44,7 @@ pnpm sst remove --stage <stage>           # tear down a stage
 pnpm sst shell --stage dev                # open a shell with Resource.* env vars
 
 # Apply pending DB migrations against the cluster bound to a stage
-pnpm sst shell --stage dev -- pnpm --filter @twy/functions migrate
+pnpm sst shell --stage dev -- pnpm --filter @twy/db migrate
 
 # Scope to one package
 pnpm --filter @twy/<name> <script>
@@ -64,11 +64,12 @@ infra/                       # SST components, one module per concern
   auth.ts, api.ts, web.ts, routes.ts
 apps/ui          @twy/ui            React 19 + Vite SPA, deployed via sst.aws.StaticSite + sst.aws.Router
 apps/auth        @twy/auth          Cognito flow Lambdas (Middy + Zod) — handlers only, infra in infra/auth.ts
-apps/functions   @twy/functions     Domain Lambdas + Kysely migrations against Aurora DSQL
-packages/lambda-shared @twy/lambda-shared   middy wrappers, error utils
+apps/functions   @twy/functions     Domain Lambdas — handlers + contracts; consumes @twy/db for all DB access
+packages/db          @twy/db              Drizzle schema, query operations, migration runner (Aurora Data API)
+packages/lambda-shared @twy/lambda-shared  middy wrappers, error utils
 ```
 
-Cross-package deps are `workspace:*`. `lambda-shared` builds first (Turbo `^build`); SST handles bundling each handler with esbuild on `sst deploy`.
+Cross-package deps are `workspace:*`. `lambda-shared` and `db` build first (Turbo `^build`); SST handles bundling each handler with esbuild on `sst deploy`.
 
 ### Stages
 
@@ -85,18 +86,20 @@ api.route("GET /api/user", "apps/functions/src/functions/user/get.handler", {
 });
 ```
 
-Consumer side, in the handler:
+Consumer side, in the handler — never construct a DB client; import the shared one from `@twy/db`:
 
 ```ts
-import { Resource } from "sst";
-const hostname = Resource.Cluster.host;
+import { db, users, eq } from "@twy/db";
+const [user] = await db.select().from(users).where(eq(users.id, userId));
 ```
 
-`link[]` does two things: it injects the resource's runtime values into `Resource.X` and grants the matching IAM permissions automatically. There is no longer a `dsqlConnectPolicyFor` / `cognitoUserManagementPolicyFor` / `s3ObjectWritePolicyFor` helper — those were CDK-era and are gone.
+(In practice handlers call into operation functions — `createUser`, `listLoads`, etc. — which already encapsulate query composition. Reach for `eq`/`and` only when factoring a new operation.)
+
+`link[]` does two things: it injects the resource's runtime values into `Resource.X` (e.g. `Resource.Cluster.{clusterArn,secretArn,database}` for the Aurora component, `Resource.UserPool.id`, `Resource.Files.name`) and grants the matching IAM permissions automatically. There is no longer a `dsqlConnectPolicyFor` / `cognitoUserManagementPolicyFor` / `s3ObjectWritePolicyFor` helper — those were CDK-era and are gone.
 
 ### Domains (multi-domain deploy)
 
-Each environment serves a `primaryDomain` plus `aliases` from a single `sst.aws.Router` distribution, shared with the `sst.aws.ApiGatewayV2` via `router.routeUrl("/api/*", api.url)`. Today: dev = `dev.twy.am` + `dev.twy.be`; prod = `twy.am` + `twy.be` (+ `www.*`). All domains share the same DSQL cluster, Cognito user pool, API Gateway, and files bucket — there's exactly one backend per env. **Auth is per-origin**: Cognito tokens live in `localStorage`/cookies, so a user signed in on `twy.am` is *not* signed in on `twy.be`.
+Each environment serves a `primaryDomain` plus `aliases` from a single `sst.aws.Router` distribution, shared with the `sst.aws.ApiGatewayV2` via `router.routeUrl("/api/*", api.url)`. Today: dev = `dev.twy.am` + `dev.twy.be`; prod = `twy.am` + `twy.be` (+ `www.*`). All domains share the same Aurora cluster, Cognito user pool, API Gateway, and files bucket — there's exactly one backend per env. **Auth is per-origin**: Cognito tokens live in `localStorage`/cookies, so a user signed in on `twy.am` is *not* signed in on `twy.be`.
 
 To add a new alias domain: (1) create the Route53 hosted zone in the matching AWS account; (2) point the registrar's NS records at Route53; (3) append to `aliases` in `infra/domain.ts`. SST's `dns: sst.aws.dns()` adapter handles cross-zone DNS validation and A/AAAA record creation automatically.
 
@@ -111,13 +114,24 @@ Handlers read configuration via `Resource.X` (the SST SDK), **not** `process.env
 
 ### DB / migrations
 
-`@twy/functions` uses Kysely + `pg`. Auth is **Aurora DSQL with IAM** via `@aws-sdk/dsql-signer`. The cluster identifier comes from `Resource.Cluster.host` (provided by `link: [db.cluster]` in `infra/api.ts`). The migration runner (`apps/functions/src/migration/run-migrations.ts`) is launched via `sst shell` so the same `Resource.Cluster` binding is in scope:
+The `@twy/db` package owns the database layer: **Drizzle ORM** against an **Aurora Serverless v2 (Postgres)** cluster via the **RDS Data API** (`drizzle-orm/aws-data-api/pg`). Lambdas are *not* attached to the cluster's VPC — Drizzle talks to the cluster over HTTPS through `RDSDataClient`, which avoids cold-start tax and the NAT-Gateway cost. The cluster credentials come from `Resource.Cluster.{clusterArn,secretArn,database}` (provided by `link: [db.cluster]` in `infra/api.ts` / `infra/auth.ts`).
+
+Schema lives under `packages/db/src/schema/`, one `pgTable` per file, using snake_case columns and camelCase TS keys (Drizzle's `casing: 'snake_case'` does the mapping). `packages/db/drizzle/` holds the generated migration SQL + `meta/` snapshots — both are checked in.
+
+The Drizzle workflow:
 
 ```bash
-pnpm sst shell --stage dev -- pnpm --filter @twy/functions migrate
+# 1. Edit a schema file under packages/db/src/schema/
+# 2. Diff schema → new migration SQL under packages/db/drizzle/
+pnpm sst shell --stage dev -- pnpm --filter @twy/db db:generate
+
+# 3. Apply pending migrations against the cluster bound to a stage
+pnpm sst shell --stage dev -- pnpm --filter @twy/db migrate
 ```
 
-CI runs this after `sst deploy` succeeds. Migration scripts must use `process.stdout.write` for output (Biome's `noConsole` rule).
+The runner (`packages/db/src/migration/run-migrations.ts`) is launched via `sst shell` so the same `Resource.Cluster` binding is in scope. CI invokes the same command after `sst deploy` succeeds. Migration scripts must use `process.stdout.write` for output (Biome's `noConsole` rule).
+
+Per-stage scaling: prod stays warm at `min: 0.5 ACU`; dev (and personal stages) auto-pause at `min: 0 ACU` after ~10 min idle.
 
 ### UI
 
@@ -155,7 +169,7 @@ lint (biome ci)
   └── build (turbo run build + test)
         └── deploy (matrix: dev, prod)
               ├── sst deploy --stage <env>
-              └── sst shell --stage <env> -- pnpm --filter @twy/functions migrate
+              └── sst shell --stage <env> -- pnpm --filter @twy/db migrate
 ```
 
 Per-environment GitHub vars (`DEV_ACCOUNT_ID`, `PROD_ACCOUNT_ID`) feed the OIDC role assumption (`arn:aws:iam::<ACCOUNT_ID>:role/github-deploy-role`). The deploy role needs Pulumi-friendly perms (S3 state bucket + DynamoDB lock table + the resource creation perms) — broader than the CDK-era CloudFormation policy.
@@ -163,7 +177,7 @@ Per-environment GitHub vars (`DEV_ACCOUNT_ID`, `PROD_ACCOUNT_ID`) feed the OIDC 
 ## Pitfalls
 
 - **`Resource.X is not defined` at TypeScript** — types are generated by SST after the first `sst dev` or `sst deploy`. They land in `sst-env.d.ts` (gitignored). Run one of those once before `tsc` will be fully happy.
-- **Migrations fail with auth/role errors** — the deploying IAM role is missing `dsql:DbConnectAdmin` on the cluster. With `link[]` it should be granted automatically; check `infra/api.ts` includes `cluster` in the right route's `linkKeys`.
+- **Migrations fail with auth errors** — the deploying / shell-running IAM role is missing `rds-data:*` on the cluster (or `secretsmanager:GetSecretValue` on the cluster's managed secret). With `link[]` both should be granted automatically; check `infra/api.ts` registers `cluster` in `linkRegistry` and the relevant route's `linkKeys`. The migration runner relies on the same `link[]` because it launches under `sst shell`.
 - **Stale Turbo cache** — `pnpm turbo run build --force` for one run, or `rm -rf .turbo`.
 - **Husky hooks not running** — `pnpm prepare` reinstalls them; check `.husky/{pre-commit,commit-msg}` are executable.
 - **Don't bypass `biome ci`** with `--no-verify` — fix the violation. The codebase has been through deliberate cleanup passes; regressions have a way of compounding.

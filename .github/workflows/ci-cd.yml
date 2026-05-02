@@ -69,4 +69,4 @@ jobs:
       - name: SST deploy
         run: pnpm sst deploy --stage "$STAGE"
       - name: Run DB migrations
-        run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @twy/functions migrate
+        run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @twy/db migrate

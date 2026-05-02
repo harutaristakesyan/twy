@@ -1,6 +1,6 @@
 import { type ListUsersEvent, ListUsersEventSchema } from "@contracts/user/request";
 import type { UserListResponse } from "@contracts/user/response";
-import { listUsers as listUserRecords } from "@libs/db/operations/userOperations";
+import { listUsers as listUserRecords } from "@twy/db";
 import { middyfy } from "@twy/lambda-shared";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 

@@ -1,6 +1,6 @@
 import { type ChangeLoadStatusEvent, ChangeLoadStatusEventSchema } from "@contracts/load/request";
 import type { ChangeLoadStatusResponse } from "@contracts/load/response";
-import { changeLoadStatus as changeLoadStatusRecord } from "@libs/db/operations/loadOperations";
+import { changeLoadStatus as changeLoadStatusRecord } from "@twy/db";
 import { middyfy } from "@twy/lambda-shared";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";

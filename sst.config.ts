@@ -55,7 +55,7 @@ export default $config({
       aliases: cfg.aliases,
       siteUrl: web.url,
       apiUrl: api.api.url,
-      clusterEndpoint: db.cluster.endpoint,
+      clusterHost: db.cluster.host,
       userPoolId: auth.userPool.id,
       userPoolClientId: auth.userPoolClient.id,
       filesBucket: storage.filesBucket.name,

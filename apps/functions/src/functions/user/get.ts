@@ -1,6 +1,6 @@
 import { type GetUserEvent, GetUserEventSchema } from "@contracts/user/request";
 import type { UserResponse } from "@contracts/user/response";
-import { getFullUserInfoById } from "@libs/db/operations/userOperations";
+import { getFullUserInfoById } from "@twy/db";
 import { middyfy } from "@twy/lambda-shared";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 

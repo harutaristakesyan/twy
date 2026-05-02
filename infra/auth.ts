@@ -1,15 +1,14 @@
 /// <reference path="../.sst/platform/config.d.ts" />
 
 /**
- * Cognito user pool + app client + post-confirmation Lambda — replacement
- * for apps/infra/bin/stacks/auth-stack.ts.
+ * Cognito user pool + app client + post-confirmation Lambda.
  *
  * Sign-in alias: email. Self-sign-up enabled. The post-confirmation trigger
- * gets `link: [db]` so it can write a row into the users table on first
- * verification (replaces the manual `dsql:DbConnectAdmin` policy attached
- * via dsqlConnectPolicyFor in the CDK era).
+ * gets `link: [db.cluster]` so it can write a row into the users table on
+ * first verification — IAM grants for the RDS Data API + Secrets Manager
+ * read are auto-derived from the link.
  */
-export function createAuth(args: { db: { cluster: sst.aws.Dsql } }) {
+export function createAuth(args: { db: { cluster: sst.aws.Aurora } }) {
   const userPool = new sst.aws.CognitoUserPool("UserPool", {
     usernames: ["email"],
     transform: {

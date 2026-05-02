@@ -9,7 +9,7 @@ interface CreateApiArgs {
     userPool: sst.aws.CognitoUserPool;
     userPoolClient: ReturnType<sst.aws.CognitoUserPool["addClient"]>;
   };
-  db: { cluster: sst.aws.Dsql };
+  db: { cluster: sst.aws.Aurora };
   filesBucket: sst.aws.Bucket;
 }
 
@@ -59,7 +59,7 @@ export function createApi(args: CreateApiArgs) {
 
   const linkRegistry: Record<
     LinkKey,
-    | sst.aws.Dsql
+    | sst.aws.Aurora
     | sst.aws.CognitoUserPool
     | sst.aws.Bucket
     | ReturnType<sst.aws.CognitoUserPool["addClient"]>

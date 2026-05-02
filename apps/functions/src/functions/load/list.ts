@@ -1,6 +1,6 @@
 import { type ListLoadsEvent, ListLoadsEventSchema } from "@contracts/load/request";
 import type { LoadListResponse } from "@contracts/load/response";
-import { listLoads as listLoadRecords } from "@libs/db/operations/loadOperations";
+import { listLoads as listLoadRecords } from "@twy/db";
 import { middyfy } from "@twy/lambda-shared";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 

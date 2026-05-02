@@ -9,7 +9,7 @@ Single-source-of-truth for every AWS resource the twy app provisions. Imported l
 | File | Owns |
 |---|---|
 | `domain.ts` | Per-stage domain config (primary + aliases) and the `stageConfig()` selector. |
-| `database.ts` | Aurora DSQL cluster (`sst.aws.Dsql`). |
+| `database.ts` | Aurora Serverless v2 (Postgres) cluster (`sst.aws.Aurora`) with `dataApi: true`, plus the small `sst.aws.Vpc` it needs. Per-stage scaling: prod `min: 0.5 ACU`, dev `min: 0 ACU` (auto-pause). |
 | `storage.ts` | Files S3 bucket with multi-origin CORS. |
 | `email.ts` | SES email identity per apex domain (auto-DKIM/SPF/DMARC via `sst.aws.dns()`). |
 | `auth.ts` | Cognito user pool + app client + post-confirmation Lambda trigger. |
