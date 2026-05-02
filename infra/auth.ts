@@ -8,7 +8,7 @@
  * first verification — IAM grants for the RDS Data API + Secrets Manager
  * read are auto-derived from the link.
  */
-export function createAuth(args: { db: { cluster: sst.aws.Aurora } }) {
+export function createAuth(args: { db: { cluster: sst.aws.Aurora }; filesBucket: sst.aws.Bucket }) {
   const userPool = new sst.aws.CognitoUserPool("UserPool", {
     usernames: ["email"],
     transform: {
@@ -30,7 +30,7 @@ export function createAuth(args: { db: { cluster: sst.aws.Aurora } }) {
     triggers: {
       postConfirmation: {
         handler: "packages/functions/src/events/postConfirmation.handler",
-        link: [args.db.cluster],
+        link: [args.db.cluster, args.filesBucket],
         permissions: [
           {
             actions: ["cognito-idp:AdminDisableUser"],

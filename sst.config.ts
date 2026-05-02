@@ -39,7 +39,7 @@ export default $config({
     const db = createDatabase();
     const storage = createStorage(cfg);
     const email = createEmail(cfg);
-    const auth = createAuth({ db });
+    const auth = createAuth({ db, filesBucket: storage.filesBucket });
     const api = createApi({
       cfg,
       auth,
