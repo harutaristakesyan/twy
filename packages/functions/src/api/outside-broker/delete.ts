@@ -1,14 +1,20 @@
 import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
+  assertPermission,
   type DeleteBrokerEvent,
   DeleteBrokerEventSchema,
   deleteBroker as deleteBrokerRecord,
+  loadAuthContext,
 } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
 
 const deleteBroker = async (event: DeleteBrokerEvent): Promise<MessageResponse> => {
+  const { userId } = event.requestContext.authUser;
+  const ctx = await loadAuthContext(userId);
+  assertPermission(ctx, "brokers", "edit");
+
   const { brokerId } = event.pathParameters;
 
   const removed = await deleteBrokerRecord(brokerId);

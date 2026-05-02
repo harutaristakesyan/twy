@@ -16,8 +16,9 @@ const { Title } = Typography;
 export const LoadManagementTable: React.FC = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const { user } = useCurrentUser();
+  const { user, permissions } = useCurrentUser();
   const isBranchAssigned = user?.branch?.id !== undefined && user?.branch?.id !== null;
+  const canAdd = permissions.loads.add;
 
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 500 });
@@ -70,23 +71,25 @@ export const LoadManagementTable: React.FC = () => {
               prefix={<SearchOutlined />}
               allowClear
             />
-            <Tooltip
-              title={
-                !isBranchAssigned
-                  ? "You must be assigned to a branch before creating a load. Please contact your administrator."
-                  : undefined
-              }
-              placement="top"
-            >
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => navigate("/loads/create")}
-                disabled={!isBranchAssigned}
+            {canAdd && (
+              <Tooltip
+                title={
+                  !isBranchAssigned
+                    ? "You must be assigned to a branch before creating a load. Please contact your administrator."
+                    : undefined
+                }
+                placement="top"
               >
-                Create New Load
-              </Button>
-            </Tooltip>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => navigate("/loads/create")}
+                  disabled={!isBranchAssigned}
+                >
+                  Create New Load
+                </Button>
+              </Tooltip>
+            )}
             <Button icon={<ReloadOutlined />} onClick={refresh} loading={tableProps.loading}>
               Refresh
             </Button>

@@ -1,0 +1,44 @@
+---
+const features = [
+  {
+    icon: "📦",
+    title: "Load Tracking",
+    body: "Track every load from pickup to delivery. Full visibility across your entire book of business, in real time.",
+  },
+  {
+    icon: "🚛",
+    title: "Carrier Management",
+    body: "Build and manage your carrier network. Store contacts, rates, and performance history — all in one place.",
+  },
+  {
+    icon: "📊",
+    title: "Reporting",
+    body: "Understand your business at a glance. Revenue, margins, and load volume — the numbers that matter most.",
+  },
+];
+---
+
+<section class="bg-slate-50 py-20 px-6 border-b border-slate-200">
+  <div class="max-w-5xl mx-auto">
+    <div class="text-center mb-14">
+      <h2 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-3">
+        Everything your operation needs
+      </h2>
+      <p class="text-base text-slate-500">
+        Built for how freight brokers and trucking companies actually work.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {features.map((f) => (
+        <div class="bg-white border border-slate-200 rounded-2xl p-8 hover:shadow-lg transition-shadow">
+          <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-2xl mb-5">
+            {f.icon}
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mb-2">{f.title}</h3>
+          <p class="text-sm text-slate-500 leading-relaxed">{f.body}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

@@ -17,8 +17,7 @@ import { getBranches } from "@/features/branch/api/branchApi";
 import type { Branch } from "@/features/branch/types/branch";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { updateUser } from "../api/userApi";
-import type { UpdateUserRequest, User, UserRole as UserRoleType } from "../types/user";
-import { USER_ROLE_LABELS, UserRole } from "../types/user";
+import type { UpdateUserRequest, User } from "../types/user";
 
 const { Option } = Select;
 
@@ -40,7 +39,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
   const [_branchTotal, setBranchTotal] = useState(0);
   const [branchSearch, setBranchSearch] = useState("");
   const [hasMoreBranches, setHasMoreBranches] = useState(true);
-  const branchSearchTimeoutRef = useRef<NodeJS.Timeout>();
+  const branchSearchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isInitialFetchRef = useRef(false);
 
   // Fetch branches
@@ -90,7 +89,6 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        role: user.role,
         isActive: user.isActive,
         branch: branchId,
       });
@@ -98,7 +96,6 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
   }, [open, user, form]);
 
   interface UserEditFormValues {
-    role: UserRoleType;
     isActive: boolean;
     branch: string;
   }
@@ -108,7 +105,6 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
     try {
       const updateData: UpdateUserRequest = {
         id: user.id,
-        role: values.role,
         isActive: values.isActive,
         branch: values.branch,
       };
@@ -174,7 +170,6 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
           firstName: user?.firstName,
           lastName: user?.lastName,
           email: user?.email,
-          role: user?.role,
           isActive: user?.isActive,
           branch: user?.branch?.id || user?.branchId,
         }}
@@ -195,20 +190,6 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
         <Divider />
 
         {/* Editable fields */}
-        <Form.Item
-          name="role"
-          label="Role"
-          rules={[{ required: true, message: "Please select a role" }]}
-        >
-          <Select placeholder="Select role">
-            {Object.values(UserRole).map((role) => (
-              <Option key={role} value={role}>
-                {USER_ROLE_LABELS[role]}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-
         <Form.Item
           name="branch"
           label="Branch"

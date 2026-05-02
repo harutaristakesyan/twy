@@ -10,12 +10,12 @@ import CreateLoadPage from "@/features/load/pages/CreateLoadPage";
 import LoadsPage from "@/features/load/pages/LoadsPage";
 import OutsideBrokersPage from "@/features/outside-broker/pages/OutsideBrokersPage";
 import OutsideCarriersPage from "@/features/outside-carrier/pages/OutsideCarriersPage";
+import TeamsPage from "@/features/team/pages/TeamsPage";
 import ProfilePage from "@/features/user/pages/ProfilePage";
 import UsersPage from "@/features/user/pages/UsersPage";
 import AppLayout from "@/layouts/AppLayout.tsx";
 import ProtectedRoute from "@/routes/ProtectedRoute";
-import RoleBasedRoute from "@/routes/RoleBasedRoute";
-import { MenuFeature } from "@/utils/permissions";
+import RequirePermission from "@/routes/RequirePermission";
 
 const NotFound = () => <div>Not Found</div>;
 
@@ -36,49 +36,57 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <RoleBasedRoute requiredFeature={MenuFeature.USERS}>
+              <RequirePermission resource="users" action="view">
                 <UsersPage />
-              </RoleBasedRoute>
+              </RequirePermission>
             ),
           },
           {
             path: "branches",
             element: (
-              <RoleBasedRoute requiredFeature={MenuFeature.BRANCHES}>
+              <RequirePermission resource="branches" action="view">
                 <BranchesPage />
-              </RoleBasedRoute>
+              </RequirePermission>
             ),
           },
           {
             path: "loads",
             element: (
-              <RoleBasedRoute requiredFeature={MenuFeature.LOADS}>
+              <RequirePermission resource="loads" action="view">
                 <LoadsPage />
-              </RoleBasedRoute>
+              </RequirePermission>
             ),
           },
           {
             path: "loads/create",
             element: (
-              <RoleBasedRoute requiredFeature={MenuFeature.LOADS}>
+              <RequirePermission resource="loads" action="view">
                 <CreateLoadPage />
-              </RoleBasedRoute>
+              </RequirePermission>
             ),
           },
           {
             path: "outside-brokers",
             element: (
-              <RoleBasedRoute requiredFeature={MenuFeature.OUTSIDE_BROKERS}>
+              <RequirePermission resource="brokers" action="view">
                 <OutsideBrokersPage />
-              </RoleBasedRoute>
+              </RequirePermission>
             ),
           },
           {
             path: "outside-carriers",
             element: (
-              <RoleBasedRoute requiredFeature={MenuFeature.OUTSIDE_CARRIERS}>
+              <RequirePermission resource="carriers" action="view">
                 <OutsideCarriersPage />
-              </RoleBasedRoute>
+              </RequirePermission>
+            ),
+          },
+          {
+            path: "teams",
+            element: (
+              <RequirePermission resource="teams" action="view">
+                <TeamsPage />
+              </RequirePermission>
             ),
           },
           { path: "profile", element: <ProfilePage /> },

@@ -217,6 +217,7 @@
     "ENV": "dev"
   },
 
+  "plansDirectory": "./docs/plans",
   "outputStyle": "default",
 
   "hooks": {

@@ -1,0 +1,110 @@
+---
+---
+
+<div
+  id="contact-modal"
+  class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+>
+  <div class="bg-white rounded-2xl p-10 w-full max-w-md shadow-2xl">
+    <h3 class="text-2xl font-black text-slate-900 mb-1">Get in touch</h3>
+    <p class="text-sm text-slate-500 mb-7">
+      Tell us about your operation — we'll be in touch shortly.
+    </p>
+
+    <form action="mailto:hello@twy.am" method="GET" enctype="text/plain">
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+            First name
+          </label>
+          <input
+            type="text"
+            name="first_name"
+            placeholder="John"
+            required
+            class="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-500 transition-colors"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+            Last name
+          </label>
+          <input
+            type="text"
+            name="last_name"
+            placeholder="Smith"
+            required
+            class="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-500 transition-colors"
+          />
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+          Email
+        </label>
+        <input
+          type="email"
+          name="email"
+          placeholder="john@yourcompany.com"
+          required
+          class="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-500 transition-colors"
+        />
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+          Company
+        </label>
+        <input
+          type="text"
+          name="company"
+          placeholder="Smith Freight LLC"
+          required
+          class="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-500 transition-colors"
+        />
+      </div>
+
+      <div class="mb-6">
+        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+          Message
+        </label>
+        <textarea
+          name="message"
+          placeholder="Tell us about your operation — fleet size, current challenges, etc."
+          rows="3"
+          required
+          class="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+        ></textarea>
+      </div>
+
+      <div class="flex gap-3 justify-end">
+        <button
+          type="button"
+          onclick="closeContactModal()"
+          class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm px-5 py-2.5 rounded-lg transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-6 py-2.5 rounded-lg transition-colors shadow-md shadow-blue-200 cursor-pointer"
+        >
+          Send Message
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script is:inline>
+  function openContactModal() {
+    document.getElementById("contact-modal").classList.remove("hidden");
+  }
+  function closeContactModal() {
+    document.getElementById("contact-modal").classList.add("hidden");
+  }
+  document.getElementById("contact-modal").addEventListener("click", function (e) {
+    if (e.target === this) closeContactModal();
+  });
+</script>

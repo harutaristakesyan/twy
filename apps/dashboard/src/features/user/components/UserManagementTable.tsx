@@ -3,6 +3,7 @@ import { useAntdTable, useDebounce, useRequest } from "ahooks";
 import { Button, Card, Flex, Input, message, Table, Typography } from "antd";
 import type React from "react";
 import { useState } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { deleteUser, getUsers } from "../api/userApi";
 import { useUserModal } from "../providers/UserModalProvider";
@@ -15,7 +16,6 @@ type SortField =
   | "firstName"
   | "lastName"
   | "email"
-  | "role"
   | "isActive"
   | "createdAt"
   | "branch"
@@ -23,6 +23,8 @@ type SortField =
 
 const UserManagementTable: React.FC = () => {
   const { openUserCreate } = useUserModal();
+  const { permissions } = useCurrentUser();
+  const canAdd = permissions.users.add;
 
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 500 });
@@ -68,13 +70,15 @@ const UserManagementTable: React.FC = () => {
               prefix={<SearchOutlined />}
               allowClear
             />
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => openUserCreate(() => refresh())}
-            >
-              Add User
-            </Button>
+            {canAdd && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => openUserCreate(() => refresh())}
+              >
+                Add User
+              </Button>
+            )}
             <Button icon={<ReloadOutlined />} onClick={refresh} loading={tableProps.loading}>
               Refresh
             </Button>

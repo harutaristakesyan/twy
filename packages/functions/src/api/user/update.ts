@@ -6,6 +6,8 @@ import {
 import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
+  assertPermission,
+  loadAuthContext,
   type UpdateUserEvent,
   UpdateUserEventSchema,
   updateUser as updateUserRecord,
@@ -19,12 +21,15 @@ const userPoolId = Resource.UserPool.id;
 const cognitoClient = new CognitoIdentityProviderClient({});
 
 const updateUser = async (event: UpdateUserEvent): Promise<MessageResponse> => {
+  const { userId: adminId } = event.requestContext.authUser;
+  const ctx = await loadAuthContext(adminId);
+  assertPermission(ctx, "users", "edit");
+
   const { userId } = event.pathParameters;
-  const { branch, role, isActive } = event.body;
+  const { branch, isActive } = event.body;
 
   const updated = await updateUserRecord(userId, {
     branchId: typeof branch === "undefined" ? undefined : branch,
-    role: typeof role === "undefined" ? undefined : role,
     isActive,
   });
 

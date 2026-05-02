@@ -1,9 +1,11 @@
 import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
+  assertPermission,
   type CreateBrokerEvent,
   CreateBrokerEventSchema,
   createBroker as createBrokerRecord,
+  loadAuthContext,
 } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
@@ -21,6 +23,9 @@ const createBroker = async (event: CreateBrokerEvent): Promise<MessageResponse> 
     creditLimitUnlimited,
     creditLimit,
   } = event.body;
+  const { userId } = event.requestContext.authUser;
+  const ctx = await loadAuthContext(userId);
+  assertPermission(ctx, "brokers", "add");
 
   await createBrokerRecord({
     brokerName,
@@ -34,6 +39,7 @@ const createBroker = async (event: CreateBrokerEvent): Promise<MessageResponse> 
     branchId: branchId ?? null,
     creditLimitUnlimited,
     creditLimit: creditLimit ?? null,
+    createdBy: userId,
   });
 
   return { message: "Outside broker created successfully" };

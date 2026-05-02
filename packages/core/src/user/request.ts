@@ -1,4 +1,3 @@
-import { Roles } from "@twy/db";
 import z from "zod";
 import { AuthContext } from "../shared/auth.js";
 
@@ -12,7 +11,6 @@ export const userSortFieldMap = {
   firstName: "users.firstName",
   lastName: "users.lastName",
   email: "users.email",
-  role: "users.role",
   isActive: "users.isActive",
   createdAt: "users.createdAt",
   branch: "branch.name",
@@ -50,17 +48,11 @@ export const ListUsersEventSchema = z.object({
 
 export type ListUsersEvent = z.infer<typeof ListUsersEventSchema>;
 
+const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
 const UpdateUserPayloadSchema = z
   .object({
-    branch: z
-      .string()
-      .regex(
-        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
-        "userId must be a valid Cognito user identifier",
-      )
-      .nullable()
-      .optional(),
-    role: z.enum(Roles).nullable().optional(),
+    branch: z.string().regex(UUID_REGEX, "branch must be a valid UUID").nullable().optional(),
     isActive: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
@@ -70,12 +62,7 @@ const UpdateUserPayloadSchema = z
 export const UpdateUserEventSchema = z.object({
   requestContext: AuthContext,
   pathParameters: z.object({
-    userId: z
-      .string()
-      .regex(
-        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
-        "userId must be a valid Cognito user identifier",
-      ),
+    userId: z.string().regex(UUID_REGEX, "userId must be a valid Cognito user identifier"),
   }),
   body: UpdateUserPayloadSchema,
 });
@@ -85,12 +72,7 @@ export type UpdateUserEvent = z.infer<typeof UpdateUserEventSchema>;
 export const DeleteUserEventSchema = z.object({
   requestContext: AuthContext,
   pathParameters: z.object({
-    userId: z
-      .string()
-      .regex(
-        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
-        "userId must be a valid Cognito user identifier",
-      ),
+    userId: z.string().regex(UUID_REGEX, "userId must be a valid Cognito user identifier"),
   }),
 });
 
@@ -112,15 +94,12 @@ export const SelfUpdateUserEventSchema = z.object({
 
 export type SelfUpdateUserEvent = z.infer<typeof SelfUpdateUserEventSchema>;
 
-const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-
 export const CreateUserEventSchema = z.object({
   requestContext: AuthContext,
   body: z.object({
     email: z.string().email("Must be a valid email"),
     firstName: z.string().trim().min(1, "First name is required"),
     lastName: z.string().trim().min(1, "Last name is required"),
-    role: z.enum(Roles),
     branch: z.string().regex(UUID_REGEX, "branch must be a valid UUID").nullable().optional(),
     isActive: z.boolean(),
   }),

@@ -2,19 +2,16 @@ import { Spin } from "antd";
 import type React from "react";
 import { Navigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import type { MenuFeature } from "@/utils/permissions";
+import type { Action, Resource } from "@/utils/permissions";
 
-interface RoleBasedRouteProps {
+interface RequirePermissionProps {
   children: React.ReactNode;
-  requiredFeature: MenuFeature;
+  resource: Resource;
+  action: Action;
 }
 
-/**
- * Role-based route protection component
- * Only allows access if user's role has permission for the required feature
- */
-const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({ children, requiredFeature }) => {
-  const { user, loading, permissions } = useCurrentUser();
+const RequirePermission: React.FC<RequirePermissionProps> = ({ children, resource, action }) => {
+  const { loading, permissions } = useCurrentUser();
 
   if (loading) {
     return (
@@ -31,11 +28,11 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({ children, requiredFeatu
     );
   }
 
-  if (!user || !permissions.menu[requiredFeature]) {
+  if (!permissions[resource][action]) {
     return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
 };
 
-export default RoleBasedRoute;
+export default RequirePermission;

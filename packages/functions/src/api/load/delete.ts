@@ -1,14 +1,20 @@
 import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
+  assertPermission,
   type DeleteLoadEvent,
   DeleteLoadEventSchema,
   deleteLoad as deleteLoadRecord,
+  loadAuthContext,
 } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
 
 const deleteLoad = async (event: DeleteLoadEvent): Promise<MessageResponse> => {
+  const { userId } = event.requestContext.authUser;
+  const ctx = await loadAuthContext(userId);
+  assertPermission(ctx, "loads", "edit");
+
   const { loadId } = event.pathParameters;
 
   const removed = await deleteLoadRecord(loadId);

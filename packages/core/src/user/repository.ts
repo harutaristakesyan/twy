@@ -1,4 +1,4 @@
-import { branch, db, type NewUser, type OrderDirection, type Roles, users } from "@twy/db";
+import { branch, db, type NewUser, type OrderDirection, users } from "@twy/db";
 import { asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
 
@@ -13,7 +13,6 @@ interface UserDetailsRow {
   email: string;
   firstName: string | null;
   lastName: string | null;
-  role: string | null;
   isActive: boolean;
   branchId: string | null;
   branchName: string | null;
@@ -24,7 +23,6 @@ const mapUserDetails = (row: UserDetailsRow) => ({
   email: row.email,
   firstName: row.firstName,
   lastName: row.lastName,
-  role: row.role,
   isActive: row.isActive,
   branch: row.branchId ? { id: row.branchId, name: row.branchName } : null,
   createdAt: row.createdAt ? row.createdAt.toISOString() : null,
@@ -47,7 +45,6 @@ export const getFullUserInfoById = async (userId: string) => {
       email: users.email,
       firstName: users.firstName,
       lastName: users.lastName,
-      role: users.role,
       isActive: users.isActive,
       branchId: users.branch,
       branchName: branch.name,
@@ -71,7 +68,6 @@ export interface ListUsersInput {
     | "users.firstName"
     | "users.lastName"
     | "users.email"
-    | "users.role"
     | "users.isActive"
     | "users.createdAt"
     | "branch.name";
@@ -87,8 +83,6 @@ const userSortColumn = (field: ListUsersInput["sortField"]) => {
       return users.lastName;
     case "users.email":
       return users.email;
-    case "users.role":
-      return users.role;
     case "users.isActive":
       return users.isActive;
     case "branch.name":
@@ -118,7 +112,6 @@ export const listUsers = async (input: ListUsersInput) => {
         email: users.email,
         firstName: users.firstName,
         lastName: users.lastName,
-        role: users.role,
         isActive: users.isActive,
         branchId: users.branch,
         branchName: branch.name,
@@ -141,7 +134,6 @@ export const listUsers = async (input: ListUsersInput) => {
 
 export interface UpdateUserInput {
   branchId?: string | null;
-  role?: Roles | null;
   isActive?: boolean;
 }
 
@@ -163,10 +155,6 @@ export const updateUser = async (userId: string, input: UpdateUserInput): Promis
       }
 
       updatePayload.branch = branchId;
-    }
-
-    if (Object.hasOwn(input, "role")) {
-      updatePayload.role = input.role ?? null;
     }
 
     if (typeof input.isActive !== "undefined") {

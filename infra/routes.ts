@@ -178,6 +178,38 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
+  // auth/me — permissions snapshot for the current user
+  {
+    handler: "packages/functions/src/api/auth/me.handler",
+    routeKey: "GET /api/auth/me",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  // team
+  {
+    handler: "packages/functions/src/api/team/list.handler",
+    routeKey: "GET /api/teams",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/team/create.handler",
+    routeKey: "POST /api/teams",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/team/update.handler",
+    routeKey: "PUT /api/teams/{teamId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/team/delete.handler",
+    routeKey: "DELETE /api/teams/{teamId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
   // outside-broker
   {
     handler: "packages/functions/src/api/outside-broker/list.handler",

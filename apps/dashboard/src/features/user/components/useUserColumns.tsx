@@ -5,25 +5,16 @@ import { useMemo } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useUserModal } from "../providers/UserModalProvider";
 import type { User } from "../types/user";
-import { USER_ROLE_LABELS, UserRole } from "../types/user";
 
 const { Text } = Typography;
-
-const roleColor: Record<UserRole, string> = {
-  [UserRole.OWNER]: "red",
-  [UserRole.HEAD_OWNER]: "magenta",
-  [UserRole.HEAD_ACCOUNTANT]: "purple",
-  [UserRole.ACCOUNTANT]: "blue",
-  [UserRole.AGENT]: "green",
-  [UserRole.CARRIER]: "orange",
-};
 
 export function useUserColumns(
   refresh: () => void,
   runDelete: (id: string) => void,
 ): ColumnsType<User> {
-  const { user: currentUser } = useCurrentUser();
+  const { user: currentUser, permissions } = useCurrentUser();
   const { openUserEdit } = useUserModal();
+  const canEdit = permissions.users.edit;
 
   return useMemo(
     () => [
@@ -47,11 +38,11 @@ export function useUserColumns(
         sorter: true,
       },
       {
-        title: "Role",
-        dataIndex: "role",
-        key: "role",
-        render: (role: UserRole) => <Tag color={roleColor[role]}>{USER_ROLE_LABELS[role]}</Tag>,
-        sorter: true,
+        title: "Team",
+        dataIndex: "teamName",
+        key: "team",
+        render: (teamName: string | null | undefined) =>
+          teamName ? <Tag color="blue">{teamName}</Tag> : <Tag color="default">Unassigned</Tag>,
       },
       {
         title: "Branch",
@@ -87,30 +78,34 @@ export function useUserColumns(
           const tooltip = "You cannot edit or delete your own account";
           return (
             <Space>
-              <Tooltip title={isCurrentUser ? tooltip : undefined}>
-                <Button
-                  type="text"
-                  icon={<EditOutlined />}
-                  onClick={() => openUserEdit({ user: record }, () => refresh())}
-                  disabled={isCurrentUser}
-                />
-              </Tooltip>
-              <Tooltip title={isCurrentUser ? tooltip : undefined}>
-                <Popconfirm
-                  title="Are you sure you want to delete this user?"
-                  description="This action cannot be undone."
-                  onConfirm={() => runDelete(record.id)}
-                  okText="Yes"
-                  cancelText="No"
-                >
-                  <Button type="text" danger icon={<DeleteOutlined />} disabled={isCurrentUser} />
-                </Popconfirm>
-              </Tooltip>
+              {canEdit && (
+                <Tooltip title={isCurrentUser ? tooltip : undefined}>
+                  <Button
+                    type="text"
+                    icon={<EditOutlined />}
+                    onClick={() => openUserEdit({ user: record }, () => refresh())}
+                    disabled={isCurrentUser}
+                  />
+                </Tooltip>
+              )}
+              {canEdit && (
+                <Tooltip title={isCurrentUser ? tooltip : undefined}>
+                  <Popconfirm
+                    title="Are you sure you want to delete this user?"
+                    description="This action cannot be undone."
+                    onConfirm={() => runDelete(record.id)}
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <Button type="text" danger icon={<DeleteOutlined />} disabled={isCurrentUser} />
+                  </Popconfirm>
+                </Tooltip>
+              )}
             </Space>
           );
         },
       },
     ],
-    [currentUser, openUserEdit, refresh, runDelete],
+    [canEdit, currentUser, openUserEdit, refresh, runDelete],
   );
 }

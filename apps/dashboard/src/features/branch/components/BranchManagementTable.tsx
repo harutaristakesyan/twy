@@ -4,7 +4,7 @@ import { Button, Card, Flex, Input, message, Table, Typography } from "antd";
 import type React from "react";
 import { useState } from "react";
 import { getUsers } from "@/features/user/api/userApi";
-import { UserRole } from "@/features/user/types/user";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { deleteBranch, getBranches } from "../api/branchApi";
 import { useBranchModal } from "../providers/BranchModalProvider";
@@ -17,6 +17,8 @@ type SortField = "name" | "owner" | "createdAt" | undefined;
 
 const BranchManagementTable: React.FC = () => {
   const { openBranchCreate } = useBranchModal();
+  const { permissions } = useCurrentUser();
+  const canAdd = permissions.branches.add;
 
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 500 });
@@ -39,9 +41,7 @@ const BranchManagementTable: React.FC = () => {
   const { data: owners = [], loading: ownersLoading } = useRequest(
     async () => {
       const response = await getUsers({ limit: 100 });
-      return response.users.filter(
-        (u) => u.role === UserRole.OWNER || u.role === UserRole.HEAD_OWNER,
-      );
+      return response.users;
     },
     { cacheKey: "branch-owners" },
   );
@@ -58,20 +58,20 @@ const BranchManagementTable: React.FC = () => {
   const columns = useBranchColumns(refresh, runDelete, owners, ownersLoading);
 
   return (
-    <div>
-      <Card>
-        <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
-          <Title level={4} style={{ margin: 0 }}>
-            Branches ({tableProps.pagination.total ?? 0})
-          </Title>
-          <Flex align="middle" gap="middle">
-            <Search
-              placeholder="Search branches..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              prefix={<SearchOutlined />}
-              allowClear
-            />
+    <Card>
+      <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
+        <Title level={4} style={{ margin: 0 }}>
+          Branches ({tableProps.pagination.total ?? 0})
+        </Title>
+        <Flex align="middle" gap="middle">
+          <Search
+            placeholder="Search branches..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            prefix={<SearchOutlined />}
+            allowClear
+          />
+          {canAdd && (
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -81,27 +81,27 @@ const BranchManagementTable: React.FC = () => {
             >
               Add Branch
             </Button>
-            <Button icon={<ReloadOutlined />} onClick={refresh} loading={tableProps.loading}>
-              Refresh
-            </Button>
-          </Flex>
+          )}
+          <Button icon={<ReloadOutlined />} onClick={refresh} loading={tableProps.loading}>
+            Refresh
+          </Button>
         </Flex>
+      </Flex>
 
-        <Table
-          columns={columns}
-          rowKey="id"
-          scroll={{ x: 800 }}
-          {...tableProps}
-          pagination={{
-            ...tableProps.pagination,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t, range) => `${range[0]}-${range[1]} of ${t} branches`,
-            pageSizeOptions: ["5", "10", "20", "50", "100"],
-          }}
-        />
-      </Card>
-    </div>
+      <Table
+        columns={columns}
+        rowKey="id"
+        scroll={{ x: 800 }}
+        {...tableProps}
+        pagination={{
+          ...tableProps.pagination,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (t, range) => `${range[0]}-${range[1]} of ${t} branches`,
+          pageSizeOptions: ["5", "10", "20", "50", "100"],
+        }}
+      />
+    </Card>
   );
 };
 

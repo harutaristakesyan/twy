@@ -50,8 +50,8 @@ src/
 | Tokens | `src/utils/jwt.ts` | **Cookies via `js-cookie`**, not `localStorage`. |
 | API | `src/libs/ApiClient.ts` | Axios singleton with relative `/api` baseURL + auth interceptor + token refresh. Never use raw `axios`/`fetch`. |
 | Server state | `ahooks` | `useAntdTable` for paginated tables, `useRequest` for mutations/aux data, `useDebounce` for search. |
-| Modals | `@ebay/nice-modal-react` | `NiceModal.create(...)`, `NiceModal.show(...)`. |
-| Permissions | `src/utils/permissions.ts` | `MenuFeature` enum drives sidebar items + `<RoleBasedRoute requiredFeature={...}>`. |
+| Modals | Custom providers | Each domain has a `providers/<Domain>ModalProvider.tsx` that manages open state and renders modal/drawer components. Consume via `use<Domain>Modal()` hook. |
+| Permissions | `src/utils/permissions.ts` | `MenuFeature` enum drives sidebar items + `<RequirePermission resource="..." action="view">`. |
 | Charts | `@ant-design/charts@2.6.7` | Already installed. |
 | Tables | `antd` `<Table>` | Use proper column generic types — don't `any` columns. |
 
@@ -74,10 +74,15 @@ Files at `apps/dashboard/.env.development` and `apps/dashboard/.env.production` 
 ## Adding a new page
 
 1. Create `src/features/<domain>/pages/<Name>Page.tsx` with a default export.
-2. Wire the route in `src/routes/router.tsx`, wrapped in `<ProtectedRoute>` and (if role-gated) `<RoleBasedRoute>`.
-3. Add a `MenuFeature` enum entry in `src/utils/permissions.ts` if role-gated.
-4. Add a sidebar item in `src/layouts/Sidebar.tsx`.
+2. Wire the route in `src/routes/router.tsx`, wrapped in `<ProtectedRoute>` and `<RequirePermission resource="..." action="view">`.
+3. Add a `MenuFeature` enum entry in `src/utils/permissions.ts` if it needs a sidebar entry.
+4. Add a sidebar item in `src/layouts/Sidebar.tsx` with the matching `resource` key.
 5. Use `useAntdTable` for paginated tables, `useRequest` (manual) for mutations, `useDebounce` for search inputs.
+6. For create/edit modals or drawers, create a `providers/<Domain>ModalProvider.tsx` and consume via `use<Domain>Modal()`.
+
+## AntD documentation
+
+When you need to look up AntD component APIs, props, or usage examples, fetch `https://ant.design/llms-full.txt` — it's the LLM-optimised full reference for the current version.
 
 ## Common UI footguns
 
@@ -86,7 +91,7 @@ Files at `apps/dashboard/.env.development` and `apps/dashboard/.env.production` 
 - **New API call with raw `fetch`/`axios`** → bypasses the auth interceptor and the error handler. Always go through `ApiClient` from `src/libs/ApiClient.ts`.
 - **`localStorage.getItem("accessToken")`** → wrong; use `getAccessToken()` from `src/utils/jwt.ts`.
 - **AntD v5 patterns (e.g. `Tooltip` `title` typing)** — we're on AntD v6. Some props/types changed.
-- **`<Modal open={x}>` with state in a sibling** — leaks state. Use `NiceModal`.
+- **`<Modal open={x}>` with state in a sibling** — leaks state. Use the domain's `ModalProvider` pattern (see `features/branch/providers/BranchModalProvider.tsx` as a reference).
 
 ## Build & test
 

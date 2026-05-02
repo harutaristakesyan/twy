@@ -1,11 +1,13 @@
 import { middyfy } from "@shared/index";
 import type { CreateLoadResponse } from "@twy/core";
 import {
+  assertPermission,
   type CreateLoadEvent,
   CreateLoadEventSchema,
   createLoad as createLoadRecord,
   getFullUserInfoById,
   type LoadFileInput,
+  loadAuthContext,
 } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
@@ -38,6 +40,9 @@ const createLoad = async (event: CreateLoadEvent): Promise<CreateLoadResponse> =
       authUser: { userId },
     },
   } = event;
+
+  const ctx = await loadAuthContext(userId);
+  assertPermission(ctx, "loads", "add");
 
   const user = await getFullUserInfoById(userId);
 
@@ -80,6 +85,7 @@ const createLoad = async (event: CreateLoadEvent): Promise<CreateLoadResponse> =
     dropoffName: dropoff.name,
     dropoffAddress: dropoff.address,
     branchId,
+    createdBy: userId,
     files: normalizedFiles,
   });
 

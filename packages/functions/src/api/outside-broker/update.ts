@@ -1,6 +1,8 @@
 import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
+  assertPermission,
+  loadAuthContext,
   type UpdateBrokerEvent,
   UpdateBrokerEventSchema,
   updateBroker as updateBrokerRecord,
@@ -9,6 +11,10 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
 
 const updateBroker = async (event: UpdateBrokerEvent): Promise<MessageResponse> => {
+  const { userId } = event.requestContext.authUser;
+  const ctx = await loadAuthContext(userId);
+  assertPermission(ctx, "brokers", "edit");
+
   const { brokerId } = event.pathParameters;
   const {
     brokerName,

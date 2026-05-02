@@ -23,7 +23,7 @@ type SortField =
 const OutsideCarriersManagementTable: React.FC = () => {
   const { permissions } = useCurrentUser();
   const { openOutsideCarrierCreate } = useOutsideCarrierModal();
-  const { canCreate } = permissions.outsideCarriers;
+  const canCreate = permissions.carriers.add;
 
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 500 });

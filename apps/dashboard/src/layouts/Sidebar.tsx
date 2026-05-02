@@ -4,6 +4,7 @@ import {
   LineChartOutlined,
   TeamOutlined,
   TruckOutlined,
+  UserSwitchOutlined,
 } from "@ant-design/icons";
 import { Flex, Layout, Menu, type MenuProps, Typography } from "antd";
 import type React from "react";
@@ -11,7 +12,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { EventType, useEvent } from "@/libs/EventBus.ts";
-import { MenuFeature } from "@/utils/permissions";
+import type { Resource } from "@/utils/permissions";
 
 const { Sider } = Layout;
 const { Title } = Typography;
@@ -39,25 +40,33 @@ const Sidebar: React.FC = () => {
     navigate(key);
   };
 
-  const allMenuItems: MenuProps["items"] = [
-    { key: "/", icon: <LineChartOutlined />, label: "Users" },
-    { key: "/branches", icon: <BranchesOutlined />, label: "Branches" },
-    { key: "/loads", icon: <TruckOutlined />, label: "Loads" },
-    { key: "/outside-brokers", icon: <TeamOutlined />, label: "OutSide Brokers" },
-    { key: "/outside-carriers", icon: <CarOutlined />, label: "OutSide Carriers" },
+  const allMenuItems: Array<{
+    key: string;
+    icon: React.ReactNode;
+    label: string;
+    resource: Resource;
+  }> = [
+    { key: "/", icon: <LineChartOutlined />, label: "Users", resource: "users" },
+    { key: "/branches", icon: <BranchesOutlined />, label: "Branches", resource: "branches" },
+    { key: "/loads", icon: <TruckOutlined />, label: "Loads", resource: "loads" },
+    {
+      key: "/outside-brokers",
+      icon: <TeamOutlined />,
+      label: "Outside Brokers",
+      resource: "brokers",
+    },
+    {
+      key: "/outside-carriers",
+      icon: <CarOutlined />,
+      label: "Outside Carriers",
+      resource: "carriers",
+    },
+    { key: "/teams", icon: <UserSwitchOutlined />, label: "Teams", resource: "teams" },
   ];
 
-  const menuPermissionMap: Record<string, MenuFeature> = {
-    "/": MenuFeature.USERS,
-    "/branches": MenuFeature.BRANCHES,
-    "/loads": MenuFeature.LOADS,
-    "/outside-brokers": MenuFeature.OUTSIDE_BROKERS,
-    "/outside-carriers": MenuFeature.OUTSIDE_CARRIERS,
-  };
-
-  const items: MenuProps["items"] = allMenuItems.filter(
-    (item) => item?.key && permissions.menu[menuPermissionMap[item.key as string]],
-  );
+  const items: MenuProps["items"] = allMenuItems
+    .filter((item) => permissions[item.resource].view)
+    .map(({ key, icon, label }) => ({ key, icon, label }));
 
   return (
     <Sider

@@ -24,7 +24,9 @@
       "!pnpm-lock.yaml",
       "!**/*.tsbuildinfo",
       "!**/*.min.js",
-      "!**/*.generated.ts"
+      "!**/*.generated.ts",
+      "!.superpowers",
+      "!**/.claude"
     ]
   },
   "formatter": {

@@ -2,7 +2,6 @@ export interface UserResponse {
   email: string;
   firstName: string | null;
   lastName: string | null;
-  role: string | null;
   isActive: boolean;
   branch: UserBranchResponse | null;
   createdAt: string | null;
@@ -18,7 +17,6 @@ export interface UserListItemResponse {
   email: string;
   firstName: string | null;
   lastName: string | null;
-  role: string | null;
   isActive: boolean;
   branch: UserBranchResponse | null;
   createdAt: string | null;

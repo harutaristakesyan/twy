@@ -3,6 +3,7 @@ import { Button, Popconfirm, Space, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo } from "react";
 import type { User } from "@/features/user/types/user";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useBranchModal } from "../providers/BranchModalProvider";
 import type { Branch } from "../types/branch";
 
@@ -15,6 +16,8 @@ export function useBranchColumns(
   ownersLoading: boolean,
 ): ColumnsType<Branch> {
   const { openBranchEdit } = useBranchModal();
+  const { permissions } = useCurrentUser();
+  const canEdit = permissions.branches.edit;
 
   return useMemo(
     () => [
@@ -79,32 +82,36 @@ export function useBranchColumns(
         key: "actions",
         render: (_, record) => (
           <Space>
-            <Tooltip title="Edit Branch">
-              <Button
-                type="text"
-                icon={<EditOutlined />}
-                onClick={() =>
-                  openBranchEdit({ branch: record, owners, loadingOwners: ownersLoading }, () =>
-                    refresh(),
-                  )
-                }
-              />
-            </Tooltip>
-            <Popconfirm
-              title="Are you sure you want to delete this branch?"
-              description="This action cannot be undone. All associated data may be affected."
-              onConfirm={() => runDelete(record.id)}
-              okText="Yes"
-              cancelText="No"
-            >
-              <Tooltip title="Delete Branch">
-                <Button type="text" danger icon={<DeleteOutlined />} />
+            {canEdit && (
+              <Tooltip title="Edit Branch">
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  onClick={() =>
+                    openBranchEdit({ branch: record, owners, loadingOwners: ownersLoading }, () =>
+                      refresh(),
+                    )
+                  }
+                />
               </Tooltip>
-            </Popconfirm>
+            )}
+            {canEdit && (
+              <Popconfirm
+                title="Are you sure you want to delete this branch?"
+                description="This action cannot be undone. All associated data may be affected."
+                onConfirm={() => runDelete(record.id)}
+                okText="Yes"
+                cancelText="No"
+              >
+                <Tooltip title="Delete Branch">
+                  <Button type="text" danger icon={<DeleteOutlined />} />
+                </Tooltip>
+              </Popconfirm>
+            )}
           </Space>
         ),
       },
     ],
-    [openBranchEdit, owners, ownersLoading, refresh, runDelete],
+    [canEdit, openBranchEdit, owners, ownersLoading, refresh, runDelete],
   );
 }

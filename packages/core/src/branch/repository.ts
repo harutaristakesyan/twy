@@ -1,21 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { type BranchRow, branch, db, type OrderDirection, Roles, users } from "@twy/db";
+import { type BranchRow, branch, db, type OrderDirection, users } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, ne, or } from "drizzle-orm";
 import createError from "http-errors";
-
-export interface BranchOwnerRecord {
-  id: string;
-  email: string;
-  firstName: string | null;
-  lastName: string | null;
-}
 
 export interface Branch {
   id: string;
   name: string;
   contact: string | null;
   createdAt: string | null;
-  owner: BranchOwnerRecord | null;
 }
 
 export interface NewBranchInput {
@@ -61,7 +53,7 @@ const assignOwner = async (
     await executor
       .update(users)
       .set({ branch: null, updatedAt: new Date() })
-      .where(and(eq(users.branch, branchId), eq(users.role, Roles.Owner)));
+      .where(eq(users.branch, branchId));
     return;
   }
 
@@ -70,12 +62,12 @@ const assignOwner = async (
   await executor
     .update(users)
     .set({ branch: null, updatedAt: new Date() })
-    .where(and(eq(users.branch, branchId), eq(users.role, Roles.Owner), ne(users.id, ownerId)));
+    .where(and(eq(users.branch, branchId), ne(users.id, ownerId)));
 
   await executor
     .update(users)
     .set({ branch: branchId, updatedAt: new Date() })
-    .where(and(eq(users.id, ownerId), eq(users.role, Roles.Owner)));
+    .where(eq(users.id, ownerId));
 };
 
 const sortColumn = (field: ListBranchesInput["sortField"]) => {
@@ -84,26 +76,11 @@ const sortColumn = (field: ListBranchesInput["sortField"]) => {
   return branch.createdAt;
 };
 
-const mapBranchRow = (
-  row: Pick<BranchRow, "id" | "name" | "contact" | "createdAt"> & {
-    ownerId: string | null;
-    ownerEmail: string | null;
-    ownerFirstName: string | null;
-    ownerLastName: string | null;
-  },
-): Branch => ({
+const mapBranchRow = (row: Pick<BranchRow, "id" | "name" | "contact" | "createdAt">): Branch => ({
   id: row.id,
   name: row.name,
   contact: row.contact,
   createdAt: row.createdAt ? row.createdAt.toISOString() : null,
-  owner: row.ownerId
-    ? {
-        id: row.ownerId,
-        email: row.ownerEmail ?? "",
-        firstName: row.ownerFirstName,
-        lastName: row.ownerLastName,
-      }
-    : null,
 });
 
 export const listBranches = async (input: ListBranchesInput) => {
@@ -122,13 +99,8 @@ export const listBranches = async (input: ListBranchesInput) => {
         name: branch.name,
         contact: branch.contact,
         createdAt: branch.createdAt,
-        ownerId: users.id,
-        ownerEmail: users.email,
-        ownerFirstName: users.firstName,
-        ownerLastName: users.lastName,
       })
       .from(branch)
-      .leftJoin(users, eq(users.branch, branch.id))
       .where(searchClause)
       .orderBy(direction(orderColumn))
       .limit(input.limit)

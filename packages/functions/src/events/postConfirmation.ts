@@ -30,6 +30,8 @@ const postConfirmationHandler: PostConfirmationTriggerHandler = async (event) =>
       firstName: userAttributes.given_name ?? null,
       lastName: userAttributes.family_name ?? null,
       isActive: false,
+      createdBy: id,
+      teamId: null,
     });
 
     return event;

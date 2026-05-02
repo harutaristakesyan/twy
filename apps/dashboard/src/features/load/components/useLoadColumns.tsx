@@ -8,6 +8,7 @@ import type { MenuProps } from "antd";
 import { App, Button, Dropdown, Popconfirm, Space, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useMemo } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { fileApi } from "@/libs/fileApi";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { useLoadModal } from "../providers/LoadModalProvider";
@@ -30,6 +31,8 @@ export function useLoadColumns(
 ): ColumnsType<Load> {
   const { message } = App.useApp();
   const { openLoadEdit, openStatusUpdate } = useLoadModal();
+  const { permissions } = useCurrentUser();
+  const canEdit = permissions.loads.edit;
 
   const handleFileDownload = useCallback(
     async (fileId: string, fileName: string) => {
@@ -171,42 +174,48 @@ export function useLoadColumns(
         align: "right",
         render: (_, record) => (
           <Space size="small" wrap={false}>
-            <Button
-              type="link"
-              icon={<CheckCircleOutlined />}
-              onClick={() => openStatusUpdate({ load: record }, () => refresh())}
-              style={{ padding: "4px 8px", whiteSpace: "nowrap" }}
-            >
-              Update Status Approval
-            </Button>
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              onClick={() => openLoadEdit({ load: record }, () => refresh())}
-              style={{ padding: "4px 8px", whiteSpace: "nowrap" }}
-            >
-              Edit
-            </Button>
-            <Popconfirm
-              title="Delete Load"
-              description="Are you sure you want to delete this load?"
-              onConfirm={() => runDelete(record.id)}
-              okText="Yes"
-              cancelText="No"
-            >
+            {canEdit && (
               <Button
                 type="link"
-                danger
-                icon={<DeleteOutlined />}
+                icon={<CheckCircleOutlined />}
+                onClick={() => openStatusUpdate({ load: record }, () => refresh())}
                 style={{ padding: "4px 8px", whiteSpace: "nowrap" }}
               >
-                Delete
+                Update Status Approval
               </Button>
-            </Popconfirm>
+            )}
+            {canEdit && (
+              <Button
+                type="link"
+                icon={<EditOutlined />}
+                onClick={() => openLoadEdit({ load: record }, () => refresh())}
+                style={{ padding: "4px 8px", whiteSpace: "nowrap" }}
+              >
+                Edit
+              </Button>
+            )}
+            {canEdit && (
+              <Popconfirm
+                title="Delete Load"
+                description="Are you sure you want to delete this load?"
+                onConfirm={() => runDelete(record.id)}
+                okText="Yes"
+                cancelText="No"
+              >
+                <Button
+                  type="link"
+                  danger
+                  icon={<DeleteOutlined />}
+                  style={{ padding: "4px 8px", whiteSpace: "nowrap" }}
+                >
+                  Delete
+                </Button>
+              </Popconfirm>
+            )}
           </Space>
         ),
       },
     ],
-    [handleFileDownload, openLoadEdit, openStatusUpdate, refresh, runDelete],
+    [canEdit, handleFileDownload, openLoadEdit, openStatusUpdate, refresh, runDelete],
   );
 }

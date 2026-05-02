@@ -1,11 +1,12 @@
 import type React from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { login as loginAction, logout as logoutAction } from "@/features/auth/api/authActions";
+import { getAuthMe } from "@/features/auth/api/authApi";
 import { getCurrentUser } from "@/features/user/api/userApi";
 import type { CurrentUser } from "@/features/user/types/user";
 import ApiClient from "@/libs/ApiClient.ts";
 import { clearTokens, getAccessToken, isTokenExpired } from "@/utils/jwt";
-import { type AppPermissions, computePermissions, EMPTY_PERMISSIONS } from "@/utils/permissions";
+import { type AuthMe, emptyPermissionsMap } from "@/utils/permissions";
 
 type ChallengeResult = { challengeName: "NEW_PASSWORD_REQUIRED"; session: string; email: string };
 
@@ -15,7 +16,8 @@ interface AuthContextType {
   currentUser: CurrentUser | null;
   userLoading: boolean;
   refetchUser: () => Promise<void>;
-  permissions: AppPermissions;
+  authMe: AuthMe | null;
+  refetchAuthMe: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -30,22 +32,39 @@ const AuthContext = createContext<AuthContextType>({
   refetchUser: async () => {
     throw new Error("AuthContext used outside of AuthProvider");
   },
-  permissions: EMPTY_PERMISSIONS,
+  authMe: null,
+  refetchAuthMe: async () => {
+    throw new Error("AuthContext used outside of AuthProvider");
+  },
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [authMe, setAuthMe] = useState<AuthMe | null>(null);
 
-  const permissions = useMemo(() => computePermissions(currentUser?.role), [currentUser?.role]);
+  const refetchAuthMe = useCallback(async () => {
+    try {
+      const me = await getAuthMe();
+      setAuthMe(me);
+    } catch {
+      setAuthMe({
+        user: { id: "", branchId: null, teamId: null },
+        team: null,
+        permissions: emptyPermissionsMap(),
+      });
+    }
+  }, []);
 
   const fetchCurrentUser = useCallback(async () => {
     setUserLoading(true);
     try {
-      const userData = await getCurrentUser();
+      const [userData, me] = await Promise.all([getCurrentUser(), getAuthMe()]);
       setCurrentUser(userData);
+      setAuthMe(me);
     } catch {
       setCurrentUser(null);
+      setAuthMe(null);
     } finally {
       setUserLoading(false);
     }
@@ -82,6 +101,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = useCallback(() => {
     setCurrentUser(null);
+    setAuthMe(null);
     logoutAction();
   }, []);
 
@@ -93,7 +113,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         currentUser,
         userLoading,
         refetchUser: fetchCurrentUser,
-        permissions,
+        authMe,
+        refetchAuthMe,
       }}
     >
       {children}

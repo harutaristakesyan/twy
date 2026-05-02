@@ -24,7 +24,7 @@ const { Title, Text } = Typography;
 
 const UserSelfUpdate: React.FC = () => {
   const [form] = Form.useForm();
-  const { user, loading: userLoading, refetch } = useCurrentUser();
+  const { user, loading: userLoading, refetch, authMe } = useCurrentUser();
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -73,7 +73,7 @@ const UserSelfUpdate: React.FC = () => {
           <Text type="secondary">{user.email}</Text>
           <br />
           <Text type="secondary" style={{ fontSize: "12px" }}>
-            {user.branch?.name || "No Branch"} • {user.role}
+            {user.branch?.name || "No Branch"}
           </Text>
         </Col>
         <Col>
@@ -139,8 +139,8 @@ const UserSelfUpdate: React.FC = () => {
           <Input value={user.email} disabled />
         </Form.Item>
 
-        <Form.Item label="Role">
-          <Input value={user.role} disabled style={{ textTransform: "capitalize" }} />
+        <Form.Item label="Team">
+          <Input value={authMe?.team?.name ?? "Unassigned"} disabled />
         </Form.Item>
 
         <Form.Item label="Branch">

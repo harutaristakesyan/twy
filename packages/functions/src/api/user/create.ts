@@ -6,9 +6,11 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 import { middyfy, toError } from "@shared/index";
 import {
+  assertPermission,
   type CreateUserEvent,
   CreateUserEventSchema,
   createUser,
+  loadAuthContext,
   type MessageResponse,
 } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
@@ -18,7 +20,11 @@ import { Resource } from "sst";
 const cognitoClient = new CognitoIdentityProviderClient({});
 
 const createUserHandler = async (event: CreateUserEvent): Promise<MessageResponse> => {
-  const { email, firstName, lastName, role, branch, isActive } = event.body;
+  const { userId: adminId } = event.requestContext.authUser;
+  const ctx = await loadAuthContext(adminId);
+  assertPermission(ctx, "users", "add");
+
+  const { email, firstName, lastName, branch, isActive } = event.body;
 
   let sub: string;
   try {
@@ -50,9 +56,9 @@ const createUserHandler = async (event: CreateUserEvent): Promise<MessageRespons
       email,
       firstName,
       lastName,
-      role,
       branch: branch ?? undefined,
       isActive,
+      createdBy: adminId,
     });
   } catch {
     await cognitoClient

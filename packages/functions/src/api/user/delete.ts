@@ -5,9 +5,11 @@ import {
 import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
+  assertPermission,
   type DeleteUserEvent,
   DeleteUserEventSchema,
   deleteUser as deleteUserRecord,
+  loadAuthContext,
 } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
@@ -18,6 +20,10 @@ const userPoolId = Resource.UserPool.id;
 const cognitoClient = new CognitoIdentityProviderClient({});
 
 const deleteUser = async (event: DeleteUserEvent): Promise<MessageResponse> => {
+  const { userId: adminId } = event.requestContext.authUser;
+  const ctx = await loadAuthContext(adminId);
+  assertPermission(ctx, "users", "edit");
+
   const { userId } = event.pathParameters;
 
   const removed = await deleteUserRecord(userId);

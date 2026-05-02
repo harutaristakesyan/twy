@@ -94,6 +94,7 @@ export type CreateLoadInput = {
   dropoffName: string;
   dropoffAddress: string;
   branchId: string;
+  createdBy: string;
   files?: LoadFileInput[] | undefined;
 };
 
@@ -337,6 +338,7 @@ export const createLoad = async (input: CreateLoadInput): Promise<string> =>
       dropoffName: input.dropoffName,
       dropoffAddress: input.dropoffAddress,
       branchId: input.branchId,
+      createdBy: input.createdBy,
       status: DEFAULT_LOAD_STATUS,
       statusChangedBy: null,
     });

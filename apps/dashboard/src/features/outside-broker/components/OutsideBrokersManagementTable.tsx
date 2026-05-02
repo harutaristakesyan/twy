@@ -18,7 +18,7 @@ type SortField = "brokerName" | "mcNumber" | "status" | "createdAt" | "branch" |
 const OutsideBrokersManagementTable: React.FC = () => {
   const { permissions } = useCurrentUser();
   const { openOutsideBrokerCreate } = useOutsideBrokerModal();
-  const { canCreate } = permissions.outsideBrokers;
+  const canCreate = permissions.brokers.add;
 
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 500 });

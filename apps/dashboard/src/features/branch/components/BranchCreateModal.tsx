@@ -125,9 +125,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
                   <div style={{ fontWeight: 500 }}>
                     {owner.firstName} {owner.lastName}
                   </div>
-                  <div style={{ fontSize: "12px", color: "#888" }}>
-                    {owner.email} - {owner.role}
-                  </div>
+                  <div style={{ fontSize: "12px", color: "#888" }}>{owner.email}</div>
                 </div>
               </Option>
             ))}

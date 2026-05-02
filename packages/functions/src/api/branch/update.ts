@@ -1,6 +1,8 @@
 import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
+  assertPermission,
+  loadAuthContext,
   type UpdateBranchEvent,
   UpdateBranchEventSchema,
   updateBranch as updateBranchRecord,
@@ -8,6 +10,10 @@ import {
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
 const updateBranch = async (event: UpdateBranchEvent): Promise<MessageResponse> => {
+  const { userId } = event.requestContext.authUser;
+  const ctx = await loadAuthContext(userId);
+  assertPermission(ctx, "branches", "edit");
+
   const { branchId } = event.pathParameters;
   const { name, owner, contact } = event.body;
 

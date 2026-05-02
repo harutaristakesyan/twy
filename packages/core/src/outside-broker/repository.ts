@@ -41,6 +41,7 @@ export interface NewBrokerInput {
   branchId?: string | null;
   creditLimitUnlimited: boolean;
   creditLimit?: number | null;
+  createdBy: string;
 }
 
 export interface UpdateBrokerInput {
@@ -169,6 +170,7 @@ export const createBroker = async (input: NewBrokerInput): Promise<string> => {
       !input.creditLimitUnlimited && input.creditLimit != null
         ? input.creditLimit.toString()
         : null,
+    createdBy: input.createdBy,
   });
   return id;
 };

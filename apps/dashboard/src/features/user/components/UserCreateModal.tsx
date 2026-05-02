@@ -6,7 +6,6 @@ import type { Branch } from "@/features/branch/types/branch";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { createUser } from "../api/userApi";
 import type { UserFormData } from "../types/user";
-import { USER_ROLE_LABELS, UserRole } from "../types/user";
 
 const { Option } = Select;
 
@@ -27,7 +26,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuc
   const [_branchTotal, setBranchTotal] = useState(0);
   const [branchSearch, setBranchSearch] = useState("");
   const [hasMoreBranches, setHasMoreBranches] = useState(true);
-  const branchSearchTimeoutRef = useRef<NodeJS.Timeout>();
+  const branchSearchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isInitialFetchRef = useRef(false);
 
   // Fetch branches
@@ -157,20 +156,6 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuc
           ]}
         >
           <Input placeholder="Enter email address" id="create-email" />
-        </Form.Item>
-
-        <Form.Item
-          name="role"
-          label="Role"
-          rules={[{ required: true, message: "Please select a role" }]}
-        >
-          <Select placeholder="Select role">
-            {Object.values(UserRole).map((role) => (
-              <Option key={role} value={role}>
-                {USER_ROLE_LABELS[role]}
-              </Option>
-            ))}
-          </Select>
         </Form.Item>
 
         <Form.Item

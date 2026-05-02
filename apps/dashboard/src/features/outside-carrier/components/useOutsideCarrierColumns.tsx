@@ -44,7 +44,8 @@ export function useOutsideCarrierColumns(
 ): ColumnsType<OutsideCarrier> {
   const { permissions } = useCurrentUser();
   const { openOutsideCarrierEdit } = useOutsideCarrierModal();
-  const { canUpdate, canDelete } = permissions.outsideCarriers;
+  const canUpdate = permissions.carriers.edit;
+  const canDelete = permissions.carriers.edit;
 
   return useMemo(
     () => [

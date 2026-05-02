@@ -1,7 +1,9 @@
 import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
+  assertPermission,
   type LoadFileInput,
+  loadAuthContext,
   type UpdateLoad,
   type UpdateLoadEvent,
   UpdateLoadEventSchema,
@@ -11,6 +13,10 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
 
 const updateLoad = async (event: UpdateLoadEvent): Promise<MessageResponse> => {
+  const { userId } = event.requestContext.authUser;
+  const ctx = await loadAuthContext(userId);
+  assertPermission(ctx, "loads", "edit");
+
   const { loadId } = event.pathParameters;
   const { pickup, dropoff, files, ...rest } = event.body;
 

@@ -38,7 +38,8 @@ export function useOutsideBrokerColumns(
 ): ColumnsType<OutsideBroker> {
   const { permissions } = useCurrentUser();
   const { openOutsideBrokerEdit } = useOutsideBrokerModal();
-  const { canUpdate, canDelete } = permissions.outsideBrokers;
+  const canUpdate = permissions.brokers.edit;
+  const canDelete = permissions.brokers.edit;
 
   return useMemo(
     () => [
