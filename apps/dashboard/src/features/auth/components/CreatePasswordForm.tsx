@@ -3,8 +3,8 @@ import { Button, Card, Col, Flex, Form, Input, Row, Typography } from "antd";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ResendCode from "@/features/auth/components/ResendCode.tsx";
-import ApiClient from "@/shared/api/ApiClient.ts";
-import { maskEmail } from "@/shared/utils/email.ts";
+import ApiClient from "@/libs/ApiClient.ts";
+import { maskEmail } from "@/utils/email.ts";
 
 const { Text } = Typography;
 

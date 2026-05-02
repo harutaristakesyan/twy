@@ -14,8 +14,8 @@ import {
 } from "antd";
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import ApiClient from "@/shared/api/ApiClient.ts";
-import { mapErrorToModalProps } from "@/shared/utils/errorUtils.ts";
+import ApiClient from "@/libs/ApiClient.ts";
+import { mapErrorToModalProps } from "@/utils/errorUtils.ts";
 
 const { Text } = Typography;
 

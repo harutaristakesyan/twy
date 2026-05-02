@@ -1,6 +1,6 @@
 import { Card, Flex, Typography } from "antd";
 import CardHeader from "@/features/auth/components/CardHeader.tsx";
-import ForgotPasswordForm from "@/features/auth/forgot-password/ForgotPasswordForm.tsx";
+import ForgotPasswordForm from "@/features/auth/components/ForgotPasswordForm.tsx";
 
 const { Title, Paragraph } = Typography;
 

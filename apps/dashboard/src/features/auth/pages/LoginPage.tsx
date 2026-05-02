@@ -1,7 +1,7 @@
 import { Card, Col, Divider, Flex, Grid, Row, Typography } from "antd";
-import FooterSection from "@/features/auth/login/FooterSection.tsx";
-import LoginForm from "@/features/auth/login/LoginForm.tsx";
-import Logo from "@/shared/ui/Logo.tsx";
+import Logo from "@/components/Logo.tsx";
+import FooterSection from "@/features/auth/components/FooterSection.tsx";
+import LoginForm from "@/features/auth/components/LoginForm.tsx";
 
 const { Title } = Typography;
 const { useBreakpoint } = Grid;

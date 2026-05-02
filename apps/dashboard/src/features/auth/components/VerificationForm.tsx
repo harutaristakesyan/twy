@@ -3,9 +3,9 @@ import { Button, Flex, Form, Input, message, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ResendCode from "@/features/auth/components/ResendCode.tsx";
-import ApiClient from "@/shared/api/ApiClient.ts";
-import { maskEmail } from "@/shared/utils/email.ts";
-import { getErrorMessage } from "@/shared/utils/errorUtils";
+import ApiClient from "@/libs/ApiClient.ts";
+import { maskEmail } from "@/utils/email.ts";
+import { getErrorMessage } from "@/utils/errorUtils";
 
 const { Text, Title, Paragraph } = Typography;
 

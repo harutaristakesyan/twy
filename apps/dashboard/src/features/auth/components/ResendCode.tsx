@@ -1,7 +1,7 @@
 import { Flex, message, Space, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import ApiClient from "@/shared/api/ApiClient.ts";
+import ApiClient from "@/libs/ApiClient.ts";
 
 const { Text, Link } = Typography;
 

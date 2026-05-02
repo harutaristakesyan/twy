@@ -2,8 +2,8 @@ import { ArrowRightOutlined } from "@ant-design/icons";
 import { Button, Form, Input, message } from "antd";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ApiClient from "@/shared/api/ApiClient.ts";
-import { getErrorMessage } from "@/shared/utils/errorUtils";
+import ApiClient from "@/libs/ApiClient.ts";
+import { getErrorMessage } from "@/utils/errorUtils";
 
 const ForgotPasswordForm = () => {
   const [form] = Form.useForm();

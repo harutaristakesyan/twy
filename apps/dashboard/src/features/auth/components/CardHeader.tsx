@@ -1,7 +1,7 @@
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { Button, Flex } from "antd";
 import { useNavigate } from "react-router-dom";
-import Logo from "@/shared/ui/Logo.tsx";
+import Logo from "@/components/Logo.tsx";
 
 const CardHeader = () => {
   const navigate = useNavigate();

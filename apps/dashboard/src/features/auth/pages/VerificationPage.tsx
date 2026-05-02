@@ -1,6 +1,6 @@
 import { Card, Flex } from "antd";
 import CardHeader from "@/features/auth/components/CardHeader.tsx";
-import VerificationForm from "@/features/auth/verification/VerificationForm.tsx";
+import VerificationForm from "@/features/auth/components/VerificationForm.tsx";
 
 const VerificationPage = () => {
   return (
