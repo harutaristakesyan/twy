@@ -1,4 +1,15 @@
-import { Alert, Button, Form, Input, Modal, message, Select, Space } from "antd";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  message,
+  Select,
+  Space,
+} from "antd";
 import type React from "react";
 import { useEffect, useState } from "react";
 import type { Branch } from "@/features/branch/types/branch";
@@ -33,6 +44,8 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [creditLimitUnlimited, setCreditLimitUnlimited] = useState(true);
+  const [creditLimit, setCreditLimit] = useState<number | null>(null);
 
   // Set form values when modal opens or broker changes
   useEffect(() => {
@@ -48,10 +61,18 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
         status: broker.status,
         branch: broker.branch?.id,
       });
+      setCreditLimitUnlimited(broker.creditLimitUnlimited ?? true);
+      setCreditLimit(broker.creditLimit ?? null);
     }
   }, [open, broker, form]);
 
-  const handleSubmit = async (values: OutsideBrokerFormData) => {
+  const handleSubmit = async (
+    values: Omit<OutsideBrokerFormData, "creditLimitUnlimited" | "creditLimit">,
+  ) => {
+    if (!creditLimitUnlimited && (creditLimit === null || creditLimit <= 0)) {
+      message.error("Please enter a valid credit limit amount");
+      return;
+    }
     setLoading(true);
     try {
       const updateData: UpdateOutsideBrokerRequest = {
@@ -65,6 +86,8 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
         notes: values.notes,
         status: values.status,
         branch: values.branch,
+        creditLimitUnlimited,
+        creditLimit: creditLimitUnlimited ? null : creditLimit,
       };
 
       await updateOutsideBroker(updateData);
@@ -87,6 +110,8 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
 
   const handleCancel = () => {
     form.resetFields();
+    setCreditLimitUnlimited(true);
+    setCreditLimit(null);
     onCancel();
   };
 
@@ -197,6 +222,29 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
               </Option>
             ))}
           </Select>
+        </Form.Item>
+
+        <Form.Item label="Credit Limit">
+          <Checkbox
+            checked={creditLimitUnlimited}
+            onChange={(e) => {
+              setCreditLimitUnlimited(e.target.checked);
+              if (e.target.checked) setCreditLimit(null);
+            }}
+          >
+            Unlimited
+          </Checkbox>
+          {!creditLimitUnlimited && (
+            <InputNumber
+              value={creditLimit}
+              onChange={setCreditLimit}
+              min={0.01}
+              precision={2}
+              prefix="$"
+              style={{ width: "100%", marginTop: 8 }}
+              placeholder="Enter credit limit"
+            />
+          )}
         </Form.Item>
 
         <Form.Item>

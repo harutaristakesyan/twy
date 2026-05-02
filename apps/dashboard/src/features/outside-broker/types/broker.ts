@@ -18,6 +18,8 @@ export interface OutsideBroker {
     id: string;
     name: string;
   } | null;
+  creditLimitUnlimited: boolean;
+  creditLimit: number | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -32,6 +34,8 @@ export interface OutsideBrokerFormData {
   notes?: string;
   status: BrokerStatus;
   branch?: string; // Branch ID (optional)
+  creditLimitUnlimited: boolean;
+  creditLimit?: number | null;
 }
 
 export interface UpdateOutsideBrokerRequest {
@@ -45,6 +49,8 @@ export interface UpdateOutsideBrokerRequest {
   notes?: string;
   status?: BrokerStatus;
   branch?: string; // Branch ID (optional)
+  creditLimitUnlimited?: boolean;
+  creditLimit?: number | null;
 }
 
 export interface GetOutsideBrokersParams {

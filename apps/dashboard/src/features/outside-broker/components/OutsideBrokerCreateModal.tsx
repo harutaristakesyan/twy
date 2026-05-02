@@ -1,4 +1,15 @@
-import { Alert, Button, Form, Input, Modal, message, Select, Space } from "antd";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  message,
+  Select,
+  Space,
+} from "antd";
 import type React from "react";
 import { useState } from "react";
 import type { Branch } from "@/features/branch/types/branch";
@@ -27,11 +38,23 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [creditLimitUnlimited, setCreditLimitUnlimited] = useState(true);
+  const [creditLimit, setCreditLimit] = useState<number | null>(null);
 
-  const handleSubmit = async (values: OutsideBrokerFormData) => {
+  const handleSubmit = async (
+    values: Omit<OutsideBrokerFormData, "creditLimitUnlimited" | "creditLimit">,
+  ) => {
+    if (!creditLimitUnlimited && (creditLimit === null || creditLimit <= 0)) {
+      message.error("Please enter a valid credit limit amount");
+      return;
+    }
     setLoading(true);
     try {
-      await createOutsideBroker(values);
+      await createOutsideBroker({
+        ...values,
+        creditLimitUnlimited,
+        creditLimit: creditLimitUnlimited ? null : creditLimit,
+      });
       message.success("Outside broker created successfully");
       form.resetFields();
       onSuccess();
@@ -52,6 +75,8 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
 
   const handleCancel = () => {
     form.resetFields();
+    setCreditLimitUnlimited(true);
+    setCreditLimit(null);
     onCancel();
   };
 
@@ -149,6 +174,29 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
               </Option>
             ))}
           </Select>
+        </Form.Item>
+
+        <Form.Item label="Credit Limit">
+          <Checkbox
+            checked={creditLimitUnlimited}
+            onChange={(e) => {
+              setCreditLimitUnlimited(e.target.checked);
+              if (e.target.checked) setCreditLimit(null);
+            }}
+          >
+            Unlimited
+          </Checkbox>
+          {!creditLimitUnlimited && (
+            <InputNumber
+              value={creditLimit}
+              onChange={setCreditLimit}
+              min={0.01}
+              precision={2}
+              prefix="$"
+              style={{ width: "100%", marginTop: 8 }}
+              placeholder="Enter credit limit"
+            />
+          )}
         </Form.Item>
 
         <Form.Item>

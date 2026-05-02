@@ -1,6 +1,7 @@
 import {
   BankOutlined,
   DeleteOutlined,
+  DollarOutlined,
   EditOutlined,
   MailOutlined,
   PhoneOutlined,
@@ -98,6 +99,24 @@ export function useOutsideBrokerColumns(
           <Tag color={statusColor[status]}>{statusLabel[status]}</Tag>
         ),
         sorter: true,
+      },
+      {
+        title: "Credit Limit",
+        key: "creditLimit",
+        render: (_, record) =>
+          record.creditLimitUnlimited ? (
+            <Tag color="green">Unlimited</Tag>
+          ) : (
+            <Text>
+              <DollarOutlined style={{ marginRight: 4 }} />
+              {record.creditLimit !== null
+                ? record.creditLimit.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })
+                : "—"}
+            </Text>
+          ),
       },
       {
         title: "Branch",

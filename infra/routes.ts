@@ -178,6 +178,31 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
+  // outside-broker
+  {
+    handler: "packages/functions/src/api/outside-broker/list.handler",
+    routeKey: "GET /api/outside-brokers",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/outside-broker/create.handler",
+    routeKey: "POST /api/outside-brokers",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/outside-broker/update.handler",
+    routeKey: "PUT /api/outside-brokers/{brokerId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/outside-broker/delete.handler",
+    routeKey: "DELETE /api/outside-brokers/{brokerId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
 ];
 
 export const allRoutes: RouteDef[] = [...authRoutes, ...appRoutes];

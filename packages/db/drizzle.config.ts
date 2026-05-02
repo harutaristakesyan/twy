@@ -1,19 +1,14 @@
 /// <reference path="../../types/sst-resources.d.ts" />
 import { defineConfig } from "drizzle-kit";
-import { Resource } from "sst";
 
-/**
- * Drizzle Kit config — drives `drizzle-kit generate` (schema diff → SQL files
- * under ./drizzle) and `drizzle-kit studio`.
- *
- * Reads cluster credentials from `Resource.Cluster.*`, so run inside
- * `sst shell --stage <stage>`:
- *
- *   pnpm sst shell --stage dev -- pnpm --filter @twy/db db:generate
- *
- * (For schema-only diffs `generate` doesn't actually need a connection; we
- * still wire one so `studio` works with the same config.)
- */
+const sstCluster = process.env.SST_RESOURCE_Cluster
+  ? (JSON.parse(process.env.SST_RESOURCE_Cluster) as {
+      database: string;
+      secretArn: string;
+      clusterArn: string;
+    })
+  : null;
+
 export default defineConfig({
   dialect: "postgresql",
   driver: "aws-data-api",
@@ -21,8 +16,9 @@ export default defineConfig({
   out: "./drizzle",
   casing: "snake_case",
   dbCredentials: {
-    database: Resource.Cluster.database,
-    secretArn: Resource.Cluster.secretArn,
-    resourceArn: Resource.Cluster.clusterArn,
+    database: sstCluster?.database ?? "placeholder",
+    secretArn:
+      sstCluster?.secretArn ?? "arn:aws:secretsmanager:us-east-1:000000000000:secret:placeholder",
+    resourceArn: sstCluster?.clusterArn ?? "arn:aws:rds:us-east-1:000000000000:cluster:placeholder",
   },
 });
