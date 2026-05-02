@@ -21,7 +21,6 @@ export default $config({
       providers: {
         aws: {
           region: "us-east-1",
-          profile: process.env.AWS_PROFILE ?? (isProd ? "twy-prod" : "twy-dev"),
         },
       },
     };
