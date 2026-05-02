@@ -8,7 +8,6 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Resource } from "sst";
 
-const bucketName = Resource.Files.name;
 const s3Client = new S3Client({});
 
 const DEFAULT_UPLOAD_URL_TTL_SECONDS = 15 * 60; // 15 minutes
@@ -46,6 +45,7 @@ export const createUploadUrl = async ({
   contentType,
   size,
 }: CreateUploadUrlInput): Promise<CreateUploadUrlResult> => {
+  const bucketName = Resource.Files.name;
   const fileId = randomUUID();
   const key = fileId;
   const ttlSeconds = DEFAULT_UPLOAD_URL_TTL_SECONDS;
@@ -80,6 +80,7 @@ export const createUploadUrl = async ({
 export const createDownloadUrl = async ({
   fileId,
 }: CreateDownloadUrlInput): Promise<CreateDownloadUrlResult> => {
+  const bucketName = Resource.Files.name;
   const ttlSeconds = DEFAULT_DOWNLOAD_URL_TTL_SECONDS;
 
   const command = new GetObjectCommand({
@@ -100,6 +101,7 @@ export const createDownloadUrl = async ({
 };
 
 export const deleteFile = async (fileId: string): Promise<void> => {
+  const bucketName = Resource.Files.name;
   const command = new DeleteObjectCommand({
     Bucket: bucketName,
     Key: fileId,
