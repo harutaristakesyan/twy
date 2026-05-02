@@ -16,16 +16,7 @@
     "allowJs": true,
     "types": ["vite/client", "node"],
     "paths": {
-      "@/*": ["./src/*"],
-      "@model/*": ["./src/model/*"],
-      "@api/*": ["./src/api/*"],
-      "@utils/*": ["./src/utils/*"],
-      "@layouts/*": ["./src/layouts/*"],
-      "@locales/*": ["./src/locales/*"],
-      "@constants/*": ["./src/constants/*"],
-      "@components/*": ["./src/components/*"],
-      "@fields/*": ["./src/components/fields/*"],
-      "@integration/*": ["./src/integration/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"],

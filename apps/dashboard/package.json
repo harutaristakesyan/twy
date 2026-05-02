@@ -16,8 +16,6 @@
     "@amplitude/analytics-browser": "^2.41.1",
     "@ant-design/charts": "2.6.7",
     "@ant-design/icons": "6.1.0",
-    "@ebay/nice-modal-react": "^1.2.13",
-    "@tanstack/react-query": "^5.100.5",
     "ahooks": "3.9.7",
     "antd": "6.3.7",
     "axios": "1.15.2",
@@ -29,7 +27,6 @@
     "react-router-dom": "7.9.4"
   },
   "devDependencies": {
-    "@tanstack/react-query-devtools": "^5.100.5",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "24.7.2",
     "@types/react": "19.2.14",

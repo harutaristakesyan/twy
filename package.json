@@ -15,6 +15,7 @@
     "check:ci": "biome ci .",
     "test": "turbo run test",
     "dev": "sst dev",
+    "dev:dashboard": "pnpm --filter @twy/dashboard dev",
     "deploy": "sst deploy",
     "remove": "sst remove",
     "shell": "sst shell",

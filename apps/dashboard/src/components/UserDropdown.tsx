@@ -1,9 +1,9 @@
 import { DownOutlined, LogoutOutlined, UserOutlined } from "@ant-design/icons";
 import { Dropdown, Flex, type MenuProps } from "antd";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/auth/AuthContext.tsx";
-import { UserAvatar } from "@/shared/ui/UserAvatar.tsx";
-import { decodeIdTokenToken } from "@/shared/utils/jwt.ts";
+import { UserAvatar } from "@/components/UserAvatar.tsx";
+import { useAuth } from "@/providers/AuthProvider.tsx";
+import { decodeIdTokenToken } from "@/utils/jwt.ts";
 
 const UserDropdown = () => {
   const { logout } = useAuth();

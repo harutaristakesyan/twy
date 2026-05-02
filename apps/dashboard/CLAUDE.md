@@ -1,6 +1,6 @@
 # apps/dashboard — `@twy/dashboard`
 
-React 19 + Vite 8 + Ant Design 6 SPA. Deployed via SST as a `sst.aws.StaticSite` mounted on a `sst.aws.Router` (defined in `infra/web.ts`). The single backend (per env) lives at `packages/functions`; this app talks to it via `apps/dashboard/src/shared/api/ApiClient.ts` — using a relative `/api` baseURL because the Router proxies same-origin requests to the API Gateway.
+React 19 + Vite 8 + Ant Design 6 SPA. Deployed via SST as a `sst.aws.StaticSite` mounted on a `sst.aws.Router` (defined in `infra/web.ts`). The single backend (per env) lives at `packages/functions`; this app talks to it via `apps/dashboard/src/libs/ApiClient.ts` — using a relative `/api` baseURL because the Router proxies same-origin requests to the API Gateway.
 
 > Read root `CLAUDE.md` first. This file is the UI-specific delta.
 
@@ -16,19 +16,42 @@ Biome overrides in root `biome.json` (search `apps/dashboard/**`):
 
 If you hit one of these in CI but not locally, run `pnpm check` (the editor extension autofixes; CI runs `biome ci` which does not).
 
+## Source layout
+
+```
+src/
+├── app/             # Entry only: App.tsx (provider tree) + index.tsx (Vite mount)
+├── assets/          # Static files (images, fonts)
+├── components/      # Shared UI primitives (GlobalErrorBoundary, UserDropdown, Logo, UserAvatar)
+├── config/          # Global constants (navigationMap, apiMessages, searchConstants)
+├── features/        # One sub-folder per domain
+│   ├── auth/        #   api/, components/, pages/
+│   ├── user/        #   api/, components/, pages/, types/
+│   ├── branch/      #   api/, components/, pages/, types/
+│   ├── load/        #   api/, components/, pages/, types/
+│   ├── outside-broker/
+│   └── outside-carrier/
+├── hooks/           # Global reusable hooks (useCurrentUser)
+├── layouts/         # Page wrappers (AppLayout, AppHeader, Sidebar)
+├── libs/            # Shared libraries (ApiClient, fileApi, api-types, EventBus)
+├── providers/       # React context providers (AuthProvider, AntdProvider)
+├── routes/          # React Router config + guards (router, ProtectedRoute, RoleBasedRoute)
+└── utils/           # Pure helpers (jwt, permissions, email, errorUtils, formatters)
+```
+
 ## Stack at a glance
 
 | Concern | Where | Notes |
 |---|---|---|
-| Routing | `src/app/routes/router.tsx` | `react-router-dom@7`, `RouterProvider`. |
-| Layout | `src/app/layouts/{Layout,AppHeader,Sidebar}.tsx` | AntD `<Layout>`. |
-| Auth | `src/auth/AuthContext.tsx`, `src/auth/{ProtectedRoute,RoleBasedRoute}.tsx` | `useAuth()` for `{user, login, logout}`. |
-| Tokens | `src/shared/utils/jwt.ts` | **Cookies via `js-cookie`**, not `localStorage`. |
-| API | `src/shared/api/ApiClient.ts` | Axios singleton with relative `/api` baseURL + auth interceptor + token refresh + mock interceptor. Never use raw `axios`/`fetch`. |
-| Mocks | `src/shared/api/mockInterceptor.ts` | Toggle via `VITE_ENABLE_MOCKS=true` in `.env.development`. Mock interceptor must init **before** the auth interceptor. |
-| Server state | `@tanstack/react-query@5` | `useQuery`/`useMutation`. Query keys are tuples — see queries.ts. |
+| Routing | `src/routes/router.tsx` | `react-router-dom@7`, `RouterProvider`. |
+| Layout | `src/layouts/{AppLayout,AppHeader,Sidebar}.tsx` | AntD `<Layout>`. |
+| Auth context | `src/providers/AuthProvider.tsx` | `useAuth()` for `{login, logout}`. |
+| Route guards | `src/routes/{ProtectedRoute,RoleBasedRoute}.tsx` | JWT check + role gate. |
+| Tokens | `src/utils/jwt.ts` | **Cookies via `js-cookie`**, not `localStorage`. |
+| API | `src/libs/ApiClient.ts` | Axios singleton with relative `/api` baseURL + auth interceptor + token refresh. Never use raw `axios`/`fetch`. |
+| Server state | `ahooks` | `useAntdTable` for paginated tables, `useRequest` for mutations/aux data, `useDebounce` for search. |
 | Modals | `@ebay/nice-modal-react` | `NiceModal.create(...)`, `NiceModal.show(...)`. |
-| Permissions | `src/shared/utils/permissions.ts` | `MenuFeature` enum drives sidebar items + `<RoleBasedRoute requires={...}>`. |
+| Permissions | `src/utils/permissions.ts` | `MenuFeature` enum drives sidebar items + `<RoleBasedRoute requiredFeature={...}>`. |
 | Charts | `@ant-design/charts@2.6.7` | Already installed. |
 | Tables | `antd` `<Table>` | Use proper column generic types — don't `any` columns. |
 
@@ -42,35 +65,26 @@ A user signed in on `twy.am` is **not** signed in on `twy.be` even though both h
 
 ## Vite envs
 
-Files at `apps/dashboard/.env.development` and `apps/dashboard/.env.production` are **committed** (`.gitignore` exception). They hold **public, build-time** values only:
-
-```
-VITE_ENABLE_MOCKS=false
-VITE_MOCK_DELAY=500
-```
-
-Never put a secret here — these get bundled into the JS the browser downloads.
+Files at `apps/dashboard/.env.development` and `apps/dashboard/.env.production` are **committed** (`.gitignore` exception). They hold **public, build-time** values only — never put a secret here, since these get bundled into the JS the browser downloads.
 
 ## Dev proxy
 
-`vite.config.mts` proxies `/api` → `https://dev.twy.am` and `/s3-proxy` → the dev S3 bucket. So `pnpm run:ui` works against the dev backend with no extra setup.
+`vite.config.mts` proxies `/api` → `https://dev.twy.am` and `/s3-proxy` → the dev S3 bucket. So `pnpm run:dashboard` works against the dev backend with no extra setup.
 
 ## Adding a new page
 
-Use the `ui-page-scaffold` skill (under `.claude/skills/`). The short version:
-
-1. `src/pages/<Name>Page.tsx` with a default export.
-2. Wire route in `src/app/routes/router.tsx`, wrapped in `<ProtectedRoute>` and (if role-gated) `<RoleBasedRoute>`.
-3. Add `MenuFeature` enum entry in `src/shared/utils/permissions.ts` if role-gated.
-4. Add sidebar item in `src/app/layouts/Sidebar.tsx`.
-5. Use `useQuery` for data, `useMutation` for writes. Wrap fetchers in `useCallback`.
+1. Create `src/features/<domain>/pages/<Name>Page.tsx` with a default export.
+2. Wire the route in `src/routes/router.tsx`, wrapped in `<ProtectedRoute>` and (if role-gated) `<RoleBasedRoute>`.
+3. Add a `MenuFeature` enum entry in `src/utils/permissions.ts` if role-gated.
+4. Add a sidebar item in `src/layouts/Sidebar.tsx`.
+5. Use `useAntdTable` for paginated tables, `useRequest` (manual) for mutations, `useDebounce` for search inputs.
 
 ## Common UI footguns
 
 - **Inline arrow inside `useEffect` dep array** → `useExhaustiveDependencies` error. Lift to `useCallback`.
 - **`!` to silence "possibly undefined"** → biome error in this app. Do an early return or use `?.`.
-- **New API call with raw `fetch`/`axios`** → bypasses the auth interceptor, the mock layer, and the error handler. Always go through `ApiClient`.
-- **`localStorage.getItem("accessToken")`** → wrong; use `getAccessToken()` from `src/shared/utils/jwt.ts`.
+- **New API call with raw `fetch`/`axios`** → bypasses the auth interceptor and the error handler. Always go through `ApiClient` from `src/libs/ApiClient.ts`.
+- **`localStorage.getItem("accessToken")`** → wrong; use `getAccessToken()` from `src/utils/jwt.ts`.
 - **AntD v5 patterns (e.g. `Tooltip` `title` typing)** — we're on AntD v6. Some props/types changed.
 - **`<Modal open={x}>` with state in a sibling** — leaks state. Use `NiceModal`.
 

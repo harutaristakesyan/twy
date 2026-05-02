@@ -72,22 +72,9 @@ A complete role-based access control (RBAC) system has been implemented to contr
      - `/loads` (Loads)
      - `/loads/create` (Create Load)
 
-6. **`src/shared/api/mockInterceptor.ts`** (Modified)
-   - Changed default logged-in user from ID '1' (Owner) to ID '5' (Head Owner)
-   - This allows testing of full access across all features
-
 ## Testing the System
 
-To test different roles, modify the mock interceptor or update the user ID in your authentication flow:
-
-**Mock Store User IDs:**
-
-- ID '1': Owner (Users, Loads)
-- ID '2': Head Accountant (Users, Branches, Loads)
-- ID '3': Agent (Loads)
-- ID '4': Carrier (Loads)
-- ID '5': Head Owner (Users, Branches, Loads) - Currently active
-- ID '6': Accountant (Loads)
+To test different roles, sign in with a user that has the corresponding role assigned in Cognito.
 
 ## Menu Visibility
 
