@@ -22,6 +22,7 @@ export function createDatabase() {
 
   const cluster = new sst.aws.Aurora("Cluster", {
     engine: "postgres",
+    databaseName: "app",
     dataApi: true,
     vpc,
     scaling: {
