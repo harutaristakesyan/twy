@@ -71,18 +71,17 @@ const RegistrationForm = () => {
     },
   );
 
-  // Watchers for form values and password specifically
   const passwordValue = Form.useWatch("password", form);
-  const _formValues = Form.useWatch([], form);
+  const formValues = Form.useWatch([], form);
   const [submittable, setSubmittable] = React.useState(false);
 
-  // Check form validity for enabling submit button
+  // biome-ignore lint/correctness/useExhaustiveDependencies: formValues is a change signal, not read inside the effect
   React.useEffect(() => {
     form
       .validateFields({ validateOnly: true })
       .then(() => setSubmittable(true))
       .catch(() => setSubmittable(false));
-  }, [form]);
+  }, [form, formValues]);
 
   const passwordResult = validatePassword(passwordValue || "");
   const isPasswordValid = passwordResult.isValid;
