@@ -9,7 +9,6 @@ export {
   httpZodHandler,
 } from "./middy/httpZodHandler.js";
 export { jsonErrorHandler } from "./middy/jsonErrorHandler.js";
-export { requirePermission } from "./middy/requirePermission.js";
 export {
   generateJSONResponse,
   serializeResponse,
