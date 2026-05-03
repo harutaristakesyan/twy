@@ -16,7 +16,9 @@ const ForgotPasswordPage = () => {
     >
       <Card style={{ width: "100%", maxWidth: 500, borderRadius: 16 }}>
         <CardHeader />
-        <Title level={3}>Password Recovery</Title>
+        <Title level={3} style={{ textAlign: "center" }}>
+          Password Recovery
+        </Title>
         <Paragraph type="secondary" style={{ textAlign: "center" }}>
           Enter your email address. We&apos;ll send you a link to reset your password.
         </Paragraph>

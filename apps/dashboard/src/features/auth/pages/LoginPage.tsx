@@ -27,13 +27,12 @@ const LoginPage = () => {
           }}
         >
           <Flex vertical align="center" style={{ marginBottom: 16 }}>
-            <Logo style={{ width: 180, height: 36 }} />
+            <Logo />
             <Title level={3} style={{ margin: "16px 0 0 0", fontSize: screens.xs ? 20 : 24 }}>
               Log in to your account
             </Title>
           </Flex>
           <LoginForm />
-          <Divider />
           <FooterSection />
         </Card>
       </Col>

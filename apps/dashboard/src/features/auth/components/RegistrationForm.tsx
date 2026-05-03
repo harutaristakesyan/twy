@@ -1,17 +1,6 @@
 import { ArrowRightOutlined, CheckOutlined, CloseOutlined, LockOutlined } from "@ant-design/icons";
 import { useRequest } from "ahooks";
-import {
-  App as AntdApp,
-  Button,
-  Col,
-  Divider,
-  Form,
-  Input,
-  List,
-  Row,
-  Space,
-  Typography,
-} from "antd";
+import { App as AntdApp, Button, Col, Form, Input, List, Row, Space, Typography } from "antd";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import ApiClient from "@/libs/ApiClient.ts";
@@ -176,8 +165,6 @@ const RegistrationForm = () => {
           Create Account
         </Button>
       </Form.Item>
-
-      <Divider plain>Or continue with</Divider>
     </Form>
   );
 };

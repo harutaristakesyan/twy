@@ -76,8 +76,6 @@ const LoginForm = () => {
           Log In
         </Button>
       </Form.Item>
-
-      <Divider plain>Or continue with</Divider>
     </Form>
   );
 };

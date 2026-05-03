@@ -30,11 +30,7 @@ const RegistrationPage = () => {
           <Title level={3} style={{ textAlign: "center", fontSize: screens.xs ? 20 : 24 }}>
             Create your account
           </Title>
-          <Paragraph type="secondary" style={{ textAlign: "center", marginBottom: 32 }}>
-            Join TWY
-          </Paragraph>
           <RegistrationForm />
-          <Divider />
           <Row align="middle" justify="space-between" gutter={[0, 12]}>
             <Col>
               <Text strong> Already have an account?</Text>

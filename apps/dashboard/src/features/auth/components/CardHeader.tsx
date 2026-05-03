@@ -7,10 +7,18 @@ const CardHeader = () => {
   const navigate = useNavigate();
 
   return (
-    <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
-      <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
-      <Logo style={{ width: "200px", height: "40px" }} />
-    </Flex>
+    <div style={{ position: "relative", marginBottom: 24 }}>
+      <Button
+        type="text"
+        icon={<ArrowLeftOutlined />}
+        onClick={() => navigate(-1)}
+        aria-label="Go back"
+        style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}
+      />
+      <Flex justify="center" align="center">
+        <Logo style={{ width: "200px", height: "40px", margin: 0, textAlign: "center" }} />
+      </Flex>
+    </div>
   );
 };
 
