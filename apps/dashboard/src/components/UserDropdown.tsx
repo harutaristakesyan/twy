@@ -30,7 +30,7 @@ const UserDropdown = () => {
   return (
     <Dropdown menu={{ items: menuItems }} trigger={["click"]} placement="bottomRight">
       <Flex justify="space-between" align="center" style={{ cursor: "pointer" }}>
-        <UserAvatar firstName={user.given_name} lastName={user.family_name} />
+        <UserAvatar firstName={user?.given_name} lastName={user?.family_name} />
         <DownOutlined style={{ marginLeft: 6, fontSize: 12 }} />
       </Flex>
     </Dropdown>
