@@ -2,14 +2,18 @@ import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
   assertPermission,
-  type CreateBrokerEvent,
-  CreateBrokerEventSchema,
-  createBroker as createBrokerRecord,
+  createBrokerRequest,
   loadAuthContext,
+  type SubmitBrokerRequestEvent,
+  SubmitBrokerRequestEventSchema,
 } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
-const createBroker = async (event: CreateBrokerEvent): Promise<MessageResponse> => {
+const submitBrokerRequestHandler = async (
+  event: SubmitBrokerRequestEvent,
+): Promise<MessageResponse> => {
+  const { userId } = event.requestContext.authUser;
+  const ctx = await loadAuthContext(userId);
   const {
     brokerName,
     mcNumber,
@@ -18,16 +22,14 @@ const createBroker = async (event: CreateBrokerEvent): Promise<MessageResponse> 
     email,
     address,
     notes,
-    status,
     branchId,
     creditLimitUnlimited,
     creditLimit,
   } = event.body;
-  const { userId } = event.requestContext.authUser;
-  const ctx = await loadAuthContext(userId);
+
   assertPermission(ctx, "brokers", "add");
 
-  await createBrokerRecord({
+  await createBrokerRequest({
     brokerName,
     mcNumber,
     contactName: contactName ?? null,
@@ -35,21 +37,20 @@ const createBroker = async (event: CreateBrokerEvent): Promise<MessageResponse> 
     email: email ?? null,
     address: address ?? null,
     notes: notes ?? null,
-    status,
     branchId: branchId ?? null,
     creditLimitUnlimited,
     creditLimit: creditLimit ?? null,
-    createdBy: userId,
+    submittedBy: userId,
   });
 
-  return { message: "Outside broker created successfully" };
+  return { message: "Broker request submitted successfully" };
 };
 
 export const handler = middyfy<
-  CreateBrokerEvent,
+  SubmitBrokerRequestEvent,
   MessageResponse,
   APIGatewayProxyEventV2WithJWTAuthorizer
->(createBroker, {
-  eventSchema: CreateBrokerEventSchema,
+>(submitBrokerRequestHandler, {
+  eventSchema: SubmitBrokerRequestEventSchema,
   mode: "parse",
 });

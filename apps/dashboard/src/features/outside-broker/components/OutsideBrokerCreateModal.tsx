@@ -14,9 +14,8 @@ import type React from "react";
 import { useState } from "react";
 import type { Branch } from "@/features/branch/types/branch";
 import { getErrorMessage } from "@/utils/errorUtils";
-import { createOutsideBroker } from "../api/brokerApi";
-import type { OutsideBrokerFormData } from "../types/broker";
-import { BrokerStatus } from "../types/broker";
+import { submitBrokerRequest } from "../api/brokerRequestApi";
+import type { SubmitBrokerRequestBody } from "../types/brokerRequest";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -28,6 +27,17 @@ interface OutsideBrokerCreateModalProps {
   onCancel: () => void;
   onSuccess: () => void;
 }
+
+type CreateFormValues = {
+  brokerName: string;
+  mcNumber: string;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+  branch?: string;
+};
 
 const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
   open,
@@ -41,21 +51,28 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
   const [creditLimitUnlimited, setCreditLimitUnlimited] = useState(true);
   const [creditLimit, setCreditLimit] = useState<number | null>(null);
 
-  const handleSubmit = async (
-    values: Omit<OutsideBrokerFormData, "creditLimitUnlimited" | "creditLimit">,
-  ) => {
+  const handleSubmit = async (values: CreateFormValues) => {
     if (!creditLimitUnlimited && (creditLimit === null || creditLimit <= 0)) {
       message.error("Please enter a valid credit limit amount");
       return;
     }
     setLoading(true);
     try {
-      await createOutsideBroker({
-        ...values,
+      const payload: SubmitBrokerRequestBody = {
+        brokerName: values.brokerName,
+        mcNumber: values.mcNumber,
+        contactName: values.contactName,
+        phone: values.phone,
+        email: values.email,
+        address: values.address,
+        notes: values.notes,
+        branchId: values.branch,
         creditLimitUnlimited,
         creditLimit: creditLimitUnlimited ? null : creditLimit,
-      });
-      message.success("Outside broker created successfully");
+      };
+
+      await submitBrokerRequest(payload);
+      message.success("Broker request submitted for review");
       form.resetFields();
       onSuccess();
     } catch (error) {
@@ -82,15 +99,15 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
 
   return (
     <Modal
-      title="Add New Outside Broker"
+      title="Request outside broker"
       open={open}
       onCancel={handleCancel}
       footer={null}
       width={600}
     >
       <Alert
-        message="Broker Information"
-        description="Add a new outside broker. Broker name and MC number are required."
+        message="Broker information"
+        description="Submit a request for a new outside broker. It appears in the directory only after an admin approves it."
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
@@ -143,19 +160,6 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
           <TextArea placeholder="Enter notes" rows={3} id="create-notes" />
         </Form.Item>
 
-        <Form.Item
-          name="status"
-          label="Status"
-          rules={[{ required: true, message: "Please select a status" }]}
-          initialValue={BrokerStatus.PENDING}
-        >
-          <Select placeholder="Select status" id="create-status">
-            <Option value={BrokerStatus.APPROVED}>Approved</Option>
-            <Option value={BrokerStatus.PENDING}>Pending</Option>
-            <Option value={BrokerStatus.DENIED}>Denied</Option>
-          </Select>
-        </Form.Item>
-
         <Form.Item name="branch" label="Branch (Optional)">
           <Select
             placeholder="Select branch (optional)"
@@ -203,7 +207,7 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
             <Button onClick={handleCancel}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
-              Add Broker
+              Submit request
             </Button>
           </Space>
         </Form.Item>

@@ -12,7 +12,6 @@ const uuidField = z.string().uuid("Value must be a valid UUID");
 export const brokerSortFieldMap = {
   brokerName: "brokerName",
   mcNumber: "mcNumber",
-  status: "status",
   createdAt: "createdAt",
   branch: "branch",
 } as const;
@@ -48,27 +47,6 @@ export const ListBrokersEventSchema = z.object({
 });
 
 export type ListBrokersEvent = z.infer<typeof ListBrokersEventSchema>;
-
-const BrokerBaseSchema = z.object({
-  brokerName: z.string().trim().min(2, "Broker name must be at least 2 characters"),
-  mcNumber: z.string().trim().min(1, "MC number is required"),
-  contactName: z.string().trim().optional(),
-  phone: z.string().trim().optional(),
-  email: z.string().trim().email().optional(),
-  address: z.string().trim().optional(),
-  notes: z.string().trim().optional(),
-  status: brokerStatusEnum.default("pending"),
-  branchId: uuidField.optional(),
-  creditLimitUnlimited: z.boolean().default(true),
-  creditLimit: z.number().positive().nullable().optional(),
-});
-
-export const CreateBrokerEventSchema = z.object({
-  requestContext: AuthContext,
-  body: BrokerBaseSchema,
-});
-
-export type CreateBrokerEvent = z.infer<typeof CreateBrokerEventSchema>;
 
 const UpdateBrokerPayloadSchema = z
   .object({

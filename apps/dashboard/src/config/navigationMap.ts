@@ -3,6 +3,8 @@ export const navigationLabelMap: Record<string, string> = {
   "/branches": "Branch Management",
   "/loads": "Loads Management",
   "/outside-brokers": "OutSide Brokers",
+  "/outside-brokers/directory": "OutSide Brokers",
+  "/outside-brokers/requests": "OutSide Brokers",
   "/carriers": "Carriers",
   "/carriers/twy": "Carriers",
   "/carriers/outside": "Carriers",

@@ -1,8 +1,9 @@
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { useAntdTable, useDebounce, useRequest } from "ahooks";
+import { useAntdTable, useDebounce, useLatest, useRequest, useUpdateEffect } from "ahooks";
 import { Button, Card, Empty, Flex, Input, message, Table, Typography } from "antd";
 import type React from "react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getBranches } from "@/features/branch/api/branchApi";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -13,15 +14,17 @@ import { useOutsideBrokerColumns } from "./useOutsideBrokerColumns";
 const { Title, Text } = Typography;
 const { Search } = Input;
 
-type SortField = "brokerName" | "mcNumber" | "status" | "createdAt" | "branch" | undefined;
+type SortField = "brokerName" | "mcNumber" | "createdAt" | "branch" | undefined;
 
 const OutsideBrokersManagementTable: React.FC = () => {
+  const navigate = useNavigate();
   const { permissions } = useCurrentUser();
   const { openOutsideBrokerCreate } = useOutsideBrokerModal();
   const canCreate = permissions.brokers.add;
 
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 500 });
+  const searchTextRef = useLatest(searchText);
 
   const { tableProps, refresh } = useAntdTable(
     async ({ current, pageSize, sorter }) => {
@@ -31,12 +34,16 @@ const OutsideBrokersManagementTable: React.FC = () => {
         limit: pageSize,
         sortField: s?.field as SortField,
         sortOrder: (s?.order ?? undefined) as "ascend" | "descend" | undefined,
-        query: searchText || undefined,
+        query: searchTextRef.current || undefined,
       });
       return { total: result.total, list: result.brokers };
     },
-    { refreshDeps: [searchText], defaultPageSize: 10 },
+    { defaultPageSize: 10 },
   );
+
+  useUpdateEffect(() => {
+    void refresh();
+  }, [searchText]);
 
   const { data: branches = [], loading: branchesLoading } = useRequest(
     async () => (await getBranches({ limit: 100 })).branches ?? [],
@@ -74,9 +81,10 @@ const OutsideBrokersManagementTable: React.FC = () => {
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={() =>
-                  openOutsideBrokerCreate({ branches, loadingBranches: branchesLoading }, () =>
-                    refresh(),
-                  )
+                  openOutsideBrokerCreate({ branches, loadingBranches: branchesLoading }, () => {
+                    void refresh();
+                    navigate("/outside-brokers/requests");
+                  })
                 }
               >
                 Add Broker

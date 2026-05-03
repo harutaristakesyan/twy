@@ -1,5 +1,5 @@
 import { useAuth } from "@/providers/AuthProvider";
-import { emptyPermissionsMap } from "@/utils/permissions";
+import { normalizePermissionsMap } from "@/utils/permissions";
 
 export const useCurrentUser = () => {
   const {
@@ -15,6 +15,6 @@ export const useCurrentUser = () => {
     refetch,
     authMe,
     refetchAuthMe,
-    permissions: authMe?.permissions ?? emptyPermissionsMap(),
+    permissions: normalizePermissionsMap(authMe?.permissions),
   };
 };

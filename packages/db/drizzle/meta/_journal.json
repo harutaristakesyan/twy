@@ -29,6 +29,13 @@
       "when": 1777827471680,
       "tag": "0003_carrier_request",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777832026429,
+      "tag": "0004_regular_power_pack",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,5 @@
 export * from "./branch.js";
+export * from "./brokerRequest.js";
 export * from "./carrier.js";
 export * from "./carrierRequest.js";
 export * from "./file.js";

@@ -1,7 +1,9 @@
 // Re-export DB schema enums and shared types so callers can pull everything
 // from @twy/core without reaching into @twy/db for raw schema bits.
 export {
+  type BrokerRequestStatus,
   type BrokerStatus,
+  brokerRequestStatusValues,
   brokerStatusValues,
   type CarrierKind,
   type CarrierRequestStatus,
@@ -17,6 +19,7 @@ export {
 } from "@twy/db";
 
 export * from "./branch/index.js";
+export * from "./broker-request/index.js";
 export * from "./carrier/index.js";
 export * from "./carrier-request/index.js";
 export * from "./file/index.js";

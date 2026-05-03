@@ -2,7 +2,7 @@ import { Button, Divider, Drawer, Form, Input, message, Space, Switch, Typograph
 import type React from "react";
 import { useCallback } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
-import { emptyPermissionsMap } from "@/utils/permissions";
+import { emptyPermissionsMap, normalizePermissionsMap } from "@/utils/permissions";
 import { createTeam, updateTeam } from "../api/teamApi";
 import type { Team, TeamFormData } from "../types/team";
 import PermissionMatrixField from "./PermissionMatrixField";
@@ -51,7 +51,7 @@ const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, o
         description: team.description ?? undefined,
         branchRestricted: team.branchRestricted,
         onlyOwnData: team.onlyOwnData,
-        permissions: team.permissions,
+        permissions: normalizePermissionsMap(team.permissions),
       }
     : {
         branchRestricted: false,

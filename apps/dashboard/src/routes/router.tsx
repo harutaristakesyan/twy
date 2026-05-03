@@ -13,12 +13,16 @@ import OutsideCarriersTab from "@/features/carrier/pages/OutsideCarriersTab";
 import TwyCarriersTab from "@/features/carrier/pages/TwyCarriersTab";
 import CreateLoadPage from "@/features/load/pages/CreateLoadPage";
 import LoadsPage from "@/features/load/pages/LoadsPage";
+import BrokerRequestsTab from "@/features/outside-broker/pages/BrokerRequestsTab";
+import OutsideBrokersIndexRedirect from "@/features/outside-broker/pages/OutsideBrokersIndexRedirect";
+import OutsideBrokersLayout from "@/features/outside-broker/pages/OutsideBrokersLayout";
 import OutsideBrokersPage from "@/features/outside-broker/pages/OutsideBrokersPage";
 import TeamsPage from "@/features/team/pages/TeamsPage";
 import ProfilePage from "@/features/user/pages/ProfilePage";
 import UsersPage from "@/features/user/pages/UsersPage";
 import AppLayout from "@/layouts/AppLayout.tsx";
 import ProtectedRoute from "@/routes/ProtectedRoute";
+import RequireBrokerRequestsView from "@/routes/RequireBrokerRequestsView";
 import RequirePermission from "@/routes/RequirePermission";
 
 const NotFound = () => <div>Not Found</div>;
@@ -71,11 +75,26 @@ export const router = createBrowserRouter([
           },
           {
             path: "outside-brokers",
-            element: (
-              <RequirePermission resource="brokers" action="view">
-                <OutsideBrokersPage />
-              </RequirePermission>
-            ),
+            element: <OutsideBrokersLayout />,
+            children: [
+              { index: true, element: <OutsideBrokersIndexRedirect /> },
+              {
+                path: "directory",
+                element: (
+                  <RequirePermission resource="brokers" action="view">
+                    <OutsideBrokersPage />
+                  </RequirePermission>
+                ),
+              },
+              {
+                path: "requests",
+                element: (
+                  <RequireBrokerRequestsView>
+                    <BrokerRequestsTab />
+                  </RequireBrokerRequestsView>
+                ),
+              },
+            ],
           },
           {
             path: "carriers",

@@ -4,7 +4,6 @@ import type { ApiResponse } from "@/libs/api-types.ts";
 import type {
   GetOutsideBrokersParams,
   OutsideBroker,
-  OutsideBrokerFormData,
   PaginatedOutsideBrokersResponse,
   UpdateOutsideBrokerRequest,
 } from "../types/broker.ts";
@@ -29,12 +28,6 @@ export const getOutsideBrokers = async (params?: GetOutsideBrokersParams) => {
 // Get outside broker by ID
 export const getOutsideBrokerById = async (id: string) => {
   const response = await ApiClient.get<ApiResponse<OutsideBroker>>(`/outside-brokers/${id}`);
-  return response.data;
-};
-
-// Create new outside broker
-export const createOutsideBroker = async (data: OutsideBrokerFormData) => {
-  const response = await ApiClient.post<ApiResponse<OutsideBroker>>("/outside-brokers", data);
   return response.data;
 };
 

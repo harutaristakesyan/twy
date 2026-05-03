@@ -14,21 +14,8 @@ import type { Branch } from "@/features/branch/types/branch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useOutsideBrokerModal } from "../providers/OutsideBrokerModalProvider";
 import type { OutsideBroker } from "../types/broker";
-import { BrokerStatus } from "../types/broker";
 
 const { Text } = Typography;
-
-const statusColor: Record<BrokerStatus, string> = {
-  [BrokerStatus.APPROVED]: "success",
-  [BrokerStatus.PENDING]: "warning",
-  [BrokerStatus.DENIED]: "error",
-};
-
-const statusLabel: Record<BrokerStatus, string> = {
-  [BrokerStatus.APPROVED]: "Approved",
-  [BrokerStatus.PENDING]: "Pending",
-  [BrokerStatus.DENIED]: "Denied",
-};
 
 export function useOutsideBrokerColumns(
   refresh: () => void,
@@ -91,15 +78,6 @@ export function useOutsideBrokerColumns(
             {!record.phone && !record.email && <Tag color="default">No Contact Info</Tag>}
           </Flex>
         ),
-      },
-      {
-        title: "Status",
-        dataIndex: "status",
-        key: "status",
-        render: (status: BrokerStatus) => (
-          <Tag color={statusColor[status]}>{statusLabel[status]}</Tag>
-        ),
-        sorter: true,
       },
       {
         title: "Credit Limit",

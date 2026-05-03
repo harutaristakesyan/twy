@@ -242,8 +242,26 @@ export const appRoutes: RouteDef[] = [
     linkKeys: ["cluster"],
   },
   {
-    handler: "packages/functions/src/api/outside-broker/create.handler",
-    routeKey: "POST /api/outside-brokers",
+    handler: "packages/functions/src/api/broker-request/list.handler",
+    routeKey: "GET /api/broker-requests",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/broker-request/create.handler",
+    routeKey: "POST /api/broker-requests",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/broker-request/approve.handler",
+    routeKey: "POST /api/broker-requests/{requestId}/approve",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/broker-request/reject.handler",
+    routeKey: "POST /api/broker-requests/{requestId}/reject",
     requiresAuth: true,
     linkKeys: ["cluster"],
   },

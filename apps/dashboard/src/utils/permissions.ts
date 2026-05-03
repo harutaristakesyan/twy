@@ -1,6 +1,7 @@
 export const RESOURCES = [
   "branches",
   "brokers",
+  "brokers_requests",
   "carriers_twy",
   "carriers_outside",
   "carriers_requests",
@@ -25,4 +26,38 @@ export function emptyPermissionsMap(): PermissionsMap {
     map[resource] = { add: false, view: false, edit: false };
   }
   return map;
+}
+
+/** Merge API/cached permissions into a full map so new resources never read as undefined. */
+export function normalizePermissionsMap(
+  input: Partial<Record<Resource, Partial<Record<Action, boolean>>>> | null | undefined,
+): PermissionsMap {
+  const base = emptyPermissionsMap();
+  if (!input) {
+    return base;
+  }
+  for (const r of RESOURCES) {
+    const row = input[r];
+    if (!row) {
+      continue;
+    }
+    for (const a of ACTIONS) {
+      if (typeof row[a] === "boolean") {
+        base[r][a] = row[a];
+      }
+    }
+  }
+  return base;
+}
+
+/** Broker request queue: explicit resource, or full outside-broker admins (view+edit). */
+export function canViewBrokerRequests(permissions: PermissionsMap): boolean {
+  return (
+    !!permissions.brokers_requests?.view ||
+    (!!permissions.brokers?.view && !!permissions.brokers?.edit)
+  );
+}
+
+export function canEditBrokerRequests(permissions: PermissionsMap): boolean {
+  return !!permissions.brokers_requests?.edit || !!permissions.brokers?.edit;
 }

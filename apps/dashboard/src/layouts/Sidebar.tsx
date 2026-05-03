@@ -53,7 +53,7 @@ const Sidebar: React.FC = () => {
       key: "/outside-brokers",
       icon: <TeamOutlined />,
       label: "Outside Brokers",
-      resources: ["brokers"],
+      resources: ["brokers", "brokers_requests"],
     },
     {
       key: "/carriers",
