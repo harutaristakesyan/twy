@@ -39,4 +39,6 @@ const forgotPasswordHandler = async (event: EventSchema): Promise<ForgotPassword
   }
 };
 
-export const handler = middyfy<EventSchema, ForgotPasswordResponse>(forgotPasswordHandler);
+export const handler = middyfy<EventSchema, ForgotPasswordResponse>(forgotPasswordHandler, {
+  skipAuth: true,
+});

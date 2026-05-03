@@ -41,4 +41,6 @@ const verificationHandler = async (event: EventSchema): Promise<VerificationResp
   }
 };
 
-export const handler = middyfy<EventSchema, VerificationResponse>(verificationHandler);
+export const handler = middyfy<EventSchema, VerificationResponse>(verificationHandler, {
+  skipAuth: true,
+});

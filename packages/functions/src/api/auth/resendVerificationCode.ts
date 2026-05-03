@@ -41,4 +41,6 @@ const resendVerificationCodeHandler = async (event: EventSchema): Promise<Resend
   }
 };
 
-export const handler = middyfy<EventSchema, ResendCodeResponse>(resendVerificationCodeHandler);
+export const handler = middyfy<EventSchema, ResendCodeResponse>(resendVerificationCodeHandler, {
+  skipAuth: true,
+});

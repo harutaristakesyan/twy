@@ -58,4 +58,4 @@ const loginHandler = async (event: EventSchema): Promise<LoginResponse> => {
   }
 };
 
-export const handler = middyfy(loginHandler);
+export const handler = middyfy(loginHandler, { skipAuth: true });

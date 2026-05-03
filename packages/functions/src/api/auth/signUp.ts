@@ -56,4 +56,4 @@ const signUpHandler = async (event: EventSchema): Promise<SignUpResponse> => {
   }
 };
 
-export const handler = middyfy<EventSchema, SignUpResponse>(signUpHandler);
+export const handler = middyfy<EventSchema, SignUpResponse>(signUpHandler, { skipAuth: true });

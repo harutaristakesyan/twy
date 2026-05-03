@@ -47,4 +47,5 @@ const confirmForgotPasswordHandler = async (
 
 export const handler = middyfy<EventSchema, ConfirmResetPasswordResponse>(
   confirmForgotPasswordHandler,
+  { skipAuth: true },
 );

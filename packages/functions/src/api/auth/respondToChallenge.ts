@@ -68,4 +68,5 @@ const respondToChallengeHandler = async (event: EventSchema): Promise<TokenRespo
 export const handler = middyfy<EventSchema, TokenResponse>(respondToChallengeHandler, {
   eventSchema: EventSchema,
   mode: "parse",
+  skipAuth: true,
 });

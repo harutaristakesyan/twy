@@ -46,4 +46,6 @@ const refreshTokenHandler = async (event: EventSchema): Promise<RefreshTokenResp
   };
 };
 
-export const handler = middyfy<EventSchema, RefreshTokenResponse>(refreshTokenHandler);
+export const handler = middyfy<EventSchema, RefreshTokenResponse>(refreshTokenHandler, {
+  skipAuth: true,
+});

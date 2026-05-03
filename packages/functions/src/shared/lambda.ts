@@ -19,17 +19,11 @@ type LambdaHandler<TEvent = unknown, TResult = unknown, TContext = Context> = (
   context: TContext,
 ) => Promise<TResult>;
 
-const middlewares = [
-  jsonErrorHandler(),
-  middyJsonBodyParser({ disableContentTypeError: true }),
-  httpJwtExtractor(),
-  addAwsRequestId(),
-] as middy.MiddlewareObj[];
-
 type HttpMiddifierOptions = MiddyOptions & {
   readonly eventSchema?: ZodType;
-
   readonly mode?: HttpZodHandlerMode;
+  /** Set true for public routes that have no JWT authorizer (e.g. signup, login, verify). */
+  readonly skipAuth?: boolean;
 };
 
 export const middyfy = <
@@ -44,13 +38,20 @@ export const middyfy = <
     | middy.MiddyfiedHandler<TOriginalEvent, TResult, Error, TContext>,
   options: HttpMiddifierOptions = {},
 ): middy.MiddyfiedHandler<TOriginalEvent, TResult, Error, TContext> => {
-  const { eventSchema, mode } = options;
+  const { eventSchema, mode, skipAuth } = options;
+
+  const mw = [
+    jsonErrorHandler(),
+    middyJsonBodyParser({ disableContentTypeError: true }),
+    ...(skipAuth ? [] : [httpJwtExtractor()]),
+    addAwsRequestId(),
+  ] as middy.MiddlewareObj[];
 
   if (eventSchema) {
-    middlewares.push(httpZodHandler({ eventSchema, mode }));
+    mw.push(httpZodHandler({ eventSchema, mode }));
   }
 
-  return middlewares.reduce((handler, middleware) => handler.use(middleware), wrapHandler(handler));
+  return mw.reduce((h, middleware) => h.use(middleware), wrapHandler(handler));
 };
 
 export const wrapHandler = <TEvent, TData, TResult = unknown, TContext extends Context = Context>(
