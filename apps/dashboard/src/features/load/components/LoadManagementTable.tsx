@@ -1,4 +1,4 @@
-import { PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { useAntdTable, useDebounce, useRequest } from "ahooks";
 import { App, Button, Card, Flex, Input, Table, Tooltip, Typography } from "antd";
 import type React from "react";
@@ -90,9 +90,6 @@ export const LoadManagementTable: React.FC = () => {
                 </Button>
               </Tooltip>
             )}
-            <Button icon={<ReloadOutlined />} onClick={refresh} loading={tableProps.loading}>
-              Refresh
-            </Button>
           </Flex>
         </Flex>
 

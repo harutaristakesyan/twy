@@ -1,4 +1,4 @@
-import { PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { useAntdTable, useDebounce, useLatest, useRequest, useUpdateEffect } from "ahooks";
 import { Button, Card, Empty, Flex, Input, message, Table, Typography } from "antd";
 import type React from "react";
@@ -90,9 +90,6 @@ const OutsideBrokersManagementTable: React.FC = () => {
                 Add Broker
               </Button>
             )}
-            <Button icon={<ReloadOutlined />} onClick={refresh} loading={tableProps.loading}>
-              Refresh
-            </Button>
           </Flex>
         </Flex>
 

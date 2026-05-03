@@ -1,4 +1,4 @@
-import { CheckOutlined, CloseOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { CheckOutlined, CloseOutlined, SearchOutlined } from "@ant-design/icons";
 import { useAntdTable, useDebounce, useLatest, useUpdateEffect } from "ahooks";
 import {
   Button,
@@ -215,9 +215,6 @@ const CarrierRequestsTab: React.FC = () => {
               allowClear
               style={{ width: 260 }}
             />
-            <Button icon={<ReloadOutlined />} onClick={refresh} loading={tableProps.loading}>
-              Refresh
-            </Button>
           </Flex>
         </Flex>
 
