@@ -1,5 +1,5 @@
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { useAntdTable, useDebounce, useRequest } from "ahooks";
+import { useAntdTable, useDebounce, useLatest, useRequest, useUpdateEffect } from "ahooks";
 import { Button, Card, Empty, Flex, Input, message, Table, Typography } from "antd";
 import type React from "react";
 import { useState } from "react";
@@ -33,6 +33,7 @@ const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
 
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 500 });
+  const searchTextRef = useLatest(searchText);
 
   const { tableProps, refresh } = useAntdTable(
     async ({ current, pageSize, sorter }) => {
@@ -43,12 +44,16 @@ const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
         limit: pageSize,
         sortField: s?.field as SortField,
         sortOrder: (s?.order ?? undefined) as "ascend" | "descend" | undefined,
-        query: searchText || undefined,
+        query: searchTextRef.current || undefined,
       });
       return { total: result.total, list: result.carriers };
     },
-    { refreshDeps: [searchText, kind], defaultPageSize: 10 },
+    { refreshDeps: [kind], defaultPageSize: 10 },
   );
+
+  useUpdateEffect(() => {
+    void refresh();
+  }, [searchText]);
 
   const { run: runDelete } = useRequest(deleteCarrier, {
     manual: true,

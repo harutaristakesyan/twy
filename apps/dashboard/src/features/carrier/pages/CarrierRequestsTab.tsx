@@ -1,5 +1,5 @@
 import { CheckOutlined, CloseOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { useAntdTable, useDebounce } from "ahooks";
+import { useAntdTable, useDebounce, useLatest, useUpdateEffect } from "ahooks";
 import {
   Button,
   Card,
@@ -42,6 +42,7 @@ const CarrierRequestsTab: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<CarrierRequestStatusFilter>("pending");
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 400 });
+  const searchTextRef = useLatest(searchText);
 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectTarget, setRejectTarget] = useState<CarrierRequest | null>(null);
@@ -60,12 +61,16 @@ const CarrierRequestsTab: React.FC = () => {
           | "status",
         sortOrder: (s?.order ?? undefined) as "ascend" | "descend" | undefined,
         status: statusFilter,
-        query: searchText || undefined,
+        query: searchTextRef.current || undefined,
       });
       return { total: result.total, list: result.requests };
     },
-    { refreshDeps: [searchText, statusFilter], defaultPageSize: 10 },
+    { refreshDeps: [statusFilter], defaultPageSize: 10 },
   );
+
+  useUpdateEffect(() => {
+    void refresh();
+  }, [searchText]);
 
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
@@ -178,10 +183,6 @@ const CarrierRequestsTab: React.FC = () => {
         ) : record.status === "rejected" && record.rejectionReason ? (
           <Text type="secondary" ellipsis={{ tooltip: record.rejectionReason }}>
             {record.rejectionReason}
-          </Text>
-        ) : record.status === "approved" && record.resultCarrierId ? (
-          <Text type="secondary" copyable={{ text: record.resultCarrierId }}>
-            Carrier ID
           </Text>
         ) : null,
     },

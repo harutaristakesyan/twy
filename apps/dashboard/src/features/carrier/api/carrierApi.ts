@@ -1,4 +1,6 @@
 import ApiClient from "@/libs/ApiClient.ts";
+import type { ApiResponse } from "@/libs/api-types.ts";
+import { shareInFlightPromise } from "@/utils/shareInFlightPromise.ts";
 import type {
   Carrier,
   CarrierFormData,
@@ -7,21 +9,41 @@ import type {
   UpdateCarrierRequest,
 } from "../types/carrier.ts";
 
+const carriersListInFlight = new Map<string, Promise<CarrierListResponse>>();
+
+function carriersListKey(params?: GetCarriersParams): string {
+  return JSON.stringify({
+    kind: params?.kind ?? "",
+    page: params?.page ?? 0,
+    limit: params?.limit ?? 10,
+    sortField: params?.sortField ?? "",
+    sortOrder: params?.sortOrder ?? "",
+    query: params?.query ?? "",
+  });
+}
+
 export const getCarriers = async (params?: GetCarriersParams): Promise<CarrierListResponse> => {
-  const queryParams: Record<string, string | number> = {};
+  return shareInFlightPromise(carriersListInFlight, carriersListKey(params), async () => {
+    const queryParams: Record<string, string | number> = {};
 
-  if (params?.kind) queryParams.kind = params.kind;
-  if (params?.page !== undefined) queryParams.page = params.page;
-  if (params?.limit !== undefined) queryParams.limit = params.limit;
-  if (params?.sortField) queryParams.sortField = params.sortField;
-  if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
-  if (params?.query) queryParams.query = params.query;
+    if (params?.kind) queryParams.kind = params.kind;
+    if (params?.page !== undefined) queryParams.page = params.page;
+    if (params?.limit !== undefined) queryParams.limit = params.limit;
+    if (params?.sortField) queryParams.sortField = params.sortField;
+    if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
+    if (params?.query) queryParams.query = params.query;
 
-  return ApiClient.get<CarrierListResponse>("/carriers", queryParams);
+    const response = await ApiClient.get<ApiResponse<CarrierListResponse>>(
+      "/carriers",
+      queryParams,
+    );
+    return response.data;
+  });
 };
 
 export const getCarrierById = async (id: string): Promise<Carrier> => {
-  return ApiClient.get<Carrier>(`/carriers/${id}`);
+  const response = await ApiClient.get<ApiResponse<Carrier>>(`/carriers/${id}`);
+  return response.data;
 };
 
 export const createCarrier = async (data: CarrierFormData): Promise<void> => {
