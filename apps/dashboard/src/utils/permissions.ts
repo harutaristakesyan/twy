@@ -1,13 +1,13 @@
-export enum MenuFeature {
-  USERS = "users",
-  BRANCHES = "branches",
-  LOADS = "loads",
-  OUTSIDE_BROKERS = "outside_brokers",
-  CARRIERS = "carriers",
-  TEAMS = "teams",
-}
-
-export const RESOURCES = ["branches", "brokers", "carriers", "teams", "users", "loads"] as const;
+export const RESOURCES = [
+  "branches",
+  "brokers",
+  "carriers_twy",
+  "carriers_outside",
+  "carriers_requests",
+  "teams",
+  "users",
+  "loads",
+] as const;
 export const ACTIONS = ["add", "view", "edit"] as const;
 export type Resource = (typeof RESOURCES)[number];
 export type Action = (typeof ACTIONS)[number];

@@ -78,16 +78,33 @@ export const router = createBrowserRouter([
           },
           {
             path: "carriers",
-            element: (
-              <RequirePermission resource="carriers" action="view">
-                <CarriersLayout />
-              </RequirePermission>
-            ),
+            element: <CarriersLayout />,
             children: [
               { index: true, element: <Navigate to="twy" replace /> },
-              { path: "twy", element: <TwyCarriersTab /> },
-              { path: "outside", element: <OutsideCarriersTab /> },
-              { path: "requests", element: <CarrierRequestsTab /> },
+              {
+                path: "twy",
+                element: (
+                  <RequirePermission resource="carriers_twy" action="view">
+                    <TwyCarriersTab />
+                  </RequirePermission>
+                ),
+              },
+              {
+                path: "outside",
+                element: (
+                  <RequirePermission resource="carriers_outside" action="view">
+                    <OutsideCarriersTab />
+                  </RequirePermission>
+                ),
+              },
+              {
+                path: "requests",
+                element: (
+                  <RequirePermission resource="carriers_requests" action="view">
+                    <CarrierRequestsTab />
+                  </RequirePermission>
+                ),
+              },
             ],
           },
           {

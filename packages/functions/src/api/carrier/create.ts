@@ -4,6 +4,7 @@ import {
   assertPermission,
   type CreateCarrierEvent,
   CreateCarrierEventSchema,
+  carrierResource,
   createCarrier,
   loadAuthContext,
 } from "@twy/core";
@@ -12,8 +13,6 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 const createCarrierHandler = async (event: CreateCarrierEvent): Promise<MessageResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "carriers", "add");
-
   const {
     kind,
     carrierName,
@@ -26,6 +25,7 @@ const createCarrierHandler = async (event: CreateCarrierEvent): Promise<MessageR
     notes,
     status,
   } = event.body;
+  assertPermission(ctx, carrierResource(kind), "add");
 
   await createCarrier({
     kind,

@@ -2,6 +2,7 @@ import { middyfy } from "@shared/index";
 import type { CarrierListResponse } from "@twy/core";
 import {
   assertPermission,
+  carrierResource,
   type ListCarriersEvent,
   ListCarriersEventSchema,
   listCarriers,
@@ -12,9 +13,8 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 const listCarriersHandler = async (event: ListCarriersEvent): Promise<CarrierListResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "carriers", "view");
-
   const { kind, page, limit, sortField, sortOrder, query } = event.queryStringParameters;
+  assertPermission(ctx, carrierResource(kind), "view");
 
   const { carriers, total } = await listCarriers({
     kind,

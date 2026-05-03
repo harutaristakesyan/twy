@@ -2,6 +2,8 @@ import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
   assertPermission,
+  carrierResource,
+  getCarrierById,
   loadAuthContext,
   type UpdateCarrierEvent,
   UpdateCarrierEventSchema,
@@ -13,9 +15,13 @@ import createError from "http-errors";
 const updateCarrierHandler = async (event: UpdateCarrierEvent): Promise<MessageResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "carriers", "edit");
 
   const { carrierId } = event.pathParameters;
+  const existing = await getCarrierById(carrierId);
+  if (existing === null) {
+    throw new createError.NotFound("Carrier not found");
+  }
+  assertPermission(ctx, carrierResource(existing.kind), "edit");
 
   const {
     carrierName,
@@ -29,7 +35,7 @@ const updateCarrierHandler = async (event: UpdateCarrierEvent): Promise<MessageR
     status,
   } = event.body;
 
-  const result = await updateCarrier(carrierId, {
+  await updateCarrier(carrierId, {
     carrierName,
     mcDotNumber,
     equipmentType,
@@ -45,10 +51,6 @@ const updateCarrierHandler = async (event: UpdateCarrierEvent): Promise<MessageR
     notes,
     status,
   });
-
-  if (result === null) {
-    throw new createError.NotFound("Carrier not found");
-  }
 
   return { message: "Carrier updated successfully" };
 };

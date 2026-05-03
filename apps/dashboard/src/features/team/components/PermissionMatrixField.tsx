@@ -18,8 +18,10 @@ const ACTION_LABELS: Record<Action, string> = {
 
 const RESOURCE_LABELS: Record<Resource, string> = {
   branches: "Branches",
-  brokers: "Brokers",
-  carriers: "Carriers",
+  brokers: "Outside Brokers",
+  carriers_twy: "Carriers — Twy",
+  carriers_outside: "Carriers — Outside",
+  carriers_requests: "Carriers — Requests",
   teams: "Teams",
   users: "Users",
   loads: "Loads",

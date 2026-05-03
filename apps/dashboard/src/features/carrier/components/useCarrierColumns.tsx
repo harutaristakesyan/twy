@@ -11,7 +11,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useMemo } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCarrierModal } from "../providers/CarrierModalProvider";
-import type { Carrier } from "../types/carrier";
+import type { Carrier, CarrierKind } from "../types/carrier";
 import { CarrierStatus, InsuranceStatus } from "../types/carrier";
 
 const { Text } = Typography;
@@ -41,11 +41,13 @@ const insuranceStatusLabel: Record<InsuranceStatus, string> = {
 export function useCarrierColumns(
   refresh: () => void,
   runDelete: (id: string) => void,
+  kind: CarrierKind,
 ): ColumnsType<Carrier> {
   const { permissions } = useCurrentUser();
   const { openCarrierEdit } = useCarrierModal();
-  const canUpdate = permissions.carriers.edit;
-  const canDelete = permissions.carriers.edit;
+  const editResource = kind === "twy" ? "carriers_twy" : "carriers_outside";
+  const canUpdate = permissions[editResource]?.edit;
+  const canDelete = permissions[editResource]?.edit;
 
   return useMemo(
     () => [

@@ -44,27 +44,29 @@ const Sidebar: React.FC = () => {
     key: string;
     icon: React.ReactNode;
     label: string;
-    resource: Resource;
+    resources: Resource[];
   }> = [
-    { key: "/", icon: <LineChartOutlined />, label: "Users", resource: "users" },
-    { key: "/branches", icon: <BranchesOutlined />, label: "Branches", resource: "branches" },
-    { key: "/loads", icon: <TruckOutlined />, label: "Loads", resource: "loads" },
+    { key: "/", icon: <LineChartOutlined />, label: "Users", resources: ["users"] },
+    { key: "/branches", icon: <BranchesOutlined />, label: "Branches", resources: ["branches"] },
+    { key: "/loads", icon: <TruckOutlined />, label: "Loads", resources: ["loads"] },
     {
       key: "/outside-brokers",
       icon: <TeamOutlined />,
       label: "Outside Brokers",
-      resource: "brokers",
+      resources: ["brokers"],
     },
     {
       key: "/carriers",
       icon: <CarOutlined />,
       label: "Carriers",
-      resource: "carriers",
+      resources: ["carriers_twy", "carriers_outside", "carriers_requests"],
     },
-    { key: "/teams", icon: <UserSwitchOutlined />, label: "Teams", resource: "teams" },
+    { key: "/teams", icon: <UserSwitchOutlined />, label: "Teams", resources: ["teams"] },
   ];
 
-  const filteredItems = allMenuItems.filter((item) => permissions[item.resource].view);
+  const filteredItems = allMenuItems.filter((item) =>
+    item.resources.some((r) => permissions[r]?.view),
+  );
 
   const selectedKey = filteredItems.find(
     (item) => location.pathname === item.key || location.pathname.startsWith(`${item.key}/`),

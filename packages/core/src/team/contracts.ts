@@ -1,4 +1,13 @@
-export const RESOURCES = ["branches", "brokers", "carriers", "teams", "users", "loads"] as const;
+export const RESOURCES = [
+  "branches",
+  "brokers",
+  "carriers_twy",
+  "carriers_outside",
+  "carriers_requests",
+  "teams",
+  "users",
+  "loads",
+] as const;
 
 export const ACTIONS = ["add", "view", "edit"] as const;
 

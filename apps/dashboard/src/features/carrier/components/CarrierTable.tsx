@@ -28,7 +28,8 @@ interface CarrierTableProps {
 const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
   const { permissions } = useCurrentUser();
   const { openCarrierCreate } = useCarrierModal();
-  const canCreate = permissions.carriers.add;
+  const addResource = kind === "twy" ? "carriers_twy" : "carriers_outside";
+  const canCreate = permissions[addResource]?.add;
 
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 500 });
@@ -58,7 +59,7 @@ const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const columns = useCarrierColumns(refresh, runDelete);
+  const columns = useCarrierColumns(refresh, runDelete, kind);
 
   const title = kind === "twy" ? "Twy Carriers" : "Outside Carriers";
 
