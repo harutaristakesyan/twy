@@ -67,6 +67,8 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ vars[matrix.environment.account_var] }}:role/github-deploy-role
           aws-region: ${{ matrix.environment.region }}
+      - name: SST unlock
+        run: pnpm sst unlock --stage "$STAGE"
       - name: SST deploy
         run: pnpm sst deploy --stage "$STAGE"
       - name: Run DB migrations
