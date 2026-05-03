@@ -53,7 +53,7 @@ export function createAuth(args: { db: { cluster: sst.aws.Aurora }; filesBucket:
           {
             name: "appUserId",
             attributeDataType: "String",
-            mutable: false,
+            mutable: true,
             required: false,
           },
         ],
