@@ -7,7 +7,7 @@ const loadStatusEnum = z.enum([...loadStatusValues] as [
   ...(typeof loadStatusValues)[number][],
 ]);
 
-const uuidField = z.string().uuid("Value must be a valid UUID");
+const uuidField = z.uuid("Value must be a valid UUID");
 
 const locationSchema = z.object({
   cityZipCode: z.string().trim().nullable().optional(),

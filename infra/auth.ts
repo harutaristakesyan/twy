@@ -1,14 +1,37 @@
 /// <reference path="../.sst/platform/config.d.ts" />
 
 /**
- * Cognito user pool + app client + post-confirmation Lambda.
+ * Cognito user pool + app client + Cognito trigger Lambdas.
  *
- * Sign-in alias: email. Self-sign-up enabled. The post-confirmation trigger
- * gets `link: [db.cluster]` so it can write a row into the users table on
- * first verification — IAM grants for the RDS Data API + Secrets Manager
- * read are auto-derived from the link.
+ * Triggers are wired manually (not via SST shorthand) so we can:
+ *  - Use the V2_0 PreTokenGeneration event to add `app_user_id` to access
+ *    and ID tokens (requires Essentials tier).
+ *  - Keep full control over lambdaConfig without fighting SST's V1_0 default.
+ *
+ * The postConfirmation Lambda generates a crypto.randomUUID() as the DB
+ * primary key and stores the Cognito sub as `cognitoSub`. It also writes
+ * `custom:appUserId` back to Cognito so the PreTokenGen trigger can emit it.
  */
 export function createAuth(args: { db: { cluster: sst.aws.Aurora }; filesBucket: sst.aws.Bucket }) {
+  const postConfirmationFn = new sst.aws.Function("PostConfirmation", {
+    handler: "packages/functions/src/events/postConfirmation.handler",
+    link: [args.db.cluster, args.filesBucket],
+    permissions: [
+      {
+        actions: [
+          "cognito-idp:AdminDisableUser",
+          "cognito-idp:AdminUpdateUserAttributes",
+          "cognito-idp:AdminDeleteUser",
+        ],
+        resources: ["*"],
+      },
+    ],
+  });
+
+  const preTokenGenerationFn = new sst.aws.Function("PreTokenGenerationV2", {
+    handler: "packages/functions/src/events/preTokenGenerationV2.handler",
+  });
+
   const userPool = new sst.aws.CognitoUserPool("UserPool", {
     usernames: ["email"],
     transform: {
@@ -25,20 +48,38 @@ export function createAuth(args: { db: { cluster: sst.aws.Aurora }; filesBucket:
           requireUppercase: false,
         },
         adminCreateUserConfig: { allowAdminCreateUserOnly: false },
-      },
-    },
-    triggers: {
-      postConfirmation: {
-        handler: "packages/functions/src/events/postConfirmation.handler",
-        link: [args.db.cluster, args.filesBucket],
-        permissions: [
+        userPoolTier: "ESSENTIALS",
+        schemas: [
           {
-            actions: ["cognito-idp:AdminDisableUser"],
-            resources: ["*"],
+            name: "appUserId",
+            attributeDataType: "String",
+            mutable: false,
+            required: false,
           },
         ],
+        lambdaConfig: {
+          postConfirmation: postConfirmationFn.arn,
+          preTokenGenerationConfig: {
+            lambdaArn: preTokenGenerationFn.arn,
+            lambdaVersion: "V2_0",
+          },
+        },
       },
     },
+  });
+
+  new aws.lambda.Permission("PostConfirmationCognitoPermission", {
+    action: "lambda:InvokeFunction",
+    function: postConfirmationFn.arn,
+    principal: "cognito-idp.amazonaws.com",
+    sourceArn: userPool.arn,
+  });
+
+  new aws.lambda.Permission("PreTokenGenerationCognitoPermission", {
+    action: "lambda:InvokeFunction",
+    function: preTokenGenerationFn.arn,
+    principal: "cognito-idp.amazonaws.com",
+    sourceArn: userPool.arn,
   });
 
   const userPoolClient = userPool.addClient("UserPoolClient", {
@@ -50,6 +91,9 @@ export function createAuth(args: { db: { cluster: sst.aws.Aurora }; filesBucket:
           "ALLOW_REFRESH_TOKEN_AUTH",
         ],
         generateSecret: false,
+        writeAttributes: ["email", "given_name", "family_name"],
+        // custom:appUserId is intentionally excluded — only postConfirmation Lambda sets it via AdminUpdateUserAttributes
+        readAttributes: ["email", "given_name", "family_name", "custom:appUserId"],
       },
     },
   });

@@ -47,7 +47,7 @@ jobs:
       matrix:
         environment:
           - { name: dev, account_var: DEV_ACCOUNT_ID, region: us-east-1 }
-          # - { name: prod, account_var: PROD_ACCOUNT_ID, region: us-east-1 }
+          - { name: prod, account_var: PROD_ACCOUNT_ID, region: us-east-1 }
     environment: ${{ matrix.environment.name }}
     concurrency:
       group: deploy-${{ matrix.environment.name }}-${{ github.ref }}

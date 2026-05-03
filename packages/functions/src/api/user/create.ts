@@ -26,7 +26,9 @@ const createUserHandler = async (event: CreateUserEvent): Promise<MessageRespons
 
   const { email, firstName, lastName, branch, teamId, isActive } = event.body;
 
-  let sub: string;
+  const newUserId = crypto.randomUUID();
+
+  let cognitoSub: string;
   try {
     const result = await cognitoClient.send(
       new AdminCreateUserCommand({
@@ -37,12 +39,13 @@ const createUserHandler = async (event: CreateUserEvent): Promise<MessageRespons
           { Name: "email_verified", Value: "true" },
           { Name: "given_name", Value: firstName },
           { Name: "family_name", Value: lastName },
+          { Name: "custom:appUserId", Value: newUserId },
         ],
       }),
     );
     const subAttr = result.User?.Attributes?.find((a) => a.Name === "sub")?.Value;
     if (!subAttr) throw new Error("Cognito did not return a sub attribute");
-    sub = subAttr;
+    cognitoSub = subAttr;
   } catch (err: unknown) {
     const e = toError(err);
     if (e.name === "UsernameExistsException")
@@ -52,7 +55,8 @@ const createUserHandler = async (event: CreateUserEvent): Promise<MessageRespons
 
   try {
     await createUser({
-      id: sub,
+      id: newUserId,
+      cognitoSub,
       email,
       firstName,
       lastName,

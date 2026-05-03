@@ -5,12 +5,12 @@ import {
 import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
+  getFullUserInfoById,
   type SelfUpdateUserEvent,
   SelfUpdateUserEventSchema,
   updateSelfUser as updateSelfUserRecord,
 } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
-import createError from "http-errors";
 import { Resource } from "sst";
 
 const userPoolId = Resource.UserPool.id;
@@ -21,35 +21,26 @@ const updateSelfUser = async (event: SelfUpdateUserEvent): Promise<MessageRespon
   const { userId } = event.requestContext.authUser;
   const { firstName, lastName } = event.body;
 
-  const updated = await updateSelfUserRecord(userId, { firstName, lastName });
+  const userDetails = await getFullUserInfoById(userId);
 
-  if (!updated) {
-    throw new createError.NotFound("User not found");
-  }
+  await updateSelfUserRecord(userId, { firstName, lastName });
 
-  // Update user attributes in Cognito
-  const userAttributes = [];
+  const cognitoAttributes = [];
 
   if (typeof firstName !== "undefined" && firstName !== null) {
-    userAttributes.push({
-      Name: "given_name",
-      Value: firstName,
-    });
+    cognitoAttributes.push({ Name: "given_name", Value: firstName });
   }
 
   if (typeof lastName !== "undefined" && lastName !== null) {
-    userAttributes.push({
-      Name: "family_name",
-      Value: lastName,
-    });
+    cognitoAttributes.push({ Name: "family_name", Value: lastName });
   }
 
-  if (userAttributes.length > 0) {
+  if (cognitoAttributes.length > 0) {
     await cognitoClient.send(
       new AdminUpdateUserAttributesCommand({
         UserPoolId: userPoolId,
-        Username: userId,
-        UserAttributes: userAttributes,
+        Username: userDetails.email,
+        UserAttributes: cognitoAttributes,
       }),
     );
   }

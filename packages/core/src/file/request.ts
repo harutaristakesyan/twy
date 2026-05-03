@@ -21,7 +21,7 @@ export type UploadFileEvent = z.infer<typeof UploadFileEventSchema>;
 export const DeleteFileEventSchema = z.object({
   requestContext: AuthContext,
   pathParameters: z.object({
-    fileId: z.string().uuid("fileId must be a valid UUID"),
+    fileId: z.uuid("fileId must be a valid UUID"),
   }),
 });
 
@@ -30,7 +30,7 @@ export type DeleteFileEvent = z.infer<typeof DeleteFileEventSchema>;
 export const GetDownloadUrlEventSchema = z.object({
   requestContext: AuthContext,
   pathParameters: z.object({
-    fileId: z.string().uuid("fileId must be a valid UUID"),
+    fileId: z.uuid("fileId must be a valid UUID"),
   }),
 });
 

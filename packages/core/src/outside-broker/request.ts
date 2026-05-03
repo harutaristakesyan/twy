@@ -7,7 +7,7 @@ const brokerStatusEnum = z.enum([...brokerStatusValues] as [
   ...(typeof brokerStatusValues)[number][],
 ]);
 
-const uuidField = z.string().uuid("Value must be a valid UUID");
+const uuidField = z.uuid("Value must be a valid UUID");
 
 export const brokerSortFieldMap = {
   brokerName: "brokerName",

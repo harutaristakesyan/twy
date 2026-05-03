@@ -6,35 +6,7 @@
       "idx": 0,
       "version": "7",
       "when": 1777725376009,
-      "tag": "0000_sloppy_human_fly",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1777726780950,
-      "tag": "0001_magical_gauntlet",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1777759773576,
-      "tag": "0002_silly_chamber",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1777827471680,
-      "tag": "0003_carrier_request",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1777832026429,
-      "tag": "0004_regular_power_pack",
+      "tag": "0000_init",
       "breakpoints": true
     }
   ]

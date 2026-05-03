@@ -7,13 +7,13 @@ import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
   assertPermission,
+  getFullUserInfoById,
   loadAuthContext,
   type UpdateUserEvent,
   UpdateUserEventSchema,
   updateUser as updateUserRecord,
 } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
-import createError from "http-errors";
 import { Resource } from "sst";
 
 const userPoolId = Resource.UserPool.id;
@@ -28,29 +28,27 @@ const updateUser = async (event: UpdateUserEvent): Promise<MessageResponse> => {
   const { userId } = event.pathParameters;
   const { branch, teamId, isActive } = event.body;
 
-  const updated = await updateUserRecord(userId, {
+  const userDetails = await getFullUserInfoById(userId);
+
+  await updateUserRecord(userId, {
     branchId: typeof branch === "undefined" ? undefined : branch,
     teamId: typeof teamId === "undefined" ? undefined : teamId,
     isActive,
   });
-
-  if (!updated) {
-    throw new createError.NotFound("User not found");
-  }
 
   if (typeof isActive !== "undefined") {
     if (isActive) {
       await cognitoClient.send(
         new AdminEnableUserCommand({
           UserPoolId: userPoolId,
-          Username: userId,
+          Username: userDetails.email,
         }),
       );
     } else {
       await cognitoClient.send(
         new AdminDisableUserCommand({
           UserPoolId: userPoolId,
-          Username: userId,
+          Username: userDetails.email,
         }),
       );
     }

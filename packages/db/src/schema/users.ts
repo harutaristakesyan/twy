@@ -4,6 +4,7 @@ import { team } from "./team.js";
 
 export const users = pgTable("users", {
   id: uuid().primaryKey(),
+  cognitoSub: varchar({ length: 64 }).notNull().unique(),
   email: varchar({ length: 255 }).notNull().unique(),
   firstName: varchar({ length: 100 }),
   lastName: varchar({ length: 100 }),

@@ -1,7 +1,7 @@
 import z from "zod";
 import { AuthContext } from "../shared/auth.js";
 
-const uuidField = z.string().uuid("Value must be a valid UUID");
+const uuidField = z.uuid("Value must be a valid UUID");
 
 export const brokerRequestSortFieldMap = {
   createdAt: "createdAt",

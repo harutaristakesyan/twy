@@ -2,8 +2,7 @@ import z from "zod";
 import { AuthContext } from "../shared/auth.js";
 import { ACTIONS, RESOURCES } from "./contracts.js";
 
-const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-const uuidField = z.string().regex(UUID_REGEX, "Value must be a valid UUID");
+const uuidField = z.uuid("Value must be a valid UUID");
 
 const teamSortOrderMap = {
   ascend: "asc",

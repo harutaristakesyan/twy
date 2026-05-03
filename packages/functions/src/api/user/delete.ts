@@ -9,10 +9,10 @@ import {
   type DeleteUserEvent,
   DeleteUserEventSchema,
   deleteUser as deleteUserRecord,
+  getFullUserInfoById,
   loadAuthContext,
 } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
-import createError from "http-errors";
 import { Resource } from "sst";
 
 const userPoolId = Resource.UserPool.id;
@@ -26,17 +26,14 @@ const deleteUser = async (event: DeleteUserEvent): Promise<MessageResponse> => {
 
   const { userId } = event.pathParameters;
 
-  const removed = await deleteUserRecord(userId);
+  const userDetails = await getFullUserInfoById(userId);
 
-  if (!removed) {
-    throw new createError.NotFound("User not found");
-  }
+  await deleteUserRecord(userId);
 
-  // Delete user from Cognito
   await cognitoClient.send(
     new AdminDeleteUserCommand({
       UserPoolId: userPoolId,
-      Username: userId,
+      Username: userDetails.email,
     }),
   );
 

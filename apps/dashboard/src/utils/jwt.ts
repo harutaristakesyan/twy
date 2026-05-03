@@ -6,6 +6,7 @@ export interface JwtPayload {
   given_name?: string;
   family_name?: string;
   email?: string;
+  app_user_id?: string;
 }
 
 // --- Token Storage Keys ---

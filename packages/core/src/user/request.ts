@@ -48,12 +48,10 @@ export const ListUsersEventSchema = z.object({
 
 export type ListUsersEvent = z.infer<typeof ListUsersEventSchema>;
 
-const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-
 const UpdateUserPayloadSchema = z
   .object({
-    branch: z.string().regex(UUID_REGEX, "branch must be a valid UUID").nullable().optional(),
-    teamId: z.string().regex(UUID_REGEX, "teamId must be a valid UUID").nullable().optional(),
+    branch: z.uuid("branch must be a valid UUID").nullable().optional(),
+    teamId: z.uuid("teamId must be a valid UUID").nullable().optional(),
     isActive: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
@@ -63,7 +61,7 @@ const UpdateUserPayloadSchema = z
 export const UpdateUserEventSchema = z.object({
   requestContext: AuthContext,
   pathParameters: z.object({
-    userId: z.string().regex(UUID_REGEX, "userId must be a valid Cognito user identifier"),
+    userId: z.uuid("userId must be a valid Cognito user identifier"),
   }),
   body: UpdateUserPayloadSchema,
 });
@@ -73,7 +71,7 @@ export type UpdateUserEvent = z.infer<typeof UpdateUserEventSchema>;
 export const DeleteUserEventSchema = z.object({
   requestContext: AuthContext,
   pathParameters: z.object({
-    userId: z.string().regex(UUID_REGEX, "userId must be a valid Cognito user identifier"),
+    userId: z.uuid("userId must be a valid Cognito user identifier"),
   }),
 });
 
@@ -101,8 +99,8 @@ export const CreateUserEventSchema = z.object({
     email: z.string().email("Must be a valid email"),
     firstName: z.string().trim().min(1, "First name is required"),
     lastName: z.string().trim().min(1, "Last name is required"),
-    branch: z.string().regex(UUID_REGEX, "branch must be a valid UUID").nullable().optional(),
-    teamId: z.string().regex(UUID_REGEX, "teamId must be a valid UUID").nullable().optional(),
+    branch: z.uuid("branch must be a valid UUID").nullable().optional(),
+    teamId: z.uuid("teamId must be a valid UUID").nullable().optional(),
     isActive: z.boolean(),
   }),
 });

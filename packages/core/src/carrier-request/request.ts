@@ -12,7 +12,7 @@ const insuranceStatusEnum = z.enum([...insuranceStatusValues] as [
   ...(typeof insuranceStatusValues)[number][],
 ]);
 
-const uuidField = z.string().uuid("Value must be a valid UUID");
+const uuidField = z.uuid("Value must be a valid UUID");
 
 export const carrierRequestSortFieldMap = {
   createdAt: "createdAt",
