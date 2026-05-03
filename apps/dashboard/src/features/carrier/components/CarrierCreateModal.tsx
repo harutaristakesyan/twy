@@ -1,10 +1,11 @@
-import { Alert, Button, DatePicker, Form, Input, Modal, message, Select, Space } from "antd";
+import { Alert, Button, DatePicker, Form, Input, Modal, message, Space } from "antd";
 import dayjs from "dayjs";
 import type React from "react";
 import { useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
-import { createCarrier } from "../api/carrierApi";
-import { type CarrierFormData, type CarrierKind, CarrierStatus } from "../types/carrier";
+import { submitCarrierRequest } from "../api/carrierRequestApi";
+import type { CarrierKind } from "../types/carrier";
+import type { SubmitCarrierRequestBody } from "../types/carrierRequest";
 
 const { TextArea } = Input;
 
@@ -24,14 +25,14 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  type FormValues = Omit<CarrierFormData, "insuranceExpiry" | "kind"> & {
+  type FormValues = Omit<SubmitCarrierRequestBody, "kind" | "insuranceExpiry"> & {
     insuranceExpiry?: dayjs.Dayjs | null;
   };
 
   const handleSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
-      const formData: CarrierFormData = {
+      const payload: SubmitCarrierRequestBody = {
         kind,
         carrierName: values.carrierName,
         mcDotNumber: values.mcDotNumber,
@@ -42,21 +43,21 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
         phone: values.phone,
         email: values.email,
         notes: values.notes,
-        status: values.status,
       };
 
-      await createCarrier(formData);
-      message.success("Carrier created successfully");
+      await submitCarrierRequest(payload);
+      message.success("Carrier request submitted for review");
       form.resetFields();
       onSuccess();
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       if (errorMessage.includes("duplicate") || errorMessage.includes("unique constraint")) {
-        message.error(
-          `MC/DOT Number "${values.mcDotNumber}" already exists. Please use a different number.`,
-        );
+        Modal.error({
+          title: "Duplicate MC/DOT",
+          content: `MC/DOT number "${values.mcDotNumber}" is already in use. Please use a different number.`,
+        });
       } else {
-        message.error(errorMessage);
+        Modal.error({ title: "Request failed", content: errorMessage });
       }
     } finally {
       setLoading(false);
@@ -69,10 +70,16 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
   };
 
   return (
-    <Modal title="Add New Carrier" open={open} onCancel={handleCancel} footer={null} width={600}>
+    <Modal
+      title="Submit carrier request"
+      open={open}
+      onCancel={handleCancel}
+      footer={null}
+      width={600}
+    >
       <Alert
-        message="Carrier Information"
-        description="Add a new carrier. Carrier name and MC/DOT number are required."
+        message="Approval required"
+        description="This creates a pending request. An admin must approve it before the carrier appears under Twy or Outside carriers."
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
@@ -81,7 +88,7 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="carrierName"
-          label="Carrier Name"
+          label="Carrier name"
           rules={[
             { required: true, message: "Please enter carrier name" },
             { min: 2, message: "Carrier name must be at least 2 characters" },
@@ -92,17 +99,17 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
 
         <Form.Item
           name="mcDotNumber"
-          label="MC / DOT Number"
+          label="MC / DOT number"
           rules={[{ required: true, message: "Please enter MC/DOT number" }]}
         >
           <Input placeholder="Enter MC/DOT number" />
         </Form.Item>
 
-        <Form.Item name="equipmentType" label="Equipment Type">
-          <Input placeholder="Enter equipment type (e.g., Flatbed, Dry Van, Refrigerated)" />
+        <Form.Item name="equipmentType" label="Equipment type">
+          <Input placeholder="e.g. Flatbed, Dry Van, Refrigerated" />
         </Form.Item>
 
-        <Form.Item name="insuranceExpiry" label="Insurance Expiry">
+        <Form.Item name="insuranceExpiry" label="Insurance expiry">
           <DatePicker
             style={{ width: "100%" }}
             placeholder="Select insurance expiry date"
@@ -126,23 +133,11 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
           <TextArea placeholder="Enter notes" rows={3} />
         </Form.Item>
 
-        <Form.Item
-          name="status"
-          label="Status"
-          rules={[{ required: true, message: "Please select a status" }]}
-          initialValue={CarrierStatus.APPROVED}
-        >
-          <Select placeholder="Select status">
-            <Select.Option value={CarrierStatus.APPROVED}>Approved</Select.Option>
-            <Select.Option value={CarrierStatus.DENIED}>Denied</Select.Option>
-          </Select>
-        </Form.Item>
-
         <Form.Item>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
             <Button onClick={handleCancel}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
-              Add Carrier
+              Submit request
             </Button>
           </Space>
         </Form.Item>

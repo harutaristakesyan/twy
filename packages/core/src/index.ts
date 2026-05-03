@@ -4,8 +4,10 @@ export {
   type BrokerStatus,
   brokerStatusValues,
   type CarrierKind,
+  type CarrierRequestStatus,
   type CarrierStatus,
   carrierKindValues,
+  carrierRequestStatusValues,
   carrierStatusValues,
   type InsuranceStatus,
   insuranceStatusValues,
@@ -16,6 +18,7 @@ export {
 
 export * from "./branch/index.js";
 export * from "./carrier/index.js";
+export * from "./carrier-request/index.js";
 export * from "./file/index.js";
 export * from "./load/index.js";
 export * from "./outside-broker/index.js";

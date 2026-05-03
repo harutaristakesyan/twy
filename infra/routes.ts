@@ -290,6 +290,31 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
+  // carrier requests (approval queue)
+  {
+    handler: "packages/functions/src/api/carrier-request/list.handler",
+    routeKey: "GET /api/carrier-requests",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/carrier-request/create.handler",
+    routeKey: "POST /api/carrier-requests",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/carrier-request/approve.handler",
+    routeKey: "POST /api/carrier-requests/{requestId}/approve",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/carrier-request/reject.handler",
+    routeKey: "POST /api/carrier-requests/{requestId}/reject",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
 ];
 
 export const allRoutes: RouteDef[] = [...authRoutes, ...appRoutes];

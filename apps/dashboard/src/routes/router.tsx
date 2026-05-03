@@ -7,6 +7,7 @@ import SetPasswordPage from "@/features/auth/pages/SetPasswordPage";
 import VerificationPage from "@/features/auth/pages/VerificationPage";
 import BranchesPage from "@/features/branch/pages/BranchesPage";
 import CarrierRequestsTab from "@/features/carrier/pages/CarrierRequestsTab";
+import CarriersIndexRedirect from "@/features/carrier/pages/CarriersIndexRedirect";
 import CarriersLayout from "@/features/carrier/pages/CarriersLayout";
 import OutsideCarriersTab from "@/features/carrier/pages/OutsideCarriersTab";
 import TwyCarriersTab from "@/features/carrier/pages/TwyCarriersTab";
@@ -80,7 +81,7 @@ export const router = createBrowserRouter([
             path: "carriers",
             element: <CarriersLayout />,
             children: [
-              { index: true, element: <Navigate to="twy" replace /> },
+              { index: true, element: <CarriersIndexRedirect /> },
               {
                 path: "twy",
                 element: (
