@@ -83,3 +83,66 @@ export const GetTeamEventSchema = z.object({
 });
 
 export type GetTeamEvent = z.infer<typeof GetTeamEventSchema>;
+
+export const ListTeamMembersEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    teamId: uuidField,
+  }),
+  queryStringParameters: z.object({
+    page: z
+      .string()
+      .transform((val) => Number.parseInt(val, 10))
+      .default(0)
+      .transform((val) => (Number.isNaN(val) ? 0 : val)),
+    limit: z
+      .string()
+      .transform((val) => Number.parseInt(val, 10))
+      .default(10)
+      .transform((val) => (Number.isNaN(val) ? 10 : val)),
+    query: z.string().optional(),
+  }),
+});
+
+export type ListTeamMembersEvent = z.infer<typeof ListTeamMembersEventSchema>;
+
+export const AddTeamMemberEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    teamId: uuidField,
+  }),
+  body: z.object({
+    userId: uuidField,
+  }),
+});
+
+export type AddTeamMemberEvent = z.infer<typeof AddTeamMemberEventSchema>;
+
+export const RemoveTeamMemberEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    teamId: uuidField,
+    userId: uuidField,
+  }),
+});
+
+export type RemoveTeamMemberEvent = z.infer<typeof RemoveTeamMemberEventSchema>;
+
+export const ListUnassignedUsersEventSchema = z.object({
+  requestContext: AuthContext,
+  queryStringParameters: z.object({
+    page: z
+      .string()
+      .transform((val) => Number.parseInt(val, 10))
+      .default(0)
+      .transform((val) => (Number.isNaN(val) ? 0 : val)),
+    limit: z
+      .string()
+      .transform((val) => Number.parseInt(val, 10))
+      .default(20)
+      .transform((val) => (Number.isNaN(val) ? 20 : val)),
+    query: z.string().optional(),
+  }),
+});
+
+export type ListUnassignedUsersEvent = z.infer<typeof ListUnassignedUsersEventSchema>;

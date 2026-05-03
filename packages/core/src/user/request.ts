@@ -53,6 +53,7 @@ const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}
 const UpdateUserPayloadSchema = z
   .object({
     branch: z.string().regex(UUID_REGEX, "branch must be a valid UUID").nullable().optional(),
+    teamId: z.string().regex(UUID_REGEX, "teamId must be a valid UUID").nullable().optional(),
     isActive: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
@@ -101,6 +102,7 @@ export const CreateUserEventSchema = z.object({
     firstName: z.string().trim().min(1, "First name is required"),
     lastName: z.string().trim().min(1, "Last name is required"),
     branch: z.string().regex(UUID_REGEX, "branch must be a valid UUID").nullable().optional(),
+    teamId: z.string().regex(UUID_REGEX, "teamId must be a valid UUID").nullable().optional(),
     isActive: z.boolean(),
   }),
 });

@@ -1,3 +1,5 @@
+export type CarrierKind = "twy" | "outside";
+
 export enum CarrierStatus {
   APPROVED = "approved",
   DENIED = "denied",
@@ -9,8 +11,9 @@ export enum InsuranceStatus {
   PENDING = "pending",
 }
 
-export interface OutsideCarrier {
+export interface Carrier {
   id: string;
+  kind: CarrierKind;
   carrierName: string;
   mcDotNumber: string;
   equipmentType: string | null;
@@ -24,7 +27,8 @@ export interface OutsideCarrier {
   updatedAt?: string;
 }
 
-export interface OutsideCarrierFormData {
+export interface CarrierFormData {
+  kind: CarrierKind;
   carrierName: string;
   mcDotNumber: string;
   equipmentType?: string;
@@ -35,7 +39,7 @@ export interface OutsideCarrierFormData {
   status: CarrierStatus;
 }
 
-export interface UpdateOutsideCarrierRequest {
+export interface UpdateCarrierRequest {
   id: string;
   carrierName?: string;
   mcDotNumber?: string;
@@ -47,9 +51,10 @@ export interface UpdateOutsideCarrierRequest {
   status?: CarrierStatus;
 }
 
-export interface GetOutsideCarriersParams {
-  page?: number; // zero-indexed page number (default: 0)
-  limit?: number; // number of carriers per page (default: 10)
+export interface GetCarriersParams {
+  kind: CarrierKind;
+  page?: number;
+  limit?: number;
   sortField?:
     | "carrierName"
     | "mcDotNumber"
@@ -58,10 +63,10 @@ export interface GetOutsideCarriersParams {
     | "createdAt"
     | undefined;
   sortOrder?: "ascend" | "descend" | undefined;
-  query?: string; // search text for carrier name, MC/DOT number
+  query?: string;
 }
 
-export interface PaginatedOutsideCarriersResponse {
-  carriers: OutsideCarrier[];
+export interface CarrierListResponse {
+  carriers: Carrier[];
   total: number;
 }

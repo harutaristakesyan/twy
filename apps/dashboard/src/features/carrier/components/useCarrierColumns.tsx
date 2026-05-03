@@ -10,8 +10,8 @@ import { Button, Flex, Popconfirm, Space, Tag, Tooltip, Typography } from "antd"
 import type { ColumnsType } from "antd/es/table";
 import { useMemo } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useOutsideCarrierModal } from "../providers/OutsideCarrierModalProvider";
-import type { OutsideCarrier } from "../types/carrier";
+import { useCarrierModal } from "../providers/CarrierModalProvider";
+import type { Carrier } from "../types/carrier";
 import { CarrierStatus, InsuranceStatus } from "../types/carrier";
 
 const { Text } = Typography;
@@ -38,12 +38,12 @@ const insuranceStatusLabel: Record<InsuranceStatus, string> = {
   [InsuranceStatus.PENDING]: "Pending",
 };
 
-export function useOutsideCarrierColumns(
+export function useCarrierColumns(
   refresh: () => void,
   runDelete: (id: string) => void,
-): ColumnsType<OutsideCarrier> {
+): ColumnsType<Carrier> {
   const { permissions } = useCurrentUser();
-  const { openOutsideCarrierEdit } = useOutsideCarrierModal();
+  const { openCarrierEdit } = useCarrierModal();
   const canUpdate = permissions.carriers.edit;
   const canDelete = permissions.carriers.edit;
 
@@ -136,7 +136,7 @@ export function useOutsideCarrierColumns(
                 <Button
                   type="text"
                   icon={<EditOutlined />}
-                  onClick={() => openOutsideCarrierEdit({ carrier: record }, () => refresh())}
+                  onClick={() => openCarrierEdit({ carrier: record }, () => refresh())}
                 />
               </Tooltip>
             )}
@@ -157,6 +157,6 @@ export function useOutsideCarrierColumns(
         ),
       },
     ],
-    [canDelete, canUpdate, openOutsideCarrierEdit, refresh, runDelete],
+    [canDelete, canUpdate, openCarrierEdit, refresh, runDelete],
   );
 }

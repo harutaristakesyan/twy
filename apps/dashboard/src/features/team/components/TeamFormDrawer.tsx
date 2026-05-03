@@ -1,4 +1,4 @@
-import { Button, Drawer, Form, Input, message, Space, Switch, Typography } from "antd";
+import { Button, Divider, Drawer, Form, Input, message, Space, Switch, Typography } from "antd";
 import type React from "react";
 import { useCallback } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -6,6 +6,7 @@ import { emptyPermissionsMap } from "@/utils/permissions";
 import { createTeam, updateTeam } from "../api/teamApi";
 import type { Team, TeamFormData } from "../types/team";
 import PermissionMatrixField from "./PermissionMatrixField";
+import TeamMembersSection from "./TeamMembersSection";
 
 const { Title } = Typography;
 
@@ -67,7 +68,7 @@ const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, o
       }
       open={open}
       onClose={handleClose}
-      width={720}
+      width={800}
       destroyOnHidden
       footer={null}
     >
@@ -116,6 +117,12 @@ const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, o
           </Space>
         </Form.Item>
       </Form>
+      {isEdit && team && (
+        <>
+          <Divider />
+          <TeamMembersSection teamId={team.id} />
+        </>
+      )}
     </Drawer>
   );
 };

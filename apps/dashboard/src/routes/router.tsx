@@ -6,10 +6,13 @@ import RegistrationPage from "@/features/auth/pages/RegistrationPage";
 import SetPasswordPage from "@/features/auth/pages/SetPasswordPage";
 import VerificationPage from "@/features/auth/pages/VerificationPage";
 import BranchesPage from "@/features/branch/pages/BranchesPage";
+import CarrierRequestsTab from "@/features/carrier/pages/CarrierRequestsTab";
+import CarriersLayout from "@/features/carrier/pages/CarriersLayout";
+import OutsideCarriersTab from "@/features/carrier/pages/OutsideCarriersTab";
+import TwyCarriersTab from "@/features/carrier/pages/TwyCarriersTab";
 import CreateLoadPage from "@/features/load/pages/CreateLoadPage";
 import LoadsPage from "@/features/load/pages/LoadsPage";
 import OutsideBrokersPage from "@/features/outside-broker/pages/OutsideBrokersPage";
-import OutsideCarriersPage from "@/features/outside-carrier/pages/OutsideCarriersPage";
 import TeamsPage from "@/features/team/pages/TeamsPage";
 import ProfilePage from "@/features/user/pages/ProfilePage";
 import UsersPage from "@/features/user/pages/UsersPage";
@@ -74,12 +77,18 @@ export const router = createBrowserRouter([
             ),
           },
           {
-            path: "outside-carriers",
+            path: "carriers",
             element: (
               <RequirePermission resource="carriers" action="view">
-                <OutsideCarriersPage />
+                <CarriersLayout />
               </RequirePermission>
             ),
+            children: [
+              { index: true, element: <Navigate to="twy" replace /> },
+              { path: "twy", element: <TwyCarriersTab /> },
+              { path: "outside", element: <OutsideCarriersTab /> },
+              { path: "requests", element: <CarrierRequestsTab /> },
+            ],
           },
           {
             path: "teams",

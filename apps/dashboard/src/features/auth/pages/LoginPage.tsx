@@ -1,4 +1,4 @@
-import { Card, Col, Divider, Flex, Grid, Row, Typography } from "antd";
+import { Card, Col, Flex, Grid, Row, Typography } from "antd";
 import Logo from "@/components/Logo.tsx";
 import FooterSection from "@/features/auth/components/FooterSection.tsx";
 import LoginForm from "@/features/auth/components/LoginForm.tsx";

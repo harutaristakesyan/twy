@@ -1,9 +1,9 @@
-import { Card, Col, Divider, Grid, Row, Typography } from "antd";
+import { Card, Col, Grid, Row, Typography } from "antd";
 import { Link } from "react-router-dom";
 import CardHeader from "@/features/auth/components/CardHeader.tsx";
 import RegistrationForm from "@/features/auth/components/RegistrationForm.tsx";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
 const RegistrationPage = () => {

@@ -1,4 +1,4 @@
-import { branch, db, type NewUser, type OrderDirection, users } from "@twy/db";
+import { branch, db, type NewUser, type OrderDirection, team, users } from "@twy/db";
 import { asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
 
@@ -16,6 +16,8 @@ interface UserDetailsRow {
   isActive: boolean;
   branchId: string | null;
   branchName: string | null;
+  teamId: string | null;
+  teamName: string | null;
   createdAt: Date | null;
 }
 
@@ -25,6 +27,8 @@ const mapUserDetails = (row: UserDetailsRow) => ({
   lastName: row.lastName,
   isActive: row.isActive,
   branch: row.branchId ? { id: row.branchId, name: row.branchName } : null,
+  teamId: row.teamId ?? null,
+  teamName: row.teamName ?? null,
   createdAt: row.createdAt ? row.createdAt.toISOString() : null,
 });
 
@@ -39,6 +43,14 @@ const ensureBranchExists = async (executor: Executor, branchId: string): Promise
   }
 };
 
+const ensureTeamExists = async (executor: Executor, teamId: string): Promise<void> => {
+  const [existing] = await executor.select({ id: team.id }).from(team).where(eq(team.id, teamId));
+
+  if (!existing) {
+    throw new createError.NotFound("Team not found");
+  }
+};
+
 export const getFullUserInfoById = async (userId: string) => {
   const [row] = await db
     .select({
@@ -48,10 +60,13 @@ export const getFullUserInfoById = async (userId: string) => {
       isActive: users.isActive,
       branchId: users.branch,
       branchName: branch.name,
+      teamId: users.teamId,
+      teamName: team.name,
       createdAt: users.createdAt,
     })
     .from(users)
     .leftJoin(branch, eq(users.branch, branch.id))
+    .leftJoin(team, eq(users.teamId, team.id))
     .where(eq(users.id, userId));
 
   if (!row) {
@@ -115,10 +130,13 @@ export const listUsers = async (input: ListUsersInput) => {
         isActive: users.isActive,
         branchId: users.branch,
         branchName: branch.name,
+        teamId: users.teamId,
+        teamName: team.name,
         createdAt: users.createdAt,
       })
       .from(users)
       .leftJoin(branch, eq(users.branch, branch.id))
+      .leftJoin(team, eq(users.teamId, team.id))
       .where(searchClause)
       .orderBy(direction(orderColumn))
       .limit(input.limit)
@@ -134,6 +152,7 @@ export const listUsers = async (input: ListUsersInput) => {
 
 export interface UpdateUserInput {
   branchId?: string | null;
+  teamId?: string | null;
   isActive?: boolean;
 }
 
@@ -155,6 +174,16 @@ export const updateUser = async (userId: string, input: UpdateUserInput): Promis
       }
 
       updatePayload.branch = branchId;
+    }
+
+    if (Object.hasOwn(input, "teamId")) {
+      const teamId = input.teamId ?? null;
+
+      if (teamId) {
+        await ensureTeamExists(tx, teamId);
+      }
+
+      updatePayload.teamId = teamId;
     }
 
     if (typeof input.isActive !== "undefined") {

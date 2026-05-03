@@ -2,9 +2,8 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "_comment": "Project-shared Claude Code config for the twy monorepo. Checked in. Personal overrides go in settings.local.json (gitignored).",
 
-  "model": "claude-sonnet-4-6",
   "_modelNote": "Sonnet is the daily-driver. For planning a multi-app refactor, an architectural change, or a CDK migration, switch to Opus with `/model opus` for the planning turn(s) and switch back. The plan, debugger, code-reviewer, and security-auditor subagents are explicitly pinned to Opus.",
-
+  "model": "opusplan",
   "permissions": {
     "defaultMode": "acceptEdits",
 

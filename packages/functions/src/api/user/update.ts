@@ -26,10 +26,11 @@ const updateUser = async (event: UpdateUserEvent): Promise<MessageResponse> => {
   assertPermission(ctx, "users", "edit");
 
   const { userId } = event.pathParameters;
-  const { branch, isActive } = event.body;
+  const { branch, teamId, isActive } = event.body;
 
   const updated = await updateUserRecord(userId, {
     branchId: typeof branch === "undefined" ? undefined : branch,
+    teamId: typeof teamId === "undefined" ? undefined : teamId,
     isActive,
   });
 

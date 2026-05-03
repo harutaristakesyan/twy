@@ -1,5 +1,5 @@
 import { db, team, teamPermissions, users } from "@twy/db";
-import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import createError from "http-errors";
 import {
   ACTIONS,
@@ -10,7 +10,7 @@ import {
   type Resource,
   TWY_TEAM_ID,
 } from "./contracts.js";
-import type { TeamResponse } from "./response.js";
+import type { TeamMemberResponse, TeamResponse } from "./response.js";
 
 export interface CreateTeamInput {
   name: string;
@@ -249,6 +249,121 @@ export const listTeams = async (
     ),
     total: Number(totalRows[0]?.value ?? 0),
   };
+};
+
+export interface ListTeamMembersInput {
+  teamId: string;
+  page: number;
+  limit: number;
+  query?: string;
+}
+
+export const listTeamMembers = async (
+  input: ListTeamMembersInput,
+): Promise<{ items: TeamMemberResponse[]; total: number }> => {
+  const offset = input.page * input.limit;
+  const searchClause = input.query
+    ? or(
+        ilike(users.firstName, `%${input.query}%`),
+        ilike(users.lastName, `%${input.query}%`),
+        ilike(users.email, `%${input.query}%`),
+      )
+    : undefined;
+
+  const whereClause = searchClause
+    ? and(eq(users.teamId, input.teamId), searchClause)
+    : eq(users.teamId, input.teamId);
+
+  const [rows, totalRows] = await Promise.all([
+    db
+      .select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        isActive: users.isActive,
+      })
+      .from(users)
+      .where(whereClause)
+      .orderBy(asc(users.firstName))
+      .limit(input.limit)
+      .offset(offset),
+    db.select({ value: count() }).from(users).where(whereClause),
+  ]);
+
+  return { items: rows, total: Number(totalRows[0]?.value ?? 0) };
+};
+
+export interface ListUnassignedUsersInput {
+  page: number;
+  limit: number;
+  query?: string;
+}
+
+export const listUnassignedUsers = async (
+  input: ListUnassignedUsersInput,
+): Promise<{ items: TeamMemberResponse[]; total: number }> => {
+  const offset = input.page * input.limit;
+  const baseClause = isNull(users.teamId);
+  const searchClause = input.query
+    ? or(
+        ilike(users.firstName, `%${input.query}%`),
+        ilike(users.lastName, `%${input.query}%`),
+        ilike(users.email, `%${input.query}%`),
+      )
+    : undefined;
+
+  const whereClause = searchClause ? and(baseClause, searchClause) : baseClause;
+
+  const [rows, totalRows] = await Promise.all([
+    db
+      .select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        isActive: users.isActive,
+      })
+      .from(users)
+      .where(whereClause)
+      .orderBy(asc(users.firstName))
+      .limit(input.limit)
+      .offset(offset),
+    db.select({ value: count() }).from(users).where(whereClause),
+  ]);
+
+  return { items: rows, total: Number(totalRows[0]?.value ?? 0) };
+};
+
+export const addMemberToTeam = async (teamId: string, userId: string): Promise<void> => {
+  const [teamRow] = await db.select({ id: team.id }).from(team).where(eq(team.id, teamId));
+  if (!teamRow) throw new createError.NotFound("Team not found");
+
+  const [userRow] = await db
+    .select({ id: users.id, teamId: users.teamId })
+    .from(users)
+    .where(eq(users.id, userId));
+
+  if (!userRow) throw new createError.NotFound("User not found");
+  if (userRow.teamId && userRow.teamId !== teamId) {
+    throw new createError.Conflict("User is already a member of another team");
+  }
+  if (userRow.teamId === teamId) return;
+
+  await db.update(users).set({ teamId, updatedAt: new Date() }).where(eq(users.id, userId));
+};
+
+export const removeMemberFromTeam = async (teamId: string, userId: string): Promise<void> => {
+  const [userRow] = await db
+    .select({ id: users.id, teamId: users.teamId })
+    .from(users)
+    .where(eq(users.id, userId));
+
+  if (!userRow) throw new createError.NotFound("User not found");
+  if (userRow.teamId !== teamId)
+    throw new createError.NotFound("User is not a member of this team");
+
+  await db.update(users).set({ teamId: null, updatedAt: new Date() }).where(eq(users.id, userId));
 };
 
 export const getEffectivePermissionsForUser = async (

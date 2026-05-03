@@ -56,17 +56,25 @@ const Sidebar: React.FC = () => {
       resource: "brokers",
     },
     {
-      key: "/outside-carriers",
+      key: "/carriers",
       icon: <CarOutlined />,
-      label: "Outside Carriers",
+      label: "Carriers",
       resource: "carriers",
     },
     { key: "/teams", icon: <UserSwitchOutlined />, label: "Teams", resource: "teams" },
   ];
 
-  const items: MenuProps["items"] = allMenuItems
-    .filter((item) => permissions[item.resource].view)
-    .map(({ key, icon, label }) => ({ key, icon, label }));
+  const filteredItems = allMenuItems.filter((item) => permissions[item.resource].view);
+
+  const selectedKey = filteredItems.find(
+    (item) => location.pathname === item.key || location.pathname.startsWith(`${item.key}/`),
+  )?.key;
+
+  const items: MenuProps["items"] = filteredItems.map(({ key, icon, label }) => ({
+    key,
+    icon,
+    label,
+  }));
 
   return (
     <Sider
@@ -87,7 +95,7 @@ const Sidebar: React.FC = () => {
       <Menu
         mode="inline"
         style={{ borderInlineEnd: "none" }}
-        selectedKeys={[location.pathname]}
+        selectedKeys={selectedKey ? [selectedKey] : []}
         items={items}
         onClick={handleMenuClick}
       />

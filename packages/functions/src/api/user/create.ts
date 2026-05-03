@@ -24,7 +24,7 @@ const createUserHandler = async (event: CreateUserEvent): Promise<MessageRespons
   const ctx = await loadAuthContext(adminId);
   assertPermission(ctx, "users", "add");
 
-  const { email, firstName, lastName, branch, isActive } = event.body;
+  const { email, firstName, lastName, branch, teamId, isActive } = event.body;
 
   let sub: string;
   try {
@@ -57,6 +57,7 @@ const createUserHandler = async (event: CreateUserEvent): Promise<MessageRespons
       firstName,
       lastName,
       branch: branch ?? undefined,
+      teamId: teamId ?? undefined,
       isActive,
       createdBy: adminId,
     });

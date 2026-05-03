@@ -3,6 +3,9 @@ export const navigationLabelMap: Record<string, string> = {
   "/branches": "Branch Management",
   "/loads": "Loads Management",
   "/outside-brokers": "OutSide Brokers",
-  "/outside-carriers": "OutSide Carriers",
+  "/carriers": "Carriers",
+  "/carriers/twy": "Carriers",
+  "/carriers/outside": "Carriers",
+  "/carriers/requests": "Carriers",
   "/profile": "My Profile",
 };

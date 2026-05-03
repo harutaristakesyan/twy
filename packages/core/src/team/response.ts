@@ -16,3 +16,16 @@ export interface TeamListResponse {
   teams: TeamResponse[];
   total: number;
 }
+
+export interface TeamMemberResponse {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  isActive: boolean;
+}
+
+export interface TeamMemberListResponse {
+  items: TeamMemberResponse[];
+  total: number;
+}

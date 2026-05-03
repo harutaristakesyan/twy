@@ -99,7 +99,9 @@ export function useTeamColumns(
                 >
                   <Tooltip
                     title={
-                      record.memberCount > 0 ? "Remove all members before deleting" : "Delete Team"
+                      record.memberCount > 0
+                        ? "Edit the team to remove members first"
+                        : "Delete Team"
                     }
                   >
                     <Button

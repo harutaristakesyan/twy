@@ -31,3 +31,16 @@ export interface GetTeamsParams {
   sortOrder?: "ascend" | "descend";
   query?: string;
 }
+
+export interface TeamMember {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  isActive: boolean;
+}
+
+export interface TeamMemberListResponse {
+  items: TeamMember[];
+  total: number;
+}

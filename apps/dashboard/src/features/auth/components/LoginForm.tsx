@@ -1,7 +1,7 @@
 import { track } from "@amplitude/analytics-browser";
 import { LockOutlined, UserOutlined } from "@ant-design/icons";
 import { useRequest } from "ahooks";
-import { Button, Col, Divider, Form, Input, Row } from "antd";
+import { Button, Col, Form, Input, Row } from "antd";
 import { useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/providers/AuthProvider";

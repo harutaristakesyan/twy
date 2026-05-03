@@ -3,6 +3,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getBranches } from "@/features/branch/api/branchApi";
 import type { Branch } from "@/features/branch/types/branch";
+import TeamSelect from "@/features/team/components/TeamSelect";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { createUser } from "../api/userApi";
 import type { UserFormData } from "../types/user";
@@ -193,6 +194,10 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuc
               </Option>
             )}
           </Select>
+        </Form.Item>
+
+        <Form.Item name="teamId" label="Team">
+          <TeamSelect />
         </Form.Item>
 
         <Form.Item name="isActive" label="Status" valuePropName="checked" initialValue={true}>

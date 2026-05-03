@@ -35,11 +35,13 @@ export interface UserFormData {
   email: string;
   isActive: boolean;
   branch: string;
+  teamId?: string | null;
 }
 
 export interface UpdateUserRequest {
   id: string;
   branch?: string;
+  teamId?: string | null;
   isActive?: boolean;
 }
 

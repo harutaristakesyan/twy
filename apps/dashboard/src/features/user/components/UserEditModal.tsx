@@ -15,6 +15,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getBranches } from "@/features/branch/api/branchApi";
 import type { Branch } from "@/features/branch/types/branch";
+import TeamSelect from "@/features/team/components/TeamSelect";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { updateUser } from "../api/userApi";
 import type { UpdateUserRequest, User } from "../types/user";
@@ -91,6 +92,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
         email: user.email,
         isActive: user.isActive,
         branch: branchId,
+        teamId: user.teamId ?? undefined,
       });
     }
   }, [open, user, form]);
@@ -98,6 +100,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
   interface UserEditFormValues {
     isActive: boolean;
     branch: string;
+    teamId?: string | null;
   }
 
   const handleSubmit = async (values: UserEditFormValues) => {
@@ -107,6 +110,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
         id: user.id,
         isActive: values.isActive,
         branch: values.branch,
+        teamId: values.teamId,
       };
 
       await updateUser(updateData);
@@ -156,7 +160,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
     <Modal title="Edit User" open={open} onCancel={handleCancel} footer={null} width={600}>
       <Alert
         message="User Information"
-        description="You can only update the user's role, branch assignment, and active status. For personal information updates, users should use the self-update feature."
+        description="You can only update the user's team, branch assignment, and active status. For personal information updates, users should use the self-update feature."
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
@@ -172,6 +176,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
           email: user?.email,
           isActive: user?.isActive,
           branch: user?.branch?.id || user?.branchId,
+          teamId: user?.teamId ?? undefined,
         }}
       >
         {/* Read-only personal information */}
@@ -225,6 +230,10 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
               </Option>
             )}
           </Select>
+        </Form.Item>
+
+        <Form.Item name="teamId" label="Team">
+          <TeamSelect />
         </Form.Item>
 
         <Form.Item name="isActive" label="Status" valuePropName="checked">

@@ -1,60 +1,38 @@
 import { Alert, Button, DatePicker, Form, Input, Modal, message, Select, Space } from "antd";
 import dayjs from "dayjs";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
-import { updateOutsideCarrier } from "../api/carrierApi";
-import type {
-  OutsideCarrier,
-  OutsideCarrierFormData,
-  UpdateOutsideCarrierRequest,
-} from "../types/carrier";
-import { CarrierStatus } from "../types/carrier";
+import { createCarrier } from "../api/carrierApi";
+import { type CarrierFormData, type CarrierKind, CarrierStatus } from "../types/carrier";
 
-const { Option } = Select;
 const { TextArea } = Input;
 
-interface OutsideCarrierEditModalProps {
+interface CarrierCreateModalProps {
   open: boolean;
-  carrier: OutsideCarrier;
+  kind: CarrierKind;
   onCancel: () => void;
   onSuccess: () => void;
 }
 
-const OutsideCarrierEditModal: React.FC<OutsideCarrierEditModalProps> = ({
+const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
   open,
-  carrier,
+  kind,
   onCancel,
   onSuccess,
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  // Set form values when modal opens or carrier changes
-  useEffect(() => {
-    if (open && carrier) {
-      form.setFieldsValue({
-        carrierName: carrier.carrierName,
-        mcDotNumber: carrier.mcDotNumber,
-        equipmentType: carrier.equipmentType || "",
-        insuranceExpiry: carrier.insuranceExpiry ? dayjs(carrier.insuranceExpiry) : null,
-        phone: carrier.phone || "",
-        email: carrier.email || "",
-        notes: carrier.notes || "",
-        status: carrier.status,
-      });
-    }
-  }, [open, carrier, form]);
-
-  type FormValues = Omit<OutsideCarrierFormData, "insuranceExpiry"> & {
+  type FormValues = Omit<CarrierFormData, "insuranceExpiry" | "kind"> & {
     insuranceExpiry?: dayjs.Dayjs | null;
   };
 
   const handleSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
-      const updateData: UpdateOutsideCarrierRequest = {
-        id: carrier.id,
+      const formData: CarrierFormData = {
+        kind,
         carrierName: values.carrierName,
         mcDotNumber: values.mcDotNumber,
         equipmentType: values.equipmentType,
@@ -67,12 +45,12 @@ const OutsideCarrierEditModal: React.FC<OutsideCarrierEditModalProps> = ({
         status: values.status,
       };
 
-      await updateOutsideCarrier(updateData);
-      message.success("Outside carrier updated successfully");
+      await createCarrier(formData);
+      message.success("Carrier created successfully");
+      form.resetFields();
       onSuccess();
     } catch (error) {
       const errorMessage = getErrorMessage(error);
-
       if (errorMessage.includes("duplicate") || errorMessage.includes("unique constraint")) {
         message.error(
           `MC/DOT Number "${values.mcDotNumber}" already exists. Please use a different number.`,
@@ -91,36 +69,16 @@ const OutsideCarrierEditModal: React.FC<OutsideCarrierEditModalProps> = ({
   };
 
   return (
-    <Modal
-      title="Edit Outside Carrier"
-      open={open}
-      onCancel={handleCancel}
-      footer={null}
-      width={600}
-    >
+    <Modal title="Add New Carrier" open={open} onCancel={handleCancel} footer={null} width={600}>
       <Alert
         message="Carrier Information"
-        description="Update outside carrier details. Carrier name and MC/DOT number are required."
+        description="Add a new carrier. Carrier name and MC/DOT number are required."
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
       />
 
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleSubmit}
-        initialValues={{
-          carrierName: carrier?.carrierName,
-          mcDotNumber: carrier?.mcDotNumber,
-          equipmentType: carrier?.equipmentType || "",
-          insuranceExpiry: carrier?.insuranceExpiry ? dayjs(carrier.insuranceExpiry) : null,
-          phone: carrier?.phone || "",
-          email: carrier?.email || "",
-          notes: carrier?.notes || "",
-          status: carrier?.status,
-        }}
-      >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="carrierName"
           label="Carrier Name"
@@ -135,10 +93,7 @@ const OutsideCarrierEditModal: React.FC<OutsideCarrierEditModalProps> = ({
         <Form.Item
           name="mcDotNumber"
           label="MC / DOT Number"
-          rules={[
-            { required: true, message: "Please enter MC/DOT number" },
-            { min: 1, message: "MC/DOT number is required" },
-          ]}
+          rules={[{ required: true, message: "Please enter MC/DOT number" }]}
         >
           <Input placeholder="Enter MC/DOT number" />
         </Form.Item>
@@ -175,10 +130,11 @@ const OutsideCarrierEditModal: React.FC<OutsideCarrierEditModalProps> = ({
           name="status"
           label="Status"
           rules={[{ required: true, message: "Please select a status" }]}
+          initialValue={CarrierStatus.APPROVED}
         >
           <Select placeholder="Select status">
-            <Option value={CarrierStatus.APPROVED}>Approved</Option>
-            <Option value={CarrierStatus.DENIED}>Denied</Option>
+            <Select.Option value={CarrierStatus.APPROVED}>Approved</Select.Option>
+            <Select.Option value={CarrierStatus.DENIED}>Denied</Select.Option>
           </Select>
         </Form.Item>
 
@@ -186,7 +142,7 @@ const OutsideCarrierEditModal: React.FC<OutsideCarrierEditModalProps> = ({
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
             <Button onClick={handleCancel}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
-              Update Carrier
+              Add Carrier
             </Button>
           </Space>
         </Form.Item>
@@ -195,4 +151,4 @@ const OutsideCarrierEditModal: React.FC<OutsideCarrierEditModalProps> = ({
   );
 };
 
-export default OutsideCarrierEditModal;
+export default CarrierCreateModal;

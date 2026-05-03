@@ -4,6 +4,8 @@ export interface UserResponse {
   lastName: string | null;
   isActive: boolean;
   branch: UserBranchResponse | null;
+  teamId: string | null;
+  teamName: string | null;
   createdAt: string | null;
 }
 
@@ -19,6 +21,8 @@ export interface UserListItemResponse {
   lastName: string | null;
   isActive: boolean;
   branch: UserBranchResponse | null;
+  teamId: string | null;
+  teamName: string | null;
   createdAt: string | null;
 }
 

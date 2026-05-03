@@ -5,9 +5,10 @@ import type React from "react";
 import { useState } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
-import { deleteOutsideCarrier, getOutsideCarriers } from "../api/carrierApi";
-import { useOutsideCarrierModal } from "../providers/OutsideCarrierModalProvider";
-import { useOutsideCarrierColumns } from "./useOutsideCarrierColumns";
+import { deleteCarrier, getCarriers } from "../api/carrierApi";
+import { useCarrierModal } from "../providers/CarrierModalProvider";
+import type { CarrierKind } from "../types/carrier";
+import { useCarrierColumns } from "./useCarrierColumns";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -20,9 +21,13 @@ type SortField =
   | "createdAt"
   | undefined;
 
-const OutsideCarriersManagementTable: React.FC = () => {
+interface CarrierTableProps {
+  kind: CarrierKind;
+}
+
+const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
   const { permissions } = useCurrentUser();
-  const { openOutsideCarrierCreate } = useOutsideCarrierModal();
+  const { openCarrierCreate } = useCarrierModal();
   const canCreate = permissions.carriers.add;
 
   const [searchInput, setSearchInput] = useState("");
@@ -31,7 +36,8 @@ const OutsideCarriersManagementTable: React.FC = () => {
   const { tableProps, refresh } = useAntdTable(
     async ({ current, pageSize, sorter }) => {
       const s = Array.isArray(sorter) ? sorter[0] : sorter;
-      const result = await getOutsideCarriers({
+      const result = await getCarriers({
+        kind,
         page: current - 1,
         limit: pageSize,
         sortField: s?.field as SortField,
@@ -40,26 +46,28 @@ const OutsideCarriersManagementTable: React.FC = () => {
       });
       return { total: result.total, list: result.carriers };
     },
-    { refreshDeps: [searchText], defaultPageSize: 10 },
+    { refreshDeps: [searchText, kind], defaultPageSize: 10 },
   );
 
-  const { run: runDelete } = useRequest(deleteOutsideCarrier, {
+  const { run: runDelete } = useRequest(deleteCarrier, {
     manual: true,
     onSuccess: () => {
-      message.success("Outside carrier deleted successfully");
+      message.success("Carrier deleted successfully");
       refresh();
     },
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const columns = useOutsideCarrierColumns(refresh, runDelete);
+  const columns = useCarrierColumns(refresh, runDelete);
+
+  const title = kind === "twy" ? "Twy Carriers" : "Outside Carriers";
 
   return (
     <div>
       <Card>
         <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
           <Title level={4} style={{ margin: 0 }}>
-            Outside Carriers ({tableProps.pagination.total ?? 0})
+            {title} ({tableProps.pagination.total ?? 0})
           </Title>
           <Flex align="middle" gap="middle">
             <Search
@@ -73,7 +81,7 @@ const OutsideCarriersManagementTable: React.FC = () => {
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={() => openOutsideCarrierCreate(() => refresh())}
+                onClick={() => openCarrierCreate(kind, () => refresh())}
               >
                 Add Carrier
               </Button>
@@ -106,7 +114,7 @@ const OutsideCarriersManagementTable: React.FC = () => {
                 }
               />
             ) : (
-              <Empty description="No outside carriers found" />
+              <Empty description={`No ${title.toLowerCase()} found`} />
             ),
           }}
         />
@@ -115,4 +123,4 @@ const OutsideCarriersManagementTable: React.FC = () => {
   );
 };
 
-export default OutsideCarriersManagementTable;
+export default CarrierTable;

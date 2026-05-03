@@ -210,6 +210,30 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: ["cluster"],
   },
+  {
+    handler: "packages/functions/src/api/team/unassigned-users.handler",
+    routeKey: "GET /api/teams/unassigned-users",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/team/members/list.handler",
+    routeKey: "GET /api/teams/{teamId}/members",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/team/members/add.handler",
+    routeKey: "POST /api/teams/{teamId}/members",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/team/members/remove.handler",
+    routeKey: "DELETE /api/teams/{teamId}/members/{userId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
   // outside-broker
   {
     handler: "packages/functions/src/api/outside-broker/list.handler",
@@ -232,6 +256,37 @@ export const appRoutes: RouteDef[] = [
   {
     handler: "packages/functions/src/api/outside-broker/delete.handler",
     routeKey: "DELETE /api/outside-brokers/{brokerId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  // carrier
+  {
+    handler: "packages/functions/src/api/carrier/list.handler",
+    routeKey: "GET /api/carriers",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/carrier/get.handler",
+    routeKey: "GET /api/carriers/{carrierId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/carrier/create.handler",
+    routeKey: "POST /api/carriers",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/carrier/update.handler",
+    routeKey: "PUT /api/carriers/{carrierId}",
+    requiresAuth: true,
+    linkKeys: ["cluster"],
+  },
+  {
+    handler: "packages/functions/src/api/carrier/delete.handler",
+    routeKey: "DELETE /api/carriers/{carrierId}",
     requiresAuth: true,
     linkKeys: ["cluster"],
   },

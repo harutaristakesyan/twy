@@ -3,7 +3,7 @@ export enum MenuFeature {
   BRANCHES = "branches",
   LOADS = "loads",
   OUTSIDE_BROKERS = "outside_brokers",
-  OUTSIDE_CARRIERS = "outside_carriers",
+  CARRIERS = "carriers",
   TEAMS = "teams",
 }
 
