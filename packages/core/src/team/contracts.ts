@@ -16,7 +16,7 @@ export type Resource = (typeof RESOURCES)[number];
 export type Action = (typeof ACTIONS)[number];
 export type PermissionsMap = Record<Resource, Record<Action, boolean>>;
 
-export const TWY_TEAM_ID = "00000000-0000-0000-0000-000000000001";
+export const TWY_TEAM_ID = "00000000-0000-8000-8000-000000000001";
 
 export function emptyPermissionsMap(): PermissionsMap {
   const map = {} as PermissionsMap;
