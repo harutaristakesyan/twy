@@ -20,11 +20,10 @@ type LoginResponse =
   | { accessToken: string; idToken: string; refreshToken: string }
   | { challengeName: "NEW_PASSWORD_REQUIRED"; session: string; email: string };
 
-const userPoolClientId = Resource.UserPoolClient.id;
-
 const cognitoClient = new CognitoIdentityProviderClient({});
 
 const loginHandler = async (event: EventSchema): Promise<LoginResponse> => {
+  const userPoolClientId = Resource.UserPoolClient.id;
   const { email, password } = event.body;
 
   try {

@@ -21,13 +21,12 @@ interface ConfirmResetPasswordResponse {
   message: string;
 }
 
-const userPoolClientId = Resource.UserPoolClient.id;
-
 const cognitoClient = new CognitoIdentityProviderClient({});
 
 const confirmForgotPasswordHandler = async (
   event: EventSchema,
 ): Promise<ConfirmResetPasswordResponse> => {
+  const userPoolClientId = Resource.UserPoolClient.id;
   const { email, code, newPassword } = event.body;
 
   try {

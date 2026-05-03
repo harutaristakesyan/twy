@@ -21,10 +21,10 @@ interface RefreshTokenResponse {
   tokenType?: string;
 }
 
-const userPoolClientId = Resource.UserPoolClient.id;
 const cognitoClient = new CognitoIdentityProviderClient({});
 
 const refreshTokenHandler = async (event: EventSchema): Promise<RefreshTokenResponse> => {
+  const userPoolClientId = Resource.UserPoolClient.id;
   const { refreshToken } = event.body;
 
   // 1. Try Cognito native flow

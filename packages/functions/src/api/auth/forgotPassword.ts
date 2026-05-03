@@ -19,11 +19,10 @@ const EventSchema = zod.object({
 
 type EventSchema = zod.infer<typeof EventSchema>;
 
-const userPoolClientId = Resource.UserPoolClient.id;
-
 const cognitoClient = new CognitoIdentityProviderClient({});
 
 const forgotPasswordHandler = async (event: EventSchema): Promise<ForgotPasswordResponse> => {
+  const userPoolClientId = Resource.UserPoolClient.id;
   const { email } = event.body;
 
   try {

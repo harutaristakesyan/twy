@@ -20,11 +20,10 @@ interface VerificationResponse {
   message: string;
 }
 
-const userPoolClientId = Resource.UserPoolClient.id;
-
 const cognitoClient = new CognitoIdentityProviderClient({});
 
 const verificationHandler = async (event: EventSchema): Promise<VerificationResponse> => {
+  const userPoolClientId = Resource.UserPoolClient.id;
   const { email, code } = event.body;
 
   try {

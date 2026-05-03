@@ -19,11 +19,10 @@ interface ResendCodeResponse {
   message: string;
 }
 
-const userPoolClientId = Resource.UserPoolClient.id;
-
 const cognitoClient = new CognitoIdentityProviderClient({});
 
 const resendVerificationCodeHandler = async (event: EventSchema): Promise<ResendCodeResponse> => {
+  const userPoolClientId = Resource.UserPoolClient.id;
   const { email } = event.body;
 
   try {

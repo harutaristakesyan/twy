@@ -23,11 +23,10 @@ interface SignUpResponse {
   message: string;
 }
 
-const userPoolClientId = Resource.UserPoolClient.id;
-
 const cognitoClient = new CognitoIdentityProviderClient({});
 
 const signUpHandler = async (event: EventSchema): Promise<SignUpResponse> => {
+  const userPoolClientId = Resource.UserPoolClient.id;
   const { email, password, firstName, lastName } = event.body;
 
   try {
