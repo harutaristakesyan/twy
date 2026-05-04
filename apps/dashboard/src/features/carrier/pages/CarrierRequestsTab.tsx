@@ -233,7 +233,7 @@ const CarrierRequestsTab: React.FC = () => {
         title={drawerTitle}
         open={drawerOpen}
         onClose={closeDrawer}
-        width={520}
+        size="large"
         footer={
           viewRecord?.status === "pending" && canReview ? (
             showRejectInput ? (

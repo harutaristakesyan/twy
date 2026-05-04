@@ -82,7 +82,7 @@ const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, o
       }
       open={open}
       onClose={handleClose}
-      width={800}
+      size="large"
       destroyOnHidden
       footer={null}
     >
