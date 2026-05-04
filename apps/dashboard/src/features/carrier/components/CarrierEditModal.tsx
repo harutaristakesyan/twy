@@ -1,4 +1,4 @@
-import { Alert, Button, DatePicker, Form, Input, Modal, message, Select, Space } from "antd";
+import { Button, DatePicker, Form, Input, Modal, message, Select, Space } from "antd";
 import dayjs from "dayjs";
 import type React from "react";
 import { useEffect, useState } from "react";
@@ -90,14 +90,6 @@ const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
       width={600}
       forceRender
     >
-      <Alert
-        title="Carrier Information"
-        description="Update carrier details. Carrier name and MC/DOT number are required."
-        type="info"
-        showIcon
-        style={{ marginBottom: 24 }}
-      />
-
       <Form
         form={form}
         layout="vertical"

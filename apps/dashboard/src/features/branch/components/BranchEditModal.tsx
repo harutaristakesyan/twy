@@ -1,4 +1,4 @@
-import { Alert, Button, Form, Input, Modal, message, Select, Space } from "antd";
+import { Button, Form, Input, Modal, message, Select, Space } from "antd";
 import type React from "react";
 import { useEffect, useState } from "react";
 import type { User } from "@/features/user/types/user";
@@ -83,14 +83,6 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
       width={600}
       forceRender
     >
-      <Alert
-        title="Branch Information"
-        description="Update branch details. Branch name is required; owner is optional."
-        type="info"
-        showIcon
-        style={{ marginBottom: 24 }}
-      />
-
       <Form
         form={form}
         layout="vertical"

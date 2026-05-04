@@ -1,4 +1,4 @@
-import { Alert, Button, DatePicker, Form, Input, Modal, message, Space } from "antd";
+import { Button, DatePicker, Form, Input, Modal, message, Space } from "antd";
 import dayjs from "dayjs";
 import type React from "react";
 import { useState } from "react";
@@ -76,14 +76,6 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
       width={600}
       forceRender
     >
-      <Alert
-        title="Approval required"
-        description="This creates a pending request. An admin must approve it before the carrier appears under Twy or Outside carriers."
-        type="info"
-        showIcon
-        style={{ marginBottom: 24 }}
-      />
-
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="carrierName"
