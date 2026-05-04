@@ -75,7 +75,14 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
   };
 
   return (
-    <Modal title="Edit Branch" open={open} onCancel={handleCancel} footer={null} width={600}>
+    <Modal
+      title="Edit Branch"
+      open={open}
+      onCancel={handleCancel}
+      footer={null}
+      width={600}
+      forceRender
+    >
       <Alert
         title="Branch Information"
         description="Update branch details. Branch name is required; owner is optional."

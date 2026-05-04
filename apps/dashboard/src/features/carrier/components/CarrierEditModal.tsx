@@ -82,7 +82,14 @@ const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
   };
 
   return (
-    <Modal title="Edit Carrier" open={open} onCancel={handleCancel} footer={null} width={600}>
+    <Modal
+      title="Edit Carrier"
+      open={open}
+      onCancel={handleCancel}
+      footer={null}
+      width={600}
+      forceRender
+    >
       <Alert
         title="Carrier Information"
         description="Update carrier details. Carrier name and MC/DOT number are required."

@@ -50,25 +50,29 @@ export const LoadModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     <LoadModalContext.Provider value={contextValue}>
       {children}
 
-      <LoadEditModal
-        open={loadEdit.open}
-        load={loadEdit.load}
-        onCancel={() => setLoadEdit((prev) => ({ ...prev, open: false }))}
-        onSuccess={() => {
-          setLoadEdit((prev) => ({ ...prev, open: false }));
-          loadEditOnSuccess.current?.();
-        }}
-      />
+      {loadEdit.load !== null && (
+        <LoadEditModal
+          open={loadEdit.open}
+          load={loadEdit.load}
+          onCancel={() => setLoadEdit({ open: false, load: null })}
+          onSuccess={() => {
+            setLoadEdit({ open: false, load: null });
+            loadEditOnSuccess.current?.();
+          }}
+        />
+      )}
 
-      <StatusUpdateModal
-        open={statusUpdate.open}
-        load={statusUpdate.load}
-        onCancel={() => setStatusUpdate((prev) => ({ ...prev, open: false }))}
-        onSuccess={() => {
-          setStatusUpdate((prev) => ({ ...prev, open: false }));
-          statusUpdateOnSuccess.current?.();
-        }}
-      />
+      {statusUpdate.load !== null && (
+        <StatusUpdateModal
+          open={statusUpdate.open}
+          load={statusUpdate.load}
+          onCancel={() => setStatusUpdate({ open: false, load: null })}
+          onSuccess={() => {
+            setStatusUpdate({ open: false, load: null });
+            statusUpdateOnSuccess.current?.();
+          }}
+        />
+      )}
     </LoadModalContext.Provider>
   );
 };

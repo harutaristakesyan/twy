@@ -85,6 +85,7 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
       onCancel={handleCancel}
       footer={null}
       width={600}
+      forceRender
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit} id="outsideBrokerCreateForm">
         <Row gutter={16}>

@@ -156,7 +156,14 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
   };
 
   return (
-    <Modal title="Edit User" open={open} onCancel={handleCancel} footer={null} width={600}>
+    <Modal
+      title="Edit User"
+      open={open}
+      onCancel={handleCancel}
+      footer={null}
+      width={600}
+      forceRender
+    >
       <Form
         form={form}
         layout="vertical"

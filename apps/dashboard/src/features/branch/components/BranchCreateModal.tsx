@@ -56,7 +56,14 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
   };
 
   return (
-    <Modal title="Create New Branch" open={open} onCancel={handleCancel} footer={null} width={600}>
+    <Modal
+      title="Create New Branch"
+      open={open}
+      onCancel={handleCancel}
+      footer={null}
+      width={600}
+      forceRender
+    >
       <Form form={form} layout="vertical" onFinish={handleSubmit} id="branchCreateForm">
         <Form.Item
           name="name"

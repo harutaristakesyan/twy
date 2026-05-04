@@ -114,7 +114,14 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuc
   };
 
   return (
-    <Modal title="Create New User" open={open} onCancel={handleCancel} footer={null} width={600}>
+    <Modal
+      title="Create New User"
+      open={open}
+      onCancel={handleCancel}
+      footer={null}
+      width={600}
+      forceRender
+    >
       <Form form={form} layout="vertical" onFinish={handleSubmit} id="userCreateForm">
         <Row gutter={16}>
           <Col span={12}>

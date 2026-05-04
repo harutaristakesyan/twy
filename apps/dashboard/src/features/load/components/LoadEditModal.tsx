@@ -9,7 +9,7 @@ import { getErrorMessage } from "@/utils/errorUtils";
 
 interface LoadEditModalProps {
   open: boolean;
-  load: Load | null;
+  load: Load;
   onCancel: () => void;
   onSuccess: () => void;
 }
@@ -23,13 +23,13 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
   const [uploadedFiles, setUploadedFiles] = useState<LoadFile[]>([]);
 
   const steps = [
-    { title: "Customer", description: "Customer Information" },
-    { title: "Carrier", description: "Carrier Information" },
-    { title: "Service", description: "Service Information" },
-    { title: "Booking", description: "Booking Information" },
-    { title: "Pick-up", description: "Pick-up Location" },
-    { title: "Drop-off", description: "Drop-off Location" },
-    { title: "Files", description: "Additional Files" },
+    { title: "Customer", content: "Customer Information" },
+    { title: "Carrier", content: "Carrier Information" },
+    { title: "Service", content: "Service Information" },
+    { title: "Booking", content: "Booking Information" },
+    { title: "Pick-up", content: "Pick-up Location" },
+    { title: "Drop-off", content: "Drop-off Location" },
+    { title: "Files", content: "Additional Files" },
   ];
 
   useEffect(() => {
@@ -496,48 +496,41 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
       onCancel={handleClose}
       width={1000}
       footer={null}
-      destroyOnClose
+      forceRender
+      destroyOnHidden
     >
-      {load ? (
-        <>
-          <Steps current={currentStep} items={steps} style={{ marginBottom: 24 }} />
+      <Steps current={currentStep} items={steps} style={{ marginBottom: 24 }} />
 
-          <Form
-            form={form}
-            layout="vertical"
-            initialValues={{
-              chargeServiceFeeToOffice: false,
-            }}
-          >
-            {renderStepContent()}
-          </Form>
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{
+          chargeServiceFeeToOffice: false,
+        }}
+      >
+        {renderStepContent()}
+      </Form>
 
-          <Space
-            style={{
-              marginTop: 24,
-              display: "flex",
-              justifyContent: "flex-end",
-            }}
-          >
-            {currentStep > 0 && <Button onClick={handlePrev}>Previous</Button>}
-            {currentStep < steps.length - 1 && (
-              <Button type="primary" onClick={handleNext}>
-                Next
-              </Button>
-            )}
-            {currentStep === steps.length - 1 && (
-              <Button type="primary" onClick={handleSubmit} loading={loading}>
-                Update Load
-              </Button>
-            )}
-            <Button onClick={handleClose}>Cancel</Button>
-          </Space>
-        </>
-      ) : (
-        <div style={{ textAlign: "center", padding: "24px 0" }}>
-          Unable to load record. Please close and try again.
-        </div>
-      )}
+      <Space
+        style={{
+          marginTop: 24,
+          display: "flex",
+          justifyContent: "flex-end",
+        }}
+      >
+        {currentStep > 0 && <Button onClick={handlePrev}>Previous</Button>}
+        {currentStep < steps.length - 1 && (
+          <Button type="primary" onClick={handleNext}>
+            Next
+          </Button>
+        )}
+        {currentStep === steps.length - 1 && (
+          <Button type="primary" onClick={handleSubmit} loading={loading}>
+            Update Load
+          </Button>
+        )}
+        <Button onClick={handleClose}>Cancel</Button>
+      </Space>
     </Modal>
   );
 };

@@ -114,6 +114,7 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
       onCancel={handleCancel}
       footer={null}
       width={600}
+      forceRender
     >
       <Form
         form={form}

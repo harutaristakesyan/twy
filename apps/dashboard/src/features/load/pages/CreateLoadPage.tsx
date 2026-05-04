@@ -33,13 +33,13 @@ const CreateLoadPage: React.FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<LoadFile[]>([]);
 
   const steps = [
-    { title: "Customer", description: "Customer Information" },
-    { title: "Carrier", description: "Carrier Information" },
-    { title: "Service", description: "Service Information" },
-    { title: "Booking", description: "Booking Information" },
-    { title: "Pick-up", description: "Pick-up Location" },
-    { title: "Drop-off", description: "Drop-off Location" },
-    { title: "Files", description: "Additional Files" },
+    { title: "Customer", content: "Customer Information" },
+    { title: "Carrier", content: "Carrier Information" },
+    { title: "Service", content: "Service Information" },
+    { title: "Booking", content: "Booking Information" },
+    { title: "Pick-up", content: "Pick-up Location" },
+    { title: "Drop-off", content: "Drop-off Location" },
+    { title: "Files", content: "Additional Files" },
   ];
 
   const handleNext = async () => {

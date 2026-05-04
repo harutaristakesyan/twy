@@ -74,6 +74,7 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
       onCancel={handleCancel}
       footer={null}
       width={600}
+      forceRender
     >
       <Alert
         title="Approval required"
