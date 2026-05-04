@@ -1,13 +1,21 @@
 import { randomUUID } from "node:crypto";
-import { type BranchRow, branch, db, type OrderDirection, users } from "@twy/db";
+import { branch, db, type OrderDirection, users } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, ne, or } from "drizzle-orm";
 import createError from "http-errors";
+
+export interface BranchOwner {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
 
 export interface Branch {
   id: string;
   name: string;
   contact: string | null;
   createdAt: string | null;
+  owner: BranchOwner | null;
 }
 
 export interface NewBranchInput {
@@ -76,11 +84,29 @@ const sortColumn = (field: ListBranchesInput["sortField"]) => {
   return branch.createdAt;
 };
 
-const mapBranchRow = (row: Pick<BranchRow, "id" | "name" | "contact" | "createdAt">): Branch => ({
+const mapBranchRow = (row: {
+  id: string;
+  name: string;
+  contact: string | null;
+  createdAt: Date | null;
+  ownerId: string | null;
+  ownerFirstName: string | null;
+  ownerLastName: string | null;
+  ownerEmail: string | null;
+}): Branch => ({
   id: row.id,
   name: row.name,
   contact: row.contact,
   createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+  owner:
+    row.ownerId && row.ownerFirstName && row.ownerLastName && row.ownerEmail
+      ? {
+          id: row.ownerId,
+          firstName: row.ownerFirstName,
+          lastName: row.ownerLastName,
+          email: row.ownerEmail,
+        }
+      : null,
 });
 
 export const listBranches = async (input: ListBranchesInput) => {
@@ -92,6 +118,8 @@ export const listBranches = async (input: ListBranchesInput) => {
     ? or(ilike(branch.name, `%${input.query}%`), ilike(branch.contact, `%${input.query}%`))
     : undefined;
 
+  const owner = users;
+
   const [rows, totalRows] = await Promise.all([
     db
       .select({
@@ -99,8 +127,13 @@ export const listBranches = async (input: ListBranchesInput) => {
         name: branch.name,
         contact: branch.contact,
         createdAt: branch.createdAt,
+        ownerId: owner.id,
+        ownerFirstName: owner.firstName,
+        ownerLastName: owner.lastName,
+        ownerEmail: owner.email,
       })
       .from(branch)
+      .leftJoin(owner, eq(owner.branch, branch.id))
       .where(searchClause)
       .orderBy(direction(orderColumn))
       .limit(input.limit)

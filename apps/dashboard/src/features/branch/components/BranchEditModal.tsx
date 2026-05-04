@@ -34,7 +34,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
     if (open && branch) {
       form.setFieldsValue({
         name: branch.name,
-        contact: branch.contact || "",
+        contact: branch.contact || undefined,
         owner: branch.owner?.id,
       });
     }
@@ -46,7 +46,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
       const updateData: UpdateBranchRequest = {
         id: branch.id,
         name: values.name,
-        contact: values.contact,
+        contact: values.contact || undefined,
         owner: values.owner,
       };
 
@@ -91,7 +91,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
         onFinish={handleSubmit}
         initialValues={{
           name: branch?.name,
-          contact: branch?.contact || "",
+          contact: branch?.contact || undefined,
           owner: branch?.owner?.id,
         }}
       >
