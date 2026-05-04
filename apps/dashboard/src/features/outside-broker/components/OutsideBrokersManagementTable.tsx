@@ -85,13 +85,6 @@ const OutsideBrokersManagementTable: React.FC = () => {
           rowKey="id"
           scroll={{ x: 1200 }}
           {...tableProps}
-          pagination={{
-            ...tableProps.pagination,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t, range) => `${range[0]}-${range[1]} of ${t} brokers`,
-            pageSizeOptions: ["5", "10", "20", "50", "100"],
-          }}
           locale={{
             emptyText: searchText ? (
               <Empty

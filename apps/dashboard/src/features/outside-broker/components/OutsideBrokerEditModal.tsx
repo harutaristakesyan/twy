@@ -1,4 +1,16 @@
-import { Button, Checkbox, Form, Input, InputNumber, Modal, message, Select, Space } from "antd";
+import {
+  Button,
+  Checkbox,
+  Col,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  message,
+  Row,
+  Select,
+  Space,
+} from "antd";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -118,65 +130,77 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
           status: broker?.status,
         }}
       >
-        <Form.Item
-          name="brokerName"
-          label="Broker Name"
-          rules={[
-            { required: true, message: "Please enter broker name" },
-            { min: 2, message: "Broker name must be at least 2 characters" },
-          ]}
-        >
-          <Input placeholder="Enter broker name" />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="brokerName"
+              label="Broker Name"
+              rules={[
+                { required: true, message: "Please enter broker name" },
+                { min: 2, message: "At least 2 characters" },
+              ]}
+            >
+              <Input placeholder="Enter broker name" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="mcNumber"
+              label="MC Number"
+              rules={[{ required: true, message: "Please enter MC number" }]}
+            >
+              <Input placeholder="Enter MC number" />
+            </Form.Item>
+          </Col>
+        </Row>
 
-        <Form.Item
-          name="mcNumber"
-          label="MC Number"
-          rules={[
-            { required: true, message: "Please enter MC number" },
-            { min: 1, message: "MC number is required" },
-          ]}
-        >
-          <Input placeholder="Enter MC number" />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="contactName" label="Contact Name">
+              <Input placeholder="Enter contact name" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="phone" label="Phone">
+              <Input placeholder="Enter phone number" />
+            </Form.Item>
+          </Col>
+        </Row>
 
-        <Form.Item name="contactName" label="Contact Name">
-          <Input placeholder="Enter contact name" />
-        </Form.Item>
-
-        <Form.Item name="phone" label="Phone">
-          <Input placeholder="Enter phone number" />
-        </Form.Item>
-
-        <Form.Item
-          name="email"
-          label="Email"
-          rules={[{ type: "email", message: "Please enter a valid email address" }]}
-        >
-          <Input placeholder="Enter email address" />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[{ type: "email", message: "Please enter a valid email" }]}
+            >
+              <Input placeholder="Enter email address" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="status"
+              label="Status"
+              rules={[{ required: true, message: "Please select a status" }]}
+            >
+              <Select
+                placeholder="Select status"
+                options={[
+                  { value: BrokerStatus.APPROVED, label: "Approved" },
+                  { value: BrokerStatus.PENDING, label: "Pending" },
+                  { value: BrokerStatus.DENIED, label: "Denied" },
+                ]}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
 
         <Form.Item name="address" label="Address">
-          <TextArea placeholder="Enter address" rows={3} />
+          <TextArea placeholder="Enter address" rows={2} />
         </Form.Item>
 
         <Form.Item name="notes" label="Notes">
-          <TextArea placeholder="Enter notes" rows={3} />
-        </Form.Item>
-
-        <Form.Item
-          name="status"
-          label="Status"
-          rules={[{ required: true, message: "Please select a status" }]}
-        >
-          <Select
-            placeholder="Select status"
-            options={[
-              { value: BrokerStatus.APPROVED, label: "Approved" },
-              { value: BrokerStatus.PENDING, label: "Pending" },
-              { value: BrokerStatus.DENIED, label: "Denied" },
-            ]}
-          />
+          <TextArea placeholder="Enter notes" rows={2} />
         </Form.Item>
 
         <Form.Item label="Credit Limit">

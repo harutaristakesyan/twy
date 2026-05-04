@@ -217,11 +217,6 @@ const CarrierRequestsTab: React.FC = () => {
           columns={columns}
           scroll={{ x: 900 }}
           {...tableProps}
-          pagination={{
-            ...tableProps.pagination,
-            showSizeChanger: true,
-            showTotal: (t, range) => `${range[0]}-${range[1]} of ${t} requests`,
-          }}
           locale={{
             emptyText: (
               <Empty

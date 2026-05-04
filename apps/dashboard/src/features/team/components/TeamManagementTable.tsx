@@ -77,13 +77,6 @@ const TeamManagementTable: React.FC = () => {
           rowKey="id"
           scroll={{ x: 900 }}
           {...tableProps}
-          pagination={{
-            ...tableProps.pagination,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (t, range) => `${range[0]}-${range[1]} of ${t} teams`,
-            pageSizeOptions: ["5", "10", "20", "50"],
-          }}
           locale={{
             emptyText: searchText ? (
               <Empty
