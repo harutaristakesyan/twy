@@ -2,6 +2,7 @@ import { middyfy } from "@shared/index";
 import type { LoadListResponse } from "@twy/core";
 import {
   assertPermission,
+  buildScope,
   type ListLoadsEvent,
   ListLoadsEventSchema,
   listLoads as listLoadRecords,
@@ -13,6 +14,8 @@ const listLoads = async (event: ListLoadsEvent): Promise<LoadListResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
   assertPermission(ctx, "loads", "view");
+  const scope = buildScope(ctx);
+  if (scope.denyAll) return { loads: [], total: 0 };
 
   const { page, limit, sortField, sortOrder, query } = event.queryStringParameters;
 
@@ -22,6 +25,8 @@ const listLoads = async (event: ListLoadsEvent): Promise<LoadListResponse> => {
     sortField,
     sortOrder,
     query,
+    branchId: scope.branchId,
+    ownerId: scope.ownerId,
   });
 
   return {

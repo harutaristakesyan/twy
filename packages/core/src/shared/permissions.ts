@@ -33,11 +33,10 @@ export const assertBrokerRequestsEdit = (ctx: UserPermissionsContext): void => {
   throw new createError.Forbidden("Forbidden");
 };
 
-export const buildScope = (
-  ctx: UserPermissionsContext,
-): { branchId?: string; ownerId?: string } => ({
-  branchId: ctx.branchRestricted && ctx.branchId ? ctx.branchId : undefined,
+export const buildScope = (ctx: UserPermissionsContext) => ({
+  branchId: ctx.branchRestricted ? (ctx.branchId ?? undefined) : undefined,
   ownerId: ctx.onlyOwnData ? ctx.userId : undefined,
+  denyAll: ctx.branchRestricted && !ctx.branchId,
 });
 
 export type PermissionsScope = ReturnType<typeof buildScope>;

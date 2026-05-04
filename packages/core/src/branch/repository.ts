@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { branch, db, type OrderDirection, users } from "@twy/db";
-import { asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
 
 export interface BranchOwner {
@@ -36,6 +36,7 @@ export interface ListBranchesInput {
   sortField: "createdAt" | "name" | "contact";
   sortOrder: OrderDirection;
   query?: string;
+  branchId?: string;
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -91,6 +92,8 @@ export const listBranches = async (input: ListBranchesInput) => {
   const searchClause = input.query
     ? or(ilike(branch.name, `%${input.query}%`), ilike(branch.contact, `%${input.query}%`))
     : undefined;
+  const branchClause = input.branchId ? eq(branch.id, input.branchId) : undefined;
+  const whereClause = and(searchClause, branchClause);
 
   const owner = users;
 
@@ -108,11 +111,11 @@ export const listBranches = async (input: ListBranchesInput) => {
       })
       .from(branch)
       .leftJoin(owner, eq(owner.id, branch.ownerId))
-      .where(searchClause)
+      .where(whereClause)
       .orderBy(direction(orderColumn))
       .limit(input.limit)
       .offset(offset),
-    db.select({ value: count() }).from(branch).where(searchClause),
+    db.select({ value: count() }).from(branch).where(whereClause),
   ]);
 
   return {

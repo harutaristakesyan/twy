@@ -1,5 +1,5 @@
 import { branch, db, type NewUser, type OrderDirection, team, users } from "@twy/db";
-import { asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -88,6 +88,7 @@ export interface ListUsersInput {
     | "branch.name";
   sortOrder: OrderDirection;
   query?: string;
+  branchId?: string;
 }
 
 const userSortColumn = (field: ListUsersInput["sortField"]) => {
@@ -119,6 +120,8 @@ export const listUsers = async (input: ListUsersInput) => {
         ilike(users.email, `%${input.query}%`),
       )
     : undefined;
+  const branchClause = input.branchId ? eq(users.branch, input.branchId) : undefined;
+  const whereClause = and(searchClause, branchClause);
 
   const [rows, totalRows] = await Promise.all([
     db
@@ -137,11 +140,11 @@ export const listUsers = async (input: ListUsersInput) => {
       .from(users)
       .leftJoin(branch, eq(users.branch, branch.id))
       .leftJoin(team, eq(users.teamId, team.id))
-      .where(searchClause)
+      .where(whereClause)
       .orderBy(direction(orderColumn))
       .limit(input.limit)
       .offset(offset),
-    db.select({ value: count() }).from(users).where(searchClause),
+    db.select({ value: count() }).from(users).where(whereClause),
   ]);
 
   return {

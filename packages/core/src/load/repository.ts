@@ -10,7 +10,7 @@ import {
   type OrderDirection,
   users,
 } from "@twy/db";
-import { asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import createError from "http-errors";
 
 const DEFAULT_LOAD_STATUS: LoadStatus = "Pending";
@@ -111,6 +111,8 @@ export interface ListLoadsInput {
   sortField: "referenceNumber" | "status" | "createdAt" | "customer";
   sortOrder: OrderDirection;
   query?: string;
+  branchId?: string;
+  ownerId?: string;
 }
 
 const normalizeLoadFiles = (files: LoadFileInput[]): LoadFileInput[] => {
@@ -264,16 +266,19 @@ export const listLoads = async (input: ListLoadsInput) => {
         ilike(load.commodity, `%${input.query}%`),
       )
     : undefined;
+  const branchClause = input.branchId ? eq(load.branchId, input.branchId) : undefined;
+  const ownerClause = input.ownerId ? eq(load.createdBy, input.ownerId) : undefined;
+  const whereClause = and(searchClause, branchClause, ownerClause);
 
   const [rows, totalRows] = await Promise.all([
     db
       .select()
       .from(load)
-      .where(searchClause)
+      .where(whereClause)
       .orderBy(direction(orderColumn))
       .limit(input.limit)
       .offset(offset),
-    db.select({ value: count() }).from(load).where(searchClause),
+    db.select({ value: count() }).from(load).where(whereClause),
   ]);
 
   const filesMap = await fetchFilesForLoads(
