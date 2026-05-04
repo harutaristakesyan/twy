@@ -22,7 +22,6 @@ import type {
 } from "../types/broker";
 import { BrokerStatus } from "../types/broker";
 
-const { Option } = Select;
 const { TextArea } = Input;
 
 interface OutsideBrokerEditModalProps {
@@ -124,7 +123,7 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
       width={600}
     >
       <Alert
-        message="Broker Information"
+        title="Broker Information"
         description="Update outside broker details. Broker name and MC number are required."
         type="info"
         showIcon
@@ -198,30 +197,29 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
           label="Status"
           rules={[{ required: true, message: "Please select a status" }]}
         >
-          <Select placeholder="Select status">
-            <Option value={BrokerStatus.APPROVED}>Approved</Option>
-            <Option value={BrokerStatus.PENDING}>Pending</Option>
-            <Option value={BrokerStatus.DENIED}>Denied</Option>
-          </Select>
+          <Select
+            placeholder="Select status"
+            options={[
+              { value: BrokerStatus.APPROVED, label: "Approved" },
+              { value: BrokerStatus.PENDING, label: "Pending" },
+              { value: BrokerStatus.DENIED, label: "Denied" },
+            ]}
+          />
         </Form.Item>
 
         <Form.Item name="branch" label="Branch (Optional)">
           <Select
             placeholder="Select branch (optional)"
             loading={loadingBranches}
-            showSearch
+            showSearch={{
+              filterOption: (input, option) =>
+                String(option?.label ?? "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase()),
+            }}
             allowClear
-            optionLabelProp="label"
-            filterOption={(input, option) =>
-              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-            }
-          >
-            {branches.map((branch) => (
-              <Option key={branch.id} value={branch.id} label={branch.name}>
-                {branch.name}
-              </Option>
-            ))}
-          </Select>
+            options={branches.map((b) => ({ value: b.id, label: b.name }))}
+          />
         </Form.Item>
 
         <Form.Item label="Credit Limit">

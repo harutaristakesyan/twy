@@ -6,7 +6,6 @@ import { getErrorMessage } from "@/utils/errorUtils";
 import { updateBranch } from "../api/branchApi";
 import type { Branch, BranchFormData, UpdateBranchRequest } from "../types/branch";
 
-const { Option } = Select;
 const { TextArea } = Input;
 
 interface BranchEditModalProps {
@@ -78,7 +77,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
   return (
     <Modal title="Edit Branch" open={open} onCancel={handleCancel} footer={null} width={600}>
       <Alert
-        message="Branch Information"
+        title="Branch Information"
         description="Update branch details. Branch name is required; owner is optional."
         type="info"
         showIcon
@@ -127,33 +126,28 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
             placeholder="Select branch owner"
             loading={loadingOwners}
             allowClear
-            showSearch
-            optionLabelProp="label"
-            filterOption={(input, option) => {
-              const label = String(option?.label ?? "");
-              const email = String(option?.email ?? "");
-              return (
-                label.toLowerCase().includes(input.toLowerCase()) ||
-                email.toLowerCase().includes(input.toLowerCase())
-              );
+            showSearch={{
+              filterOption: (input, option) => {
+                const label = String(option?.label ?? "");
+                const email = String(option?.email ?? "");
+                return (
+                  label.toLowerCase().includes(input.toLowerCase()) ||
+                  email.toLowerCase().includes(input.toLowerCase())
+                );
+              },
             }}
-          >
-            {owners.map((owner) => (
-              <Option
-                key={owner.id}
-                value={owner.id}
-                label={`${owner.firstName} ${owner.lastName}`}
-                email={owner.email}
-              >
-                <div>
-                  <div style={{ fontWeight: 500 }}>
-                    {owner.firstName} {owner.lastName}
-                  </div>
-                  <div style={{ fontSize: "12px", color: "#888" }}>{owner.email}</div>
-                </div>
-              </Option>
-            ))}
-          </Select>
+            options={owners.map((o) => ({
+              value: o.id,
+              label: `${o.firstName} ${o.lastName}`,
+              email: o.email,
+            }))}
+            optionRender={(option) => (
+              <div>
+                <div style={{ fontWeight: 500 }}>{option.label}</div>
+                <div style={{ fontSize: "12px", color: "#888" }}>{option.data.email}</div>
+              </div>
+            )}
+          />
         </Form.Item>
 
         <Form.Item>

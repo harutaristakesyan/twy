@@ -84,8 +84,8 @@ const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
   return (
     <Modal title="Edit Carrier" open={open} onCancel={handleCancel} footer={null} width={600}>
       <Alert
-        message="Carrier Information"
-        description="All fields are required except Notes."
+        title="Carrier Information"
+        description="Update carrier details. Carrier name and MC/DOT number are required."
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
@@ -173,10 +173,13 @@ const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
           label="Status"
           rules={[{ required: true, message: "Please select a status" }]}
         >
-          <Select placeholder="Select status">
-            <Select.Option value={CarrierStatus.APPROVED}>Approved</Select.Option>
-            <Select.Option value={CarrierStatus.DENIED}>Denied</Select.Option>
-          </Select>
+          <Select
+            placeholder="Select status"
+            options={[
+              { value: CarrierStatus.APPROVED, label: "Approved" },
+              { value: CarrierStatus.DENIED, label: "Denied" },
+            ]}
+          />
         </Form.Item>
 
         <Form.Item>

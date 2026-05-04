@@ -1,4 +1,4 @@
-import { Alert, Button, Form, Input, Modal, message, Select, Space, Spin, Switch } from "antd";
+import { Button, Col, Form, Input, Modal, message, Row, Select, Space, Spin, Switch } from "antd";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getBranches } from "@/features/branch/api/branchApi";
@@ -7,8 +7,6 @@ import TeamSelect from "@/features/team/components/TeamSelect";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { createUser } from "../api/userApi";
 import type { UserFormData } from "../types/user";
-
-const { Option } = Select;
 
 interface UserCreateModalProps {
   open: boolean;
@@ -117,36 +115,33 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuc
 
   return (
     <Modal title="Create New User" open={open} onCancel={handleCancel} footer={null} width={600}>
-      <Alert
-        message="User Creation"
-        description="First name, last name, and email are required. The user will receive an email with login credentials."
-        type="info"
-        showIcon
-        style={{ marginBottom: 24 }}
-      />
-
       <Form form={form} layout="vertical" onFinish={handleSubmit} id="userCreateForm">
-        <Form.Item
-          name="firstName"
-          label="First Name"
-          rules={[
-            { required: true, message: "Please enter first name" },
-            { min: 2, message: "First name must be at least 2 characters" },
-          ]}
-        >
-          <Input placeholder="Enter first name" id="create-firstName" />
-        </Form.Item>
-
-        <Form.Item
-          name="lastName"
-          label="Last Name"
-          rules={[
-            { required: true, message: "Please enter last name" },
-            { min: 2, message: "Last name must be at least 2 characters" },
-          ]}
-        >
-          <Input placeholder="Enter last name" id="create-lastName" />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="firstName"
+              label="First Name"
+              rules={[
+                { required: true, message: "Please enter first name" },
+                { min: 2, message: "First name must be at least 2 characters" },
+              ]}
+            >
+              <Input placeholder="Enter first name" id="create-firstName" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="lastName"
+              label="Last Name"
+              rules={[
+                { required: true, message: "Please enter last name" },
+                { min: 2, message: "Last name must be at least 2 characters" },
+              ]}
+            >
+              <Input placeholder="Enter last name" id="create-lastName" />
+            </Form.Item>
+          </Col>
+        </Row>
 
         <Form.Item
           name="email"
@@ -163,34 +158,32 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuc
           <Select
             placeholder="Search and select branch"
             allowClear
-            showSearch
-            filterOption={false}
-            onSearch={handleBranchSearch}
+            showSearch={{ filterOption: false, onSearch: handleBranchSearch }}
             onPopupScroll={handleBranchScroll}
             loading={loadingBranches}
             notFoundContent={loadingBranches ? <Spin size="small" /> : "No branches found"}
-            optionLabelProp="label"
-          >
-            {branches.map((branch) => (
-              <Option key={branch.id} value={branch.id} label={branch.name}>
-                <div>
-                  <div style={{ fontWeight: 500 }}>{branch.name}</div>
-                  {branch.owner && (
-                    <div style={{ fontSize: "12px", color: "#888" }}>
-                      Owner: {branch.owner.firstName} {branch.owner.lastName}
-                    </div>
-                  )}
-                </div>
-              </Option>
-            ))}
-            {loadingBranches && hasMoreBranches && (
-              <Option key="loading" disabled>
-                <div style={{ textAlign: "center", padding: "8px" }}>
-                  <Spin size="small" /> Loading more...
-                </div>
-              </Option>
+            options={branches.map((b) => ({ value: b.id, label: b.name, owner: b.owner ?? null }))}
+            optionRender={(option) => (
+              <div>
+                <div style={{ fontWeight: 500 }}>{option.label}</div>
+                {option.data.owner && (
+                  <div style={{ fontSize: "12px", color: "#888" }}>
+                    Owner: {option.data.owner.firstName} {option.data.owner.lastName}
+                  </div>
+                )}
+              </div>
             )}
-          </Select>
+            popupRender={(menu) => (
+              <>
+                {menu}
+                {loadingBranches && hasMoreBranches && (
+                  <div style={{ textAlign: "center", padding: "8px" }}>
+                    <Spin size="small" /> Loading more...
+                  </div>
+                )}
+              </>
+            )}
+          />
         </Form.Item>
 
         <Form.Item name="teamId" label="Team">

@@ -17,7 +17,6 @@ import { getErrorMessage } from "@/utils/errorUtils";
 import { submitBrokerRequest } from "../api/brokerRequestApi";
 import type { SubmitBrokerRequestBody } from "../types/brokerRequest";
 
-const { Option } = Select;
 const { TextArea } = Input;
 
 interface OutsideBrokerCreateModalProps {
@@ -106,7 +105,7 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
       width={600}
     >
       <Alert
-        message="Broker information"
+        title="Broker information"
         description="Submit a request for a new outside broker. It appears in the directory only after an admin approves it."
         type="info"
         showIcon
@@ -164,20 +163,15 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
           <Select
             placeholder="Select branch (optional)"
             loading={loadingBranches}
-            showSearch
-            allowClear
-            optionLabelProp="label"
-            filterOption={(input, option) => {
-              const label = String(option?.label ?? "");
-              return label.toLowerCase().includes(input.toLowerCase());
+            showSearch={{
+              filterOption: (input, option) =>
+                String(option?.label ?? "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase()),
             }}
-          >
-            {branches.map((branch) => (
-              <Option key={branch.id} value={branch.id} label={branch.name}>
-                {branch.name}
-              </Option>
-            ))}
-          </Select>
+            allowClear
+            options={branches.map((b) => ({ value: b.id, label: b.name }))}
+          />
         </Form.Item>
 
         <Form.Item label="Credit Limit">

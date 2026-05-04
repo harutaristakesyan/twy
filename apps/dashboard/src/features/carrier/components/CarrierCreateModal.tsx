@@ -76,7 +76,7 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
       width={600}
     >
       <Alert
-        message="Approval required"
+        title="Approval required"
         description="This creates a pending request. An admin must approve it before the carrier appears under Twy or Outside carriers."
         type="info"
         showIcon

@@ -150,7 +150,7 @@ const UserSelfUpdate: React.FC = () => {
 
       {isEditing && (
         <Alert
-          message="Profile Update"
+          title="Profile Update"
           description="You can only update your first name and last name. For email, role, or branch changes, contact your administrator."
           type="info"
           showIcon

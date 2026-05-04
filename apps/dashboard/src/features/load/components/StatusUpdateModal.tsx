@@ -4,8 +4,6 @@ import { loadApi } from "@/features/load/api/loadApi";
 import type { Load, LoadStatus } from "@/features/load/types/load";
 import { getErrorMessage } from "@/utils/errorUtils";
 
-const { Option } = Select;
-
 interface StatusUpdateModalProps {
   open: boolean;
   load: Load | null;
@@ -131,17 +129,12 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
             onChange={setSelectedStatus}
             style={{ width: "100%" }}
             size="large"
-          >
-            <Option value="Pending">
-              <span style={{ textTransform: "capitalize" }}>Pending</span>
-            </Option>
-            <Option value="Approved">
-              <span style={{ textTransform: "capitalize" }}>Approved</span>
-            </Option>
-            <Option value="Denied">
-              <span style={{ textTransform: "capitalize" }}>Denied</span>
-            </Option>
-          </Select>
+            options={[
+              { value: "Pending", label: "Pending" },
+              { value: "Approved", label: "Approved" },
+              { value: "Denied", label: "Denied" },
+            ]}
+          />
         </div>
         <div style={{ marginBottom: isChargable ? 16 : 0 }}>
           <Checkbox

@@ -4,8 +4,6 @@ import { useCallback, useRef, useState } from "react";
 import { getTeams } from "../api/teamApi";
 import type { Team } from "../types/team";
 
-const { Option } = Select;
-
 interface TeamSelectProps {
   value?: string | null;
   onChange?: (value: string | null) => void;
@@ -76,30 +74,25 @@ const TeamSelect: React.FC<TeamSelectProps> = ({
       value={value ?? undefined}
       onChange={(val) => onChange?.(val ?? null)}
       placeholder={placeholder}
-      showSearch
-      filterOption={false}
-      onSearch={handleSearch}
+      showSearch={{ filterOption: false, onSearch: handleSearch }}
       onPopupScroll={handleScroll}
-      onDropdownVisibleChange={handleDropdownOpen}
+      onOpenChange={handleDropdownOpen}
       loading={loading}
       allowClear={allowClear}
       disabled={disabled}
       notFoundContent={loading ? <Spin size="small" /> : "No teams found"}
-      optionLabelProp="label"
-    >
-      {teams.map((t) => (
-        <Option key={t.id} value={t.id} label={t.name}>
-          {t.name}
-        </Option>
-      ))}
-      {loading && hasMore && (
-        <Option key="loading" disabled>
-          <div style={{ textAlign: "center", padding: "8px" }}>
-            <Spin size="small" /> Loading more...
-          </div>
-        </Option>
+      options={teams.map((t) => ({ value: t.id, label: t.name }))}
+      popupRender={(menu) => (
+        <>
+          {menu}
+          {loading && hasMore && (
+            <div style={{ textAlign: "center", padding: "8px" }}>
+              <Spin size="small" /> Loading more...
+            </div>
+          )}
+        </>
       )}
-    </Select>
+    />
   );
 };
 

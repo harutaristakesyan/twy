@@ -13,7 +13,6 @@ import {
 import type { TeamMember } from "../types/team";
 
 const { Text } = Typography;
-const { Option } = Select;
 
 interface TeamMembersSectionProps {
   teamId: string;
@@ -186,32 +185,36 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
           <Select
             style={{ width: 300 }}
             placeholder="Search unassigned users"
-            showSearch
-            filterOption={false}
-            onSearch={handleUnassignedSearch}
+            showSearch={{ filterOption: false, onSearch: handleUnassignedSearch }}
             onPopupScroll={handleUnassignedScroll}
             loading={loadingUnassigned}
             notFoundContent={loadingUnassigned ? <Spin size="small" /> : "No unassigned users"}
             value={selectedUserId}
             onChange={setSelectedUserId}
-            optionLabelProp="label"
-          >
-            {unassigned.map((u) => (
-              <Option key={u.id} value={u.id} label={`${u.firstName ?? ""} ${u.lastName ?? ""}`}>
-                {u.firstName} {u.lastName}
+            options={unassigned.map((u) => ({
+              value: u.id,
+              label: `${u.firstName ?? ""} ${u.lastName ?? ""}`,
+              email: u.email,
+            }))}
+            optionRender={(option) => (
+              <>
+                {option.label}
                 <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                  {u.email}
+                  {option.data.email}
                 </Text>
-              </Option>
-            ))}
-            {loadingUnassigned && hasMoreUnassigned && (
-              <Option key="loading" disabled>
-                <div style={{ textAlign: "center" }}>
-                  <Spin size="small" /> Loading...
-                </div>
-              </Option>
+              </>
             )}
-          </Select>
+            popupRender={(menu) => (
+              <>
+                {menu}
+                {loadingUnassigned && hasMoreUnassigned && (
+                  <div style={{ textAlign: "center" }}>
+                    <Spin size="small" /> Loading...
+                  </div>
+                )}
+              </>
+            )}
+          />
           <Button
             type="primary"
             size="small"

@@ -20,8 +20,6 @@ import { getErrorMessage } from "@/utils/errorUtils";
 import { updateUser } from "../api/userApi";
 import type { UpdateUserRequest, User } from "../types/user";
 
-const { Option } = Select;
-
 interface UserEditModalProps {
   open: boolean;
   user: User;
@@ -159,7 +157,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
   return (
     <Modal title="Edit User" open={open} onCancel={handleCancel} footer={null} width={600}>
       <Alert
-        message="User Information"
+        title="User Information"
         description="You can only update the user's team, branch assignment, and active status. For personal information updates, users should use the self-update feature."
         type="info"
         showIcon
@@ -199,34 +197,32 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
           <Select
             placeholder="Search and select branch"
             allowClear
-            showSearch
-            filterOption={false}
-            onSearch={handleBranchSearch}
+            showSearch={{ filterOption: false, onSearch: handleBranchSearch }}
             onPopupScroll={handleBranchScroll}
             loading={loadingBranches}
             notFoundContent={loadingBranches ? <Spin size="small" /> : "No branches found"}
-            optionLabelProp="label"
-          >
-            {branches.map((branch) => (
-              <Option key={branch.id} value={branch.id} label={branch.name}>
-                <div>
-                  <div style={{ fontWeight: 500 }}>{branch.name}</div>
-                  {branch.owner && (
-                    <div style={{ fontSize: "12px", color: "#888" }}>
-                      Owner: {branch.owner.firstName} {branch.owner.lastName}
-                    </div>
-                  )}
-                </div>
-              </Option>
-            ))}
-            {loadingBranches && hasMoreBranches && (
-              <Option key="loading" disabled>
-                <div style={{ textAlign: "center", padding: "8px" }}>
-                  <Spin size="small" /> Loading more...
-                </div>
-              </Option>
+            options={branches.map((b) => ({ value: b.id, label: b.name, owner: b.owner ?? null }))}
+            optionRender={(option) => (
+              <div>
+                <div style={{ fontWeight: 500 }}>{option.label}</div>
+                {option.data.owner && (
+                  <div style={{ fontSize: "12px", color: "#888" }}>
+                    Owner: {option.data.owner.firstName} {option.data.owner.lastName}
+                  </div>
+                )}
+              </div>
             )}
-          </Select>
+            popupRender={(menu) => (
+              <>
+                {menu}
+                {loadingBranches && hasMoreBranches && (
+                  <div style={{ textAlign: "center", padding: "8px" }}>
+                    <Spin size="small" /> Loading more...
+                  </div>
+                )}
+              </>
+            )}
+          />
         </Form.Item>
 
         <Form.Item name="teamId" label="Team">
