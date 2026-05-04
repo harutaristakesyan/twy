@@ -1,6 +1,6 @@
 import { Select, Spin } from "antd";
 import type React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { getTeams } from "../api/teamApi";
 import type { Team } from "../types/team";
 
@@ -10,6 +10,7 @@ interface TeamSelectProps {
   placeholder?: string;
   allowClear?: boolean;
   disabled?: boolean;
+  initialOption?: { value: string; label: string };
 }
 
 const TeamSelect: React.FC<TeamSelectProps> = ({
@@ -18,6 +19,7 @@ const TeamSelect: React.FC<TeamSelectProps> = ({
   placeholder = "Search and select team",
   allowClear = true,
   disabled,
+  initialOption,
 }) => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,6 +71,14 @@ const TeamSelect: React.FC<TeamSelectProps> = ({
     }
   };
 
+  const options = useMemo(() => {
+    const fetched = teams.map((t) => ({ value: t.id, label: t.name }));
+    if (initialOption && !fetched.find((o) => o.value === initialOption.value)) {
+      return [initialOption, ...fetched];
+    }
+    return fetched;
+  }, [teams, initialOption]);
+
   return (
     <Select
       value={value ?? undefined}
@@ -81,7 +91,7 @@ const TeamSelect: React.FC<TeamSelectProps> = ({
       allowClear={allowClear}
       disabled={disabled}
       notFoundContent={loading ? <Spin size="small" /> : "No teams found"}
-      options={teams.map((t) => ({ value: t.id, label: t.name }))}
+      options={options}
       popupRender={(menu) => (
         <>
           {menu}

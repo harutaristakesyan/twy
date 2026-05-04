@@ -1,4 +1,4 @@
-import { Alert, Button, Form, Input, Modal, message, Select, Space } from "antd";
+import { Button, Form, Input, Modal, message, Select, Space } from "antd";
 import type React from "react";
 import { useState } from "react";
 import type { User } from "@/features/user/types/user";
@@ -57,14 +57,6 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
 
   return (
     <Modal title="Create New Branch" open={open} onCancel={handleCancel} footer={null} width={600}>
-      <Alert
-        title="Branch Creation"
-        description="Create a new branch. Only the branch name is required."
-        type="info"
-        showIcon
-        style={{ marginBottom: 24 }}
-      />
-
       <Form form={form} layout="vertical" onFinish={handleSubmit} id="branchCreateForm">
         <Form.Item
           name="name"

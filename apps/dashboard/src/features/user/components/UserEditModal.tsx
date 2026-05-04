@@ -1,11 +1,12 @@
 import {
-  Alert,
   Button,
+  Col,
   Divider,
   Form,
   Input,
   Modal,
   message,
+  Row,
   Select,
   Space,
   Spin,
@@ -156,14 +157,6 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
 
   return (
     <Modal title="Edit User" open={open} onCancel={handleCancel} footer={null} width={600}>
-      <Alert
-        title="User Information"
-        description="You can only update the user's team, branch assignment, and active status. For personal information updates, users should use the self-update feature."
-        type="info"
-        showIcon
-        style={{ marginBottom: 24 }}
-      />
-
       <Form
         form={form}
         layout="vertical"
@@ -177,14 +170,18 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
           teamId: user?.teamId ?? undefined,
         }}
       >
-        {/* Read-only personal information */}
-        <Form.Item label="First Name">
-          <Input value={user?.firstName} disabled />
-        </Form.Item>
-
-        <Form.Item label="Last Name">
-          <Input value={user?.lastName} disabled />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item label="First Name">
+              <Input value={user?.firstName} disabled />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="Last Name">
+              <Input value={user?.lastName} disabled />
+            </Form.Item>
+          </Col>
+        </Row>
 
         <Form.Item label="Email">
           <Input value={user?.email} disabled />
@@ -192,7 +189,6 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
 
         <Divider />
 
-        {/* Editable fields */}
         <Form.Item name="branch" label="Branch (optional)">
           <Select
             placeholder="Search and select branch"
@@ -226,7 +222,13 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
         </Form.Item>
 
         <Form.Item name="teamId" label="Team">
-          <TeamSelect />
+          <TeamSelect
+            initialOption={
+              user?.teamId && user?.teamName
+                ? { value: user.teamId, label: user.teamName }
+                : undefined
+            }
+          />
         </Form.Item>
 
         <Form.Item name="isActive" label="Status" valuePropName="checked">
