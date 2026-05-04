@@ -93,19 +93,7 @@ export const LoadManagementTable: React.FC = () => {
           </Flex>
         </Flex>
 
-        <Table
-          columns={columns}
-          rowKey="id"
-          scroll={{ x: 2000 }}
-          {...tableProps}
-          pagination={{
-            ...tableProps.pagination,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            pageSizeOptions: ["5", "10", "20", "50", "100"],
-            showTotal: (t, range) => `${range[0]}-${range[1]} of ${t} loads`,
-          }}
-        />
+        <Table columns={columns} rowKey="id" scroll={{ x: 2000 }} {...tableProps} />
       </Card>
     </div>
   );

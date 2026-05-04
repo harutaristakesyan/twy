@@ -3,9 +3,10 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
+  MoreOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
-import { App, Button, Dropdown, Popconfirm, Space, Tag } from "antd";
+import { App, Button, Dropdown, Space, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useMemo } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -29,7 +30,7 @@ export function useLoadColumns(
   refresh: () => void,
   runDelete: (id: string) => void,
 ): ColumnsType<Load> {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { openLoadEdit, openStatusUpdate } = useLoadModal();
   const { permissions } = useCurrentUser();
   const canEdit = permissions.loads.edit;
@@ -166,56 +167,55 @@ export function useLoadColumns(
           );
         },
       },
-      {
-        title: "Actions",
-        key: "actions",
-        fixed: "right",
-        width: 240,
-        align: "right",
-        render: (_, record) => (
-          <Space size="small" wrap={false}>
-            {canEdit && (
-              <Button
-                type="link"
-                icon={<CheckCircleOutlined />}
-                onClick={() => openStatusUpdate({ load: record }, () => refresh())}
-                style={{ padding: "4px 8px", whiteSpace: "nowrap" }}
-              >
-                Update Status Approval
-              </Button>
-            )}
-            {canEdit && (
-              <Button
-                type="link"
-                icon={<EditOutlined />}
-                onClick={() => openLoadEdit({ load: record }, () => refresh())}
-                style={{ padding: "4px 8px", whiteSpace: "nowrap" }}
-              >
-                Edit
-              </Button>
-            )}
-            {canEdit && (
-              <Popconfirm
-                title="Delete Load"
-                description="Are you sure you want to delete this load?"
-                onConfirm={() => runDelete(record.id)}
-                okText="Yes"
-                cancelText="No"
-              >
-                <Button
-                  type="link"
-                  danger
-                  icon={<DeleteOutlined />}
-                  style={{ padding: "4px 8px", whiteSpace: "nowrap" }}
-                >
-                  Delete
-                </Button>
-              </Popconfirm>
-            )}
-          </Space>
-        ),
-      },
+      ...(canEdit
+        ? [
+            {
+              title: "Actions",
+              key: "actions",
+              fixed: "end" as const,
+              width: 100,
+              align: "center" as const,
+              render: (_: unknown, record: Load) => {
+                const items: MenuProps["items"] = [
+                  {
+                    key: "approve",
+                    icon: <CheckCircleOutlined />,
+                    label: "Approve",
+                    onClick: () => openStatusUpdate({ load: record }, () => refresh()),
+                  },
+                  {
+                    key: "edit",
+                    icon: <EditOutlined />,
+                    label: "Edit",
+                    onClick: () => openLoadEdit({ load: record }, () => refresh()),
+                  },
+                  { type: "divider" },
+                  {
+                    key: "delete",
+                    icon: <DeleteOutlined />,
+                    label: "Delete",
+                    danger: true,
+                    onClick: () =>
+                      modal.confirm({
+                        title: "Delete Load",
+                        content: "Are you sure you want to delete this load?",
+                        okText: "Delete",
+                        okType: "danger",
+                        cancelText: "Cancel",
+                        onOk: () => runDelete(record.id),
+                      }),
+                  },
+                ];
+                return (
+                  <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
+                    <Button type="text" icon={<MoreOutlined />} />
+                  </Dropdown>
+                );
+              },
+            },
+          ]
+        : []),
     ],
-    [canEdit, handleFileDownload, openLoadEdit, openStatusUpdate, refresh, runDelete],
+    [canEdit, handleFileDownload, modal, openLoadEdit, openStatusUpdate, refresh, runDelete],
   );
 }
