@@ -38,7 +38,6 @@ const VerificationForm = () => {
   return (
     <Form layout="vertical" form={form} onFinish={onFinish}>
       <Form.Item
-        label="Verification Code"
         name="code"
         rules={[{ required: true, message: "Please enter the 6-digit code" }]}
         style={{ textAlign: "center" }}
