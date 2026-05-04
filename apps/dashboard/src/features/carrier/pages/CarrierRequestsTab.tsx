@@ -26,6 +26,7 @@ import {
   rejectCarrierRequest,
 } from "../api/carrierRequestApi";
 import type { CarrierRequest, CarrierRequestStatusFilter } from "../types/carrierRequest";
+import { deriveInsuranceStatus } from "../utils/insuranceStatus";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -34,12 +35,6 @@ const statusColors: Record<string, string> = {
   pending: "processing",
   approved: "success",
   rejected: "error",
-};
-
-const insuranceColors: Record<string, string> = {
-  valid: "success",
-  expired: "error",
-  pending: "warning",
 };
 
 const CarrierRequestsTab: React.FC = () => {
@@ -294,9 +289,13 @@ const CarrierRequestsTab: React.FC = () => {
                 {viewRecord.equipmentType ?? <Text type="secondary">—</Text>}
               </Descriptions.Item>
               <Descriptions.Item label="Insurance status">
-                <Tag color={insuranceColors[viewRecord.insuranceStatus] ?? "default"}>
-                  {viewRecord.insuranceStatus}
-                </Tag>
+                {viewRecord.insuranceExpiry ? (
+                  <Tag color={deriveInsuranceStatus(viewRecord.insuranceExpiry).color}>
+                    {deriveInsuranceStatus(viewRecord.insuranceExpiry).label}
+                  </Tag>
+                ) : (
+                  <Text type="secondary">—</Text>
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="Insurance expiry">
                 {viewRecord.insuranceExpiry ? (

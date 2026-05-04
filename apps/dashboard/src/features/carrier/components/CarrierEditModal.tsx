@@ -41,7 +41,7 @@ const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
   }, [open, carrier, form]);
 
   type FormValues = Omit<CarrierFormData, "insuranceExpiry" | "kind"> & {
-    insuranceExpiry?: dayjs.Dayjs | null;
+    insuranceExpiry: dayjs.Dayjs;
   };
 
   const handleSubmit = async (values: FormValues) => {
@@ -52,9 +52,7 @@ const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
         carrierName: values.carrierName,
         mcDotNumber: values.mcDotNumber,
         equipmentType: values.equipmentType,
-        insuranceExpiry: values.insuranceExpiry
-          ? dayjs(values.insuranceExpiry).toISOString()
-          : undefined,
+        insuranceExpiry: dayjs(values.insuranceExpiry).toISOString(),
         phone: values.phone,
         email: values.email,
         notes: values.notes,
@@ -87,7 +85,7 @@ const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
     <Modal title="Edit Carrier" open={open} onCancel={handleCancel} footer={null} width={600}>
       <Alert
         message="Carrier Information"
-        description="Update carrier details. Carrier name and MC/DOT number are required."
+        description="All fields are required except Notes."
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
@@ -127,11 +125,19 @@ const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
           <Input placeholder="Enter MC/DOT number" />
         </Form.Item>
 
-        <Form.Item name="equipmentType" label="Equipment Type">
+        <Form.Item
+          name="equipmentType"
+          label="Equipment Type"
+          rules={[{ required: true, message: "Please enter equipment type" }]}
+        >
           <Input placeholder="Enter equipment type (e.g., Flatbed, Dry Van, Refrigerated)" />
         </Form.Item>
 
-        <Form.Item name="insuranceExpiry" label="Insurance Expiry">
+        <Form.Item
+          name="insuranceExpiry"
+          label="Insurance Expiry"
+          rules={[{ required: true, message: "Please select insurance expiry date" }]}
+        >
           <DatePicker
             style={{ width: "100%" }}
             placeholder="Select insurance expiry date"
@@ -139,14 +145,21 @@ const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
           />
         </Form.Item>
 
-        <Form.Item name="phone" label="Phone">
+        <Form.Item
+          name="phone"
+          label="Phone"
+          rules={[{ required: true, message: "Please enter phone number" }]}
+        >
           <Input placeholder="Enter phone number" />
         </Form.Item>
 
         <Form.Item
           name="email"
           label="Email"
-          rules={[{ type: "email", message: "Please enter a valid email address" }]}
+          rules={[
+            { required: true, message: "Please enter email address" },
+            { type: "email", message: "Please enter a valid email address" },
+          ]}
         >
           <Input placeholder="Enter email address" />
         </Form.Item>

@@ -45,9 +45,9 @@ export interface SubmitCarrierRequestBody {
   kind: CarrierKind;
   carrierName: string;
   mcDotNumber: string;
-  equipmentType?: string;
+  equipmentType: string;
   insuranceExpiry?: string;
-  phone?: string;
-  email?: string;
+  phone: string;
+  email: string;
   notes?: string;
 }

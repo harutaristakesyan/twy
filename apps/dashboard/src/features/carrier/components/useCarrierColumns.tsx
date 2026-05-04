@@ -12,7 +12,8 @@ import { useMemo } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCarrierModal } from "../providers/CarrierModalProvider";
 import type { Carrier, CarrierKind } from "../types/carrier";
-import { CarrierStatus, InsuranceStatus } from "../types/carrier";
+import { CarrierStatus } from "../types/carrier";
+import { deriveInsuranceStatus } from "../utils/insuranceStatus";
 
 const { Text } = Typography;
 
@@ -24,18 +25,6 @@ const carrierStatusColor: Record<CarrierStatus, string> = {
 const carrierStatusLabel: Record<CarrierStatus, string> = {
   [CarrierStatus.APPROVED]: "Approved",
   [CarrierStatus.DENIED]: "Denied",
-};
-
-const insuranceStatusColor: Record<InsuranceStatus, string> = {
-  [InsuranceStatus.VALID]: "success",
-  [InsuranceStatus.EXPIRED]: "error",
-  [InsuranceStatus.PENDING]: "warning",
-};
-
-const insuranceStatusLabel: Record<InsuranceStatus, string> = {
-  [InsuranceStatus.VALID]: "Valid",
-  [InsuranceStatus.EXPIRED]: "Expired",
-  [InsuranceStatus.PENDING]: "Pending",
 };
 
 export function useCarrierColumns(
@@ -81,13 +70,16 @@ export function useCarrierColumns(
         title: "Insurance Status",
         dataIndex: "insuranceStatus",
         key: "insuranceStatus",
-        render: (status: InsuranceStatus) => (
-          <Tag color={insuranceStatusColor[status]}>
-            <SafetyOutlined style={{ marginRight: 4 }} />
-            {insuranceStatusLabel[status]}
-          </Tag>
-        ),
         sorter: true,
+        render: (_, record) => {
+          const { color, label } = deriveInsuranceStatus(record.insuranceExpiry);
+          return (
+            <Tag color={color}>
+              <SafetyOutlined style={{ marginRight: 4 }} />
+              {label}
+            </Tag>
+          );
+        },
       },
       {
         title: "Status",
