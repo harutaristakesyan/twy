@@ -1,10 +1,9 @@
 import {
   BranchesOutlined,
   CarOutlined,
-  LineChartOutlined,
   TeamOutlined,
   TruckOutlined,
-  UserSwitchOutlined,
+  UsergroupAddOutlined,
 } from "@ant-design/icons";
 import { Flex, Layout, Menu, type MenuProps, Typography } from "antd";
 import type React from "react";
@@ -46,7 +45,12 @@ const Sidebar: React.FC = () => {
     label: string;
     resources: Resource[];
   }> = [
-    { key: "/", icon: <LineChartOutlined />, label: "Users", resources: ["users"] },
+    {
+      key: "/user-management",
+      icon: <UsergroupAddOutlined />,
+      label: "User Management",
+      resources: ["users", "teams"],
+    },
     { key: "/branches", icon: <BranchesOutlined />, label: "Branches", resources: ["branches"] },
     { key: "/loads", icon: <TruckOutlined />, label: "Loads", resources: ["loads"] },
     {
@@ -61,7 +65,6 @@ const Sidebar: React.FC = () => {
       label: "Carriers",
       resources: ["carriers_twy", "carriers_outside", "carriers_requests"],
     },
-    { key: "/teams", icon: <UserSwitchOutlined />, label: "Teams", resources: ["teams"] },
   ];
 
   const filteredItems = allMenuItems.filter((item) =>
