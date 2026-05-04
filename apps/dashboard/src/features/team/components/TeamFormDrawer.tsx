@@ -1,6 +1,6 @@
 import { Button, Divider, Drawer, Form, Input, message, Space, Switch, Typography } from "antd";
 import type React from "react";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { emptyPermissionsMap, normalizePermissionsMap } from "@/utils/permissions";
 import { createTeam, updateTeam } from "../api/teamApi";
@@ -20,6 +20,20 @@ interface TeamFormDrawerProps {
 const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, onSuccess }) => {
   const [form] = Form.useForm<TeamFormData>();
   const isEdit = !!team;
+
+  useEffect(() => {
+    if (!open) return;
+    form.resetFields();
+    if (team) {
+      form.setFieldsValue({
+        name: team.name,
+        description: team.description ?? undefined,
+        branchRestricted: team.branchRestricted,
+        onlyOwnData: team.onlyOwnData,
+        permissions: normalizePermissionsMap(team.permissions),
+      });
+    }
+  }, [open, team, form]);
 
   const handleClose = useCallback(() => {
     form.resetFields();
