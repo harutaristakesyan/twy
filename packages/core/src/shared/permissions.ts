@@ -15,23 +15,11 @@ export const assertPermission = (
   }
 };
 
-/** List broker request queue: dedicated permission or outside-broker admins (view+edit). */
-export const assertBrokerRequestsView = (ctx: UserPermissionsContext): void => {
-  const p = ctx.permissions;
-  if (p.brokers_requests?.view || (p.brokers?.view && p.brokers?.edit)) {
-    return;
-  }
-  throw new createError.Forbidden("Forbidden");
-};
+export const assertBrokerRequestsView = (ctx: UserPermissionsContext): void =>
+  assertPermission(ctx, "brokers_requests", "view");
 
-/** Approve/reject broker requests: dedicated permission or outside-broker edit. */
-export const assertBrokerRequestsEdit = (ctx: UserPermissionsContext): void => {
-  const p = ctx.permissions;
-  if (p.brokers_requests?.edit || p.brokers?.edit) {
-    return;
-  }
-  throw new createError.Forbidden("Forbidden");
-};
+export const assertBrokerRequestsEdit = (ctx: UserPermissionsContext): void =>
+  assertPermission(ctx, "brokers_requests", "edit");
 
 export const buildScope = (ctx: UserPermissionsContext) => ({
   branchId: ctx.branchRestricted ? (ctx.branchId ?? undefined) : undefined,

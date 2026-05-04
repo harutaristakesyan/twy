@@ -50,14 +50,10 @@ export function normalizePermissionsMap(
   return base;
 }
 
-/** Broker request queue: explicit resource, or full outside-broker admins (view+edit). */
 export function canViewBrokerRequests(permissions: PermissionsMap): boolean {
-  return (
-    !!permissions.brokers_requests?.view ||
-    (!!permissions.brokers?.view && !!permissions.brokers?.edit)
-  );
+  return !!permissions.brokers_requests?.view;
 }
 
 export function canEditBrokerRequests(permissions: PermissionsMap): boolean {
-  return !!permissions.brokers_requests?.edit || !!permissions.brokers?.edit;
+  return !!permissions.brokers_requests?.edit;
 }

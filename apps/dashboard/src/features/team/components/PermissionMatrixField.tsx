@@ -37,7 +37,7 @@ interface PermissionMatrixFieldProps {
   onChange?: (value: PermissionsMap) => void;
 }
 
-// add → requires edit + view; edit → requires view.
+// edit → requires add + view; add → requires view.
 // Cascade: checking a permission enables its prerequisites; unchecking disables dependents.
 function cascade(
   action: Action,
@@ -46,11 +46,11 @@ function cascade(
 ): Record<Action, boolean> {
   const r = { ...row, [action]: checked };
   if (checked) {
-    if (action === "add") {
-      r.edit = true;
+    if (action === "edit") {
+      r.add = true;
       r.view = true;
     }
-    if (action === "edit") {
+    if (action === "add") {
       r.view = true;
     }
   } else {
@@ -58,8 +58,8 @@ function cascade(
       r.edit = false;
       r.add = false;
     }
-    if (action === "edit") {
-      r.add = false;
+    if (action === "add") {
+      r.edit = false;
     }
   }
   return r;
