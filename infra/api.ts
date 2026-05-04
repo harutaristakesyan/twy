@@ -71,7 +71,7 @@ export function createApi(args: CreateApiArgs) {
         link: links,
         architecture: "arm64",
         runtime: "nodejs24.x",
-        memory: "256 MB",
+        memory: "512 MB",
         timeout: "15 seconds",
         logging: { retention: "3 days" },
       },
