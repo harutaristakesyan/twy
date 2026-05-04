@@ -14,7 +14,9 @@ export interface BrokerRequestResponse {
   creditLimit: number | null;
   status: BrokerRequestStatus;
   submittedBy: string | null;
+  submittedByName: string | null;
   reviewedBy: string | null;
+  reviewedByName: string | null;
   reviewedAt: string | null;
   rejectionReason: string | null;
   resultBrokerId: string | null;

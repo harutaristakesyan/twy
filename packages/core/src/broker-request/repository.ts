@@ -5,8 +5,10 @@ import {
   db,
   type OrderDirection,
   outsideBroker,
+  users,
 } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import createError from "http-errors";
 import type { BrokerRequestResponse } from "./response.js";
 
@@ -46,6 +48,18 @@ const sortColumn = (field: ListBrokerRequestsInput["sortField"]) => {
   }
 };
 
+const submitter = alias(users, "submitter");
+const reviewer = alias(users, "reviewer");
+
+const fullName = (
+  first: string | null,
+  last: string | null,
+  email: string | null,
+): string | null => {
+  const parts = [first, last].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : (email ?? null);
+};
+
 const mapRow = (row: {
   id: string;
   brokerName: string;
@@ -60,7 +74,13 @@ const mapRow = (row: {
   creditLimit: string | null;
   status: BrokerRequestStatus;
   submittedBy: string | null;
+  submitterFirstName: string | null;
+  submitterLastName: string | null;
+  submitterEmail: string | null;
   reviewedBy: string | null;
+  reviewerFirstName: string | null;
+  reviewerLastName: string | null;
+  reviewerEmail: string | null;
   reviewedAt: Date | null;
   rejectionReason: string | null;
   resultBrokerId: string | null;
@@ -80,7 +100,9 @@ const mapRow = (row: {
   creditLimit: row.creditLimit !== null ? Number(row.creditLimit) : null,
   status: row.status,
   submittedBy: row.submittedBy,
+  submittedByName: fullName(row.submitterFirstName, row.submitterLastName, row.submitterEmail),
   reviewedBy: row.reviewedBy,
+  reviewedByName: fullName(row.reviewerFirstName, row.reviewerLastName, row.reviewerEmail),
   reviewedAt: row.reviewedAt?.toISOString() ?? null,
   rejectionReason: row.rejectionReason,
   resultBrokerId: row.resultBrokerId,
@@ -128,7 +150,13 @@ export const listBrokerRequests = async (input: ListBrokerRequestsInput) => {
         creditLimit: brokerRequest.creditLimit,
         status: brokerRequest.status,
         submittedBy: brokerRequest.submittedBy,
+        submitterFirstName: submitter.firstName,
+        submitterLastName: submitter.lastName,
+        submitterEmail: submitter.email,
         reviewedBy: brokerRequest.reviewedBy,
+        reviewerFirstName: reviewer.firstName,
+        reviewerLastName: reviewer.lastName,
+        reviewerEmail: reviewer.email,
         reviewedAt: brokerRequest.reviewedAt,
         rejectionReason: brokerRequest.rejectionReason,
         resultBrokerId: brokerRequest.resultBrokerId,
@@ -136,6 +164,8 @@ export const listBrokerRequests = async (input: ListBrokerRequestsInput) => {
         updatedAt: brokerRequest.updatedAt,
       })
       .from(brokerRequest)
+      .leftJoin(submitter, eq(brokerRequest.submittedBy, submitter.id))
+      .leftJoin(reviewer, eq(brokerRequest.reviewedBy, reviewer.id))
       .where(whereClause)
       .orderBy(direction(orderCol))
       .limit(input.limit)
