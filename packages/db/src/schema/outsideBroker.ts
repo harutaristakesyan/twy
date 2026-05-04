@@ -1,5 +1,4 @@
 import { boolean, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { branch } from "./branch.js";
 import { users } from "./users.js";
 
 export const brokerStatusValues = ["approved", "pending", "denied"] as const;
@@ -15,7 +14,6 @@ export const outsideBroker = pgTable("outside_broker", {
   address: text(),
   notes: text(),
   status: text().$type<BrokerStatus>().notNull().default("pending"),
-  branchId: uuid().references(() => branch.id, { onDelete: "set null" }),
   creditLimitUnlimited: boolean().notNull().default(true),
   creditLimit: numeric({ precision: 10, scale: 2 }),
   createdBy: uuid().references(() => users.id, { onDelete: "restrict" }),
