@@ -5,7 +5,7 @@ import {
 import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
-  getFullUserInfoById,
+  getUserEmail,
   type SelfUpdateUserEvent,
   SelfUpdateUserEventSchema,
   updateSelfUser as updateSelfUserRecord,
@@ -21,10 +21,6 @@ const updateSelfUser = async (event: SelfUpdateUserEvent): Promise<MessageRespon
   const { userId } = event.requestContext.authUser;
   const { firstName, lastName } = event.body;
 
-  const userDetails = await getFullUserInfoById(userId);
-
-  await updateSelfUserRecord(userId, { firstName, lastName });
-
   const cognitoAttributes = [];
 
   if (typeof firstName !== "undefined" && firstName !== null) {
@@ -35,11 +31,16 @@ const updateSelfUser = async (event: SelfUpdateUserEvent): Promise<MessageRespon
     cognitoAttributes.push({ Name: "family_name", Value: lastName });
   }
 
+  const [email] = await Promise.all([
+    getUserEmail(userId),
+    updateSelfUserRecord(userId, { firstName, lastName }),
+  ]);
+
   if (cognitoAttributes.length > 0) {
     await cognitoClient.send(
       new AdminUpdateUserAttributesCommand({
         UserPoolId: userPoolId,
-        Username: userDetails.email,
+        Username: email,
         UserAttributes: cognitoAttributes,
       }),
     );

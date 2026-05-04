@@ -56,6 +56,16 @@ const ensureTeamExists = async (executor: Executor, teamId: string): Promise<voi
   }
 };
 
+export const getUserEmail = async (userId: string): Promise<string> => {
+  const [row] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId));
+
+  if (!row) {
+    throw new createError.NotFound("User not found");
+  }
+
+  return row.email;
+};
+
 export const getFullUserInfoById = async (userId: string) => {
   const [row] = await db
     .select({

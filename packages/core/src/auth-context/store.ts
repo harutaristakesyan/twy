@@ -23,10 +23,10 @@ export const getCachedAuthContext = async (
   const item = result.Item;
   if (
     !item ||
-    typeof item["userId"] !== "string" ||
-    typeof item["permissions"] !== "object" ||
-    typeof item["branchRestricted"] !== "boolean" ||
-    typeof item["onlyOwnData"] !== "boolean"
+    typeof item.userId !== "string" ||
+    typeof item.permissions !== "object" ||
+    typeof item.branchRestricted !== "boolean" ||
+    typeof item.onlyOwnData !== "boolean"
   ) {
     return null;
   }
