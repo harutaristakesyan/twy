@@ -25,7 +25,7 @@ export interface CurrentUser {
   branch: {
     id: string;
     name: string;
-  };
+  } | null;
   registeredDate: string;
 }
 
@@ -34,7 +34,7 @@ export interface UserFormData {
   lastName: string;
   email: string;
   isActive: boolean;
-  branch: string;
+  branch?: string | null;
   teamId?: string | null;
 }
 

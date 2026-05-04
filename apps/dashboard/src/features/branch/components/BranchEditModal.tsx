@@ -79,7 +79,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
     <Modal title="Edit Branch" open={open} onCancel={handleCancel} footer={null} width={600}>
       <Alert
         message="Branch Information"
-        description="Update branch details. Branch name and owner are required."
+        description="Update branch details. Branch name is required; owner is optional."
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
@@ -122,20 +122,21 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
           />
         </Form.Item>
 
-        <Form.Item
-          name="owner"
-          label="Branch Owner"
-          rules={[{ required: true, message: "Please select a branch owner" }]}
-        >
+        <Form.Item name="owner" label="Branch Owner (optional)">
           <Select
             placeholder="Select branch owner"
             loading={loadingOwners}
+            allowClear
             showSearch
             optionLabelProp="label"
-            filterOption={(input, option) =>
-              (option?.label ?? "").toLowerCase().includes(input.toLowerCase()) ||
-              (option?.email ?? "").toLowerCase().includes(input.toLowerCase())
-            }
+            filterOption={(input, option) => {
+              const label = String(option?.label ?? "");
+              const email = String(option?.email ?? "");
+              return (
+                label.toLowerCase().includes(input.toLowerCase()) ||
+                email.toLowerCase().includes(input.toLowerCase())
+              );
+            }}
           >
             {owners.map((owner) => (
               <Option

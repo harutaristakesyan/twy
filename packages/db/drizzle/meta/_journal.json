@@ -15,6 +15,13 @@
       "when": 1777847392881,
       "tag": "0001_fix_twy_team",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777885926796,
+      "tag": "0002_aberrant_galactus",
+      "breakpoints": true
     }
   ]
 }

@@ -60,7 +60,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
     <Modal title="Create New Branch" open={open} onCancel={handleCancel} footer={null} width={600}>
       <Alert
         message="Branch Creation"
-        description="Create a new branch. Branch name and owner are required."
+        description="Create a new branch. Only the branch name is required."
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
@@ -95,14 +95,11 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
           />
         </Form.Item>
 
-        <Form.Item
-          name="owner"
-          label="Branch Owner"
-          rules={[{ required: true, message: "Please select a branch owner" }]}
-        >
+        <Form.Item name="owner" label="Branch Owner (optional)">
           <Select
             placeholder="Select branch owner"
             loading={loadingOwners}
+            allowClear
             showSearch
             optionLabelProp="label"
             filterOption={(input, option) => {

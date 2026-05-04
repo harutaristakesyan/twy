@@ -3,7 +3,7 @@ import { AuthContext } from "../shared/auth.js";
 
 const BranchBaseSchema = z.object({
   name: z.string().trim().min(1, "Branch name is required"),
-  owner: z.string().trim().min(1, "Owner is required"),
+  owner: z.uuid().nullable().optional(),
   contact: z.string().trim().min(1).optional(),
 });
 
@@ -55,7 +55,7 @@ export type CreateBranchEvent = z.infer<typeof CreateBranchEventSchema>;
 const UpdateBranchPayloadSchema = z
   .object({
     name: z.string().trim().min(1).optional(),
-    owner: z.string().trim().min(1).nullable().optional(),
+    owner: z.uuid().nullable().optional(),
     contact: z.string().trim().min(1).nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {

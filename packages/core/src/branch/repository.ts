@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { branch, db, type OrderDirection, users } from "@twy/db";
-import { and, asc, count, desc, eq, ilike, ne, or } from "drizzle-orm";
+import { asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
 
 export interface BranchOwner {
@@ -21,7 +21,7 @@ export interface Branch {
 export interface NewBranchInput {
   name: string;
   contact?: string | null;
-  ownerId: string;
+  ownerId?: string | null;
 }
 
 export interface UpdateBranchInput {
@@ -50,32 +50,6 @@ const ensureOwnerExists = async (executor: Executor, ownerId: string): Promise<v
   if (!existing) {
     throw new createError.NotFound("Owner not found");
   }
-};
-
-const assignOwner = async (
-  executor: Executor,
-  branchId: string,
-  ownerId: string | null,
-): Promise<void> => {
-  if (ownerId === null) {
-    await executor
-      .update(users)
-      .set({ branch: null, updatedAt: new Date() })
-      .where(eq(users.branch, branchId));
-    return;
-  }
-
-  await ensureOwnerExists(executor, ownerId);
-
-  await executor
-    .update(users)
-    .set({ branch: null, updatedAt: new Date() })
-    .where(and(eq(users.branch, branchId), ne(users.id, ownerId)));
-
-  await executor
-    .update(users)
-    .set({ branch: branchId, updatedAt: new Date() })
-    .where(eq(users.id, ownerId));
 };
 
 const sortColumn = (field: ListBranchesInput["sortField"]) => {
@@ -133,7 +107,7 @@ export const listBranches = async (input: ListBranchesInput) => {
         ownerEmail: owner.email,
       })
       .from(branch)
-      .leftJoin(owner, eq(owner.branch, branch.id))
+      .leftJoin(owner, eq(owner.id, branch.ownerId))
       .where(searchClause)
       .orderBy(direction(orderColumn))
       .limit(input.limit)
@@ -149,7 +123,9 @@ export const listBranches = async (input: ListBranchesInput) => {
 
 export const createBranch = async (input: NewBranchInput) =>
   db.transaction(async (tx) => {
-    await ensureOwnerExists(tx, input.ownerId);
+    if (input.ownerId) {
+      await ensureOwnerExists(tx, input.ownerId);
+    }
 
     const branchId = randomUUID();
 
@@ -157,9 +133,15 @@ export const createBranch = async (input: NewBranchInput) =>
       id: branchId,
       name: input.name,
       contact: input.contact ?? null,
+      ownerId: input.ownerId ?? null,
     });
 
-    await assignOwner(tx, branchId, input.ownerId);
+    if (input.ownerId) {
+      await tx
+        .update(users)
+        .set({ branch: branchId, updatedAt: new Date() })
+        .where(eq(users.id, input.ownerId));
+    }
   });
 
 export const updateBranch = async (branchId: string, input: UpdateBranchInput) =>
@@ -183,18 +165,24 @@ export const updateBranch = async (branchId: string, input: UpdateBranchInput) =
       updatePayload.contact = input.contact ?? null;
     }
 
-    if (Object.keys(updatePayload).length > 0) {
-      await tx
-        .update(branch)
-        .set({ ...updatePayload, updatedAt: new Date() })
-        .where(eq(branch.id, branchId));
-    }
-
     if (Object.hasOwn(input, "ownerId")) {
-      await assignOwner(tx, branchId, input.ownerId ?? null);
+      const newOwnerId = input.ownerId ?? null;
+      if (newOwnerId) {
+        await ensureOwnerExists(tx, newOwnerId);
+        await tx
+          .update(users)
+          .set({ branch: branchId, updatedAt: new Date() })
+          .where(eq(users.id, newOwnerId));
+      }
+      updatePayload.ownerId = newOwnerId;
     }
 
-    return true;
+    await tx
+      .update(branch)
+      .set({ ...updatePayload, updatedAt: new Date() })
+      .where(eq(branch.id, branchId));
+
+    return true as const;
   });
 
 export const deleteBranch = async (branchId: string): Promise<boolean> =>
@@ -207,11 +195,6 @@ export const deleteBranch = async (branchId: string): Promise<boolean> =>
     if (!existing) {
       return false;
     }
-
-    await tx
-      .update(users)
-      .set({ branch: null, updatedAt: new Date() })
-      .where(eq(users.branch, branchId));
 
     await tx.delete(branch).where(eq(branch.id, branchId));
 

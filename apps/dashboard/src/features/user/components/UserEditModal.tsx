@@ -99,7 +99,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
 
   interface UserEditFormValues {
     isActive: boolean;
-    branch: string;
+    branch?: string | null;
     teamId?: string | null;
   }
 
@@ -195,13 +195,10 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
         <Divider />
 
         {/* Editable fields */}
-        <Form.Item
-          name="branch"
-          label="Branch"
-          rules={[{ required: true, message: "Please select a branch" }]}
-        >
+        <Form.Item name="branch" label="Branch (optional)">
           <Select
             placeholder="Search and select branch"
+            allowClear
             showSearch
             filterOption={false}
             onSearch={handleBranchSearch}

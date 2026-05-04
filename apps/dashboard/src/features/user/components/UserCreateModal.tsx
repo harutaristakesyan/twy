@@ -119,7 +119,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuc
     <Modal title="Create New User" open={open} onCancel={handleCancel} footer={null} width={600}>
       <Alert
         message="User Creation"
-        description="All fields are required. The user will receive an email with login credentials."
+        description="First name, last name, and email are required. The user will receive an email with login credentials."
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
@@ -159,13 +159,10 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuc
           <Input placeholder="Enter email address" id="create-email" />
         </Form.Item>
 
-        <Form.Item
-          name="branch"
-          label="Branch"
-          rules={[{ required: true, message: "Please select a branch" }]}
-        >
+        <Form.Item name="branch" label="Branch (optional)">
           <Select
             placeholder="Search and select branch"
+            allowClear
             showSearch
             filterOption={false}
             onSearch={handleBranchSearch}

@@ -53,7 +53,6 @@ export function useBranchColumns(
           ) : (
             <Tag color="default">No Owner</Tag>
           ),
-        sorter: true,
       },
       {
         title: "Contact",
