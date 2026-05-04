@@ -56,7 +56,6 @@ export const SubmitBrokerRequestEventSchema = z.object({
     email: z.string().trim().email().optional(),
     address: z.string().trim().optional(),
     notes: z.string().trim().optional(),
-    branchId: uuidField.optional(),
     creditLimitUnlimited: z.boolean().default(true),
     creditLimit: z.number().positive().nullable().optional(),
   }),

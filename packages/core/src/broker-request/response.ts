@@ -9,7 +9,6 @@ export interface BrokerRequestResponse {
   email: string | null;
   address: string | null;
   notes: string | null;
-  branchId: string | null;
   creditLimitUnlimited: boolean;
   creditLimit: number | null;
   status: BrokerRequestStatus;

@@ -29,7 +29,6 @@ export interface SubmitBrokerRequestInput {
   email?: string | null;
   address?: string | null;
   notes?: string | null;
-  branchId?: string | null;
   creditLimitUnlimited: boolean;
   creditLimit?: number | null;
   submittedBy: string;
@@ -69,7 +68,6 @@ const mapRow = (row: {
   email: string | null;
   address: string | null;
   notes: string | null;
-  branchId: string | null;
   creditLimitUnlimited: boolean;
   creditLimit: string | null;
   status: BrokerRequestStatus;
@@ -95,7 +93,6 @@ const mapRow = (row: {
   email: row.email,
   address: row.address,
   notes: row.notes,
-  branchId: row.branchId,
   creditLimitUnlimited: row.creditLimitUnlimited,
   creditLimit: row.creditLimit !== null ? Number(row.creditLimit) : null,
   status: row.status,
@@ -145,7 +142,6 @@ export const listBrokerRequests = async (input: ListBrokerRequestsInput) => {
         email: brokerRequest.email,
         address: brokerRequest.address,
         notes: brokerRequest.notes,
-        branchId: brokerRequest.branchId,
         creditLimitUnlimited: brokerRequest.creditLimitUnlimited,
         creditLimit: brokerRequest.creditLimit,
         status: brokerRequest.status,
@@ -190,7 +186,6 @@ export const createBrokerRequest = async (input: SubmitBrokerRequestInput): Prom
     email: input.email ?? null,
     address: input.address ?? null,
     notes: input.notes ?? null,
-    branchId: input.branchId ?? null,
     creditLimitUnlimited: input.creditLimitUnlimited,
     creditLimit:
       !input.creditLimitUnlimited && input.creditLimit != null
@@ -236,7 +231,6 @@ export const approveBrokerRequest = async (
       address: row.address,
       notes: row.notes,
       status: "approved",
-      branchId: row.branchId,
       creditLimitUnlimited: row.creditLimitUnlimited,
       creditLimit: row.creditLimit,
       createdBy: reviewerUserId,
