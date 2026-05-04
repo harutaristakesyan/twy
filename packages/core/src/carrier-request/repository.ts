@@ -7,8 +7,10 @@ import {
   db,
   type InsuranceStatus,
   type OrderDirection,
+  users,
 } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import createError from "http-errors";
 import type { CarrierRequestResponse } from "./response.js";
 
@@ -47,6 +49,18 @@ const sortColumn = (field: ListCarrierRequestsInput["sortField"]) => {
   }
 };
 
+const submitter = alias(users, "submitter");
+const reviewer = alias(users, "reviewer");
+
+const fullName = (
+  first: string | null,
+  last: string | null,
+  email: string | null,
+): string | null => {
+  const parts = [first, last].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : (email ?? null);
+};
+
 const mapRow = (row: {
   id: string;
   kind: CarrierKind;
@@ -60,7 +74,13 @@ const mapRow = (row: {
   notes: string | null;
   status: CarrierRequestStatus;
   submittedBy: string | null;
+  submitterFirstName: string | null;
+  submitterLastName: string | null;
+  submitterEmail: string | null;
   reviewedBy: string | null;
+  reviewerFirstName: string | null;
+  reviewerLastName: string | null;
+  reviewerEmail: string | null;
   reviewedAt: Date | null;
   rejectionReason: string | null;
   resultCarrierId: string | null;
@@ -79,7 +99,9 @@ const mapRow = (row: {
   notes: row.notes,
   status: row.status,
   submittedBy: row.submittedBy,
+  submittedByName: fullName(row.submitterFirstName, row.submitterLastName, row.submitterEmail),
   reviewedBy: row.reviewedBy,
+  reviewedByName: fullName(row.reviewerFirstName, row.reviewerLastName, row.reviewerEmail),
   reviewedAt: row.reviewedAt?.toISOString() ?? null,
   rejectionReason: row.rejectionReason,
   resultCarrierId: row.resultCarrierId,
@@ -118,7 +140,13 @@ export const listCarrierRequests = async (input: ListCarrierRequestsInput) => {
         notes: carrierRequest.notes,
         status: carrierRequest.status,
         submittedBy: carrierRequest.submittedBy,
+        submitterFirstName: submitter.firstName,
+        submitterLastName: submitter.lastName,
+        submitterEmail: submitter.email,
         reviewedBy: carrierRequest.reviewedBy,
+        reviewerFirstName: reviewer.firstName,
+        reviewerLastName: reviewer.lastName,
+        reviewerEmail: reviewer.email,
         reviewedAt: carrierRequest.reviewedAt,
         rejectionReason: carrierRequest.rejectionReason,
         resultCarrierId: carrierRequest.resultCarrierId,
@@ -126,6 +154,8 @@ export const listCarrierRequests = async (input: ListCarrierRequestsInput) => {
         updatedAt: carrierRequest.updatedAt,
       })
       .from(carrierRequest)
+      .leftJoin(submitter, eq(carrierRequest.submittedBy, submitter.id))
+      .leftJoin(reviewer, eq(carrierRequest.reviewedBy, reviewer.id))
       .where(whereClause)
       .orderBy(direction(orderCol))
       .limit(input.limit)

@@ -13,7 +13,9 @@ export interface CarrierRequestResponse {
   notes: string | null;
   status: CarrierRequestStatus;
   submittedBy: string | null;
+  submittedByName: string | null;
   reviewedBy: string | null;
+  reviewedByName: string | null;
   reviewedAt: string | null;
   rejectionReason: string | null;
   resultCarrierId: string | null;
