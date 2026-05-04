@@ -15,6 +15,8 @@ export interface LoadResponse {
   referenceNumber: string;
   customerRate: number | null;
   contactName: string;
+  paymentMethod: string;
+  paymentTerms: string;
   carrier: string | null;
   carrierPaymentMethod: string | null;
   carrierRate: number;

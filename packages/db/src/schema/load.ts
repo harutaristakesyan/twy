@@ -22,6 +22,8 @@ export const load = pgTable("load", {
   referenceNumber: text().notNull(),
   customerRate: numeric({ precision: 10, scale: 2 }),
   contactName: text().notNull(),
+  paymentMethod: text(),
+  paymentTerms: text(),
 
   carrier: text(),
   carrierPaymentMethod: text(),

@@ -105,6 +105,8 @@ const CreateLoadPage: React.FC = () => {
         referenceNumber: values.referenceNumber,
         customerRate: toNumberOrNull(values.customerRate, "customerRate"),
         contactName: values.contactName,
+        paymentMethod: values.paymentMethod,
+        paymentTerms: values.paymentTerms,
         carrier: toNullableString(values.carrier),
         carrierPaymentMethod: toNullableString(values.carrierPaymentMethod),
         carrierRate: toNumberOrNull(values.carrierRate, "carrierRate"),
@@ -180,7 +182,14 @@ const CreateLoadPage: React.FC = () => {
   const getFieldsForStep = (step: number): (string | string[])[] => {
     switch (step) {
       case 0: // Customer Information
-        return ["customer", "referenceNumber", "contactName", "customerRate"];
+        return [
+          "customer",
+          "referenceNumber",
+          "contactName",
+          "customerRate",
+          "paymentMethod",
+          "paymentTerms",
+        ];
       case 1: // Carrier Information
         return ["carrierRate"];
       case 2: // Service Information
@@ -258,6 +267,20 @@ const CreateLoadPage: React.FC = () => {
               rules={[{ required: true, message: "Please enter contact name" }]}
             >
               <Input placeholder="Enter contact name" size="large" />
+            </Form.Item>
+            <Form.Item
+              label="Payment Method"
+              name="paymentMethod"
+              rules={[{ required: true, message: "Please enter payment method" }]}
+            >
+              <Input placeholder="Enter payment method" size="large" />
+            </Form.Item>
+            <Form.Item
+              label="Payment Terms"
+              name="paymentTerms"
+              rules={[{ required: true, message: "Please enter payment terms" }]}
+            >
+              <Input placeholder="Enter payment terms" size="large" />
             </Form.Item>
           </>
         );

@@ -41,6 +41,8 @@ export interface LoadRecord {
   referenceNumber: string;
   customerRate: number | null;
   contactName: string;
+  paymentMethod: string;
+  paymentTerms: string;
   carrier: string | null;
   carrierPaymentMethod: string | null;
   carrierRate: number;
@@ -70,6 +72,8 @@ export type CreateLoadInput = {
   referenceNumber: string;
   customerRate?: number | null;
   contactName: string;
+  paymentMethod: string;
+  paymentTerms: string;
   carrier?: string | null;
   carrierPaymentMethod?: string | null;
   carrierRate: number;
@@ -202,6 +206,8 @@ const mapLoadRow = (row: LoadRow, files: LoadFileRecord[]): LoadRecord => ({
   referenceNumber: row.referenceNumber,
   customerRate: numericToNumber(row.customerRate),
   contactName: row.contactName,
+  paymentMethod: row.paymentMethod ?? "",
+  paymentTerms: row.paymentTerms ?? "",
   carrier: row.carrier ?? null,
   carrierPaymentMethod: row.carrierPaymentMethod ?? null,
   carrierRate: Number(row.carrierRate),
@@ -319,6 +325,8 @@ export const createLoad = async (input: CreateLoadInput): Promise<string> =>
       referenceNumber: input.referenceNumber,
       customerRate: input.customerRate == null ? null : input.customerRate.toString(),
       contactName: input.contactName,
+      paymentMethod: input.paymentMethod,
+      paymentTerms: input.paymentTerms,
       carrier: input.carrier ?? null,
       carrierPaymentMethod: input.carrierPaymentMethod ?? null,
       carrierRate: input.carrierRate.toString(),
@@ -380,6 +388,9 @@ export const updateLoad = async (loadId: string, input: UpdateLoad): Promise<boo
       updatePayload.customerRate =
         input.customerRate == null ? null : input.customerRate.toString();
     if (typeof input.contactName !== "undefined") updatePayload.contactName = input.contactName;
+    if (typeof input.paymentMethod !== "undefined")
+      updatePayload.paymentMethod = input.paymentMethod;
+    if (typeof input.paymentTerms !== "undefined") updatePayload.paymentTerms = input.paymentTerms;
     if (typeof input.carrier !== "undefined") updatePayload.carrier = input.carrier ?? null;
     if (typeof input.carrierPaymentMethod !== "undefined")
       updatePayload.carrierPaymentMethod = input.carrierPaymentMethod ?? null;

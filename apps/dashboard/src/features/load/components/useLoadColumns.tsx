@@ -76,6 +76,20 @@ export function useLoadColumns(
         render: (text) => text || "-",
       },
       {
+        title: "Payment Method",
+        dataIndex: "paymentMethod",
+        key: "paymentMethod",
+        width: 140,
+        render: (text) => text || "-",
+      },
+      {
+        title: "Payment Terms",
+        dataIndex: "paymentTerms",
+        key: "paymentTerms",
+        width: 140,
+        render: (text) => text || "-",
+      },
+      {
         title: "Load Type",
         dataIndex: "loadType",
         key: "loadType",

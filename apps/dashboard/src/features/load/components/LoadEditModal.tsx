@@ -133,6 +133,8 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
         referenceNumber: values.referenceNumber,
         customerRate: toNumberOrNull(values.customerRate, "customerRate"),
         contactName: values.contactName,
+        paymentMethod: values.paymentMethod,
+        paymentTerms: values.paymentTerms,
         carrier: toNullableString(values.carrier),
         carrierPaymentMethod: toNullableString(values.carrierPaymentMethod),
         carrierRate: toNumberOrNull(values.carrierRate, "carrierRate"),
@@ -213,7 +215,14 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
   const getFieldsForStep = (step: number): (string | string[])[] => {
     switch (step) {
       case 0: // Customer Information
-        return ["customer", "referenceNumber", "contactName", "customerRate"];
+        return [
+          "customer",
+          "referenceNumber",
+          "contactName",
+          "customerRate",
+          "paymentMethod",
+          "paymentTerms",
+        ];
       case 1: // Carrier Information
         return ["carrierRate"];
       case 2: // Service Information
@@ -285,6 +294,20 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
               rules={[{ required: true, message: "Please enter contact name" }]}
             >
               <Input placeholder="Enter contact name" />
+            </Form.Item>
+            <Form.Item
+              label="Payment Method"
+              name="paymentMethod"
+              rules={[{ required: true, message: "Please enter payment method" }]}
+            >
+              <Input placeholder="Enter payment method" />
+            </Form.Item>
+            <Form.Item
+              label="Payment Terms"
+              name="paymentTerms"
+              rules={[{ required: true, message: "Please enter payment terms" }]}
+            >
+              <Input placeholder="Enter payment terms" />
             </Form.Item>
           </>
         );

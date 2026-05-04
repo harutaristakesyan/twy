@@ -22,6 +22,8 @@ const LoadBaseSchema = z.object({
   referenceNumber: z.string().trim().min(1, "Reference Number is required"),
   customerRate: z.number().nonnegative("Customer Rate cannot be negative"),
   contactName: z.string().trim().min(1, "Contact Name is required"),
+  paymentMethod: z.string().trim().min(1, "Payment Method is required"),
+  paymentTerms: z.string().trim().min(1, "Payment Terms is required"),
   carrier: z.string().trim().nullable().optional(),
   carrierPaymentMethod: z.string().trim().nullable().optional(),
   carrierRate: z.number().nonnegative("Carrier Rate cannot be negative"),
