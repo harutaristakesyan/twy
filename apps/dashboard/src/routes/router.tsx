@@ -17,9 +17,8 @@ import BrokerRequestsTab from "@/features/outside-broker/pages/BrokerRequestsTab
 import OutsideBrokersIndexRedirect from "@/features/outside-broker/pages/OutsideBrokersIndexRedirect";
 import OutsideBrokersLayout from "@/features/outside-broker/pages/OutsideBrokersLayout";
 import OutsideBrokersPage from "@/features/outside-broker/pages/OutsideBrokersPage";
-import TeamsPage from "@/features/team/pages/TeamsPage";
 import ProfilePage from "@/features/user/pages/ProfilePage";
-import UsersPage from "@/features/user/pages/UsersPage";
+import UserManagementPage from "@/features/user/pages/UserManagementPage";
 import AppLayout from "@/layouts/AppLayout.tsx";
 import ProtectedRoute from "@/routes/ProtectedRoute";
 import RequireBrokerRequestsView from "@/routes/RequireBrokerRequestsView";
@@ -41,13 +40,10 @@ export const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
+          { index: true, element: <Navigate to="/user-management" replace /> },
           {
-            index: true,
-            element: (
-              <RequirePermission resource="users" action="view">
-                <UsersPage />
-              </RequirePermission>
-            ),
+            path: "user-management",
+            element: <UserManagementPage />,
           },
           {
             path: "branches",
@@ -127,20 +123,12 @@ export const router = createBrowserRouter([
               },
             ],
           },
-          {
-            path: "teams",
-            element: (
-              <RequirePermission resource="teams" action="view">
-                <TeamsPage />
-              </RequirePermission>
-            ),
-          },
           { path: "profile", element: <ProfilePage /> },
         ],
       },
     ],
   },
 
-  { path: "/home", element: <Navigate to="/" replace /> },
+  { path: "/home", element: <Navigate to="/user-management" replace /> },
   { path: "*", element: <NotFound /> },
 ]);
