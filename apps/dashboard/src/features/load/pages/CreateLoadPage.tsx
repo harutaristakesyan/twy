@@ -17,7 +17,8 @@ import type React from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadApi } from "@/features/load/api/loadApi";
-import type { CreateLoadDto, LoadFile } from "@/features/load/types/load";
+import { LoadStopsFormList } from "@/features/load/components/LoadStopsFormList";
+import type { CreateLoadDto, LoadFile, Location } from "@/features/load/types/load";
 import { fileApi } from "@/libs/fileApi";
 import { getErrorMessage } from "@/utils/errorUtils";
 
@@ -46,8 +47,8 @@ const CreateLoadPage: React.FC = () => {
     try {
       await form.validateFields(getFieldsForStep(currentStep));
       setCurrentStep(currentStep + 1);
-    } catch (error) {
-      console.error("Validation failed:", error);
+    } catch {
+      // validateFields failed — Ant Design shows field-level errors
     }
   };
 
@@ -61,8 +62,8 @@ const CreateLoadPage: React.FC = () => {
       await form.validateFields();
 
       const values = form.getFieldsValue(true);
-      const pickup = values.pickup || {};
-      const dropoff = values.dropoff || {};
+      const pickups = (values.pickups ?? []) as Location[];
+      const dropoffs = (values.dropoffs ?? []) as Location[];
 
       const toNumberOrNull = (value?: string, fieldName?: string): number | null | undefined => {
         if (value === undefined) return undefined;
@@ -93,7 +94,7 @@ const CreateLoadPage: React.FC = () => {
         return parsed;
       };
 
-      const toNullableString = (value?: string): string | null | undefined => {
+      const toNullableString = (value?: string | null): string | null | undefined => {
         if (value === undefined) return undefined;
         if (value === null) return null;
         const trimmed = value.trim();
@@ -119,20 +120,20 @@ const CreateLoadPage: React.FC = () => {
         soldAs: values.soldAs,
         weight: values.weight,
         temperature: toNullableString(values.temperature),
-        pickup: {
-          cityZipCode: toNullableString(pickup.cityZipCode),
-          phone: toNullableString(pickup.phone),
-          carrier: pickup.carrier,
-          name: pickup.name,
-          address: pickup.address,
-        },
-        dropoff: {
-          cityZipCode: toNullableString(dropoff.cityZipCode),
-          phone: toNullableString(dropoff.phone),
-          carrier: dropoff.carrier,
-          name: dropoff.name,
-          address: dropoff.address,
-        },
+        pickups: pickups.map((p) => ({
+          cityZipCode: toNullableString(p.cityZipCode),
+          phone: toNullableString(p.phone),
+          carrier: p.carrier,
+          name: p.name,
+          address: p.address,
+        })),
+        dropoffs: dropoffs.map((d) => ({
+          cityZipCode: toNullableString(d.cityZipCode),
+          phone: toNullableString(d.phone),
+          carrier: d.carrier,
+          name: d.name,
+          address: d.address,
+        })),
         files: uploadedFiles.length ? uploadedFiles : undefined,
       };
 
@@ -140,7 +141,6 @@ const CreateLoadPage: React.FC = () => {
       message.success("Load created successfully");
       navigate("/loads");
     } catch (error) {
-      console.error("Failed to create load:", error);
       message.error(getErrorMessage(error));
     } finally {
       setLoading(false);
@@ -166,7 +166,6 @@ const CreateLoadPage: React.FC = () => {
         type: file.type,
       };
     } catch (error) {
-      console.error("File upload failed:", error);
       message.error({ content: getErrorMessage(error), key: "upload" });
       return null;
     }
@@ -196,18 +195,23 @@ const CreateLoadPage: React.FC = () => {
         return ["loadType", "serviceType", "serviceGivenAs", "commodity"];
       case 3: // Booking Information
         return ["bookedAs", "soldAs", "weight"];
-      case 4: // Pick-up Location
-        return [
-          ["pickup", "carrier"],
-          ["pickup", "name"],
-          ["pickup", "address"],
-        ];
-      case 5: // Drop-off Location
-        return [
-          ["dropoff", "carrier"],
-          ["dropoff", "name"],
-          ["dropoff", "address"],
-        ];
+      case 4: {
+        // Pick-up stops (Form.List)
+        const list = (form.getFieldValue("pickups") ?? []) as unknown[];
+        return list.flatMap((_, i) => [
+          ["pickups", i, "carrier"],
+          ["pickups", i, "name"],
+          ["pickups", i, "address"],
+        ]);
+      }
+      case 5: {
+        const list = (form.getFieldValue("dropoffs") ?? []) as unknown[];
+        return list.flatMap((_, i) => [
+          ["dropoffs", i, "carrier"],
+          ["dropoffs", i, "name"],
+          ["dropoffs", i, "address"],
+        ]);
+      }
       case 6: // Files
         return [];
       default:
@@ -397,70 +401,10 @@ const CreateLoadPage: React.FC = () => {
         );
 
       case 4: // Pick-up Location
-        return (
-          <>
-            <Form.Item label="City / Zipcode" name={["pickup", "cityZipCode"]}>
-              <Input placeholder="Enter city or zipcode" size="large" />
-            </Form.Item>
-            <Form.Item label="Phone Number" name={["pickup", "phone"]}>
-              <Input placeholder="Enter phone number" size="large" />
-            </Form.Item>
-            <Form.Item
-              label="Select Carrier"
-              name={["pickup", "carrier"]}
-              rules={[{ required: true, message: "Please enter carrier" }]}
-            >
-              <Input placeholder="Enter carrier" size="large" />
-            </Form.Item>
-            <Form.Item
-              label="Name"
-              name={["pickup", "name"]}
-              rules={[{ required: true, message: "Please enter name" }]}
-            >
-              <Input placeholder="Enter name" size="large" />
-            </Form.Item>
-            <Form.Item
-              label="Address"
-              name={["pickup", "address"]}
-              rules={[{ required: true, message: "Please enter address" }]}
-            >
-              <Input.TextArea placeholder="Enter address" rows={3} size="large" />
-            </Form.Item>
-          </>
-        );
+        return <LoadStopsFormList name="pickups" legLabel="Pick-up" />;
 
       case 5: // Drop-off Location
-        return (
-          <>
-            <Form.Item label="City / Zipcode" name={["dropoff", "cityZipCode"]}>
-              <Input placeholder="Enter city or zipcode" size="large" />
-            </Form.Item>
-            <Form.Item label="Phone Number" name={["dropoff", "phone"]}>
-              <Input placeholder="Enter phone number" size="large" />
-            </Form.Item>
-            <Form.Item
-              label="Select Carrier"
-              name={["dropoff", "carrier"]}
-              rules={[{ required: true, message: "Please enter carrier" }]}
-            >
-              <Input placeholder="Enter carrier" size="large" />
-            </Form.Item>
-            <Form.Item
-              label="Name"
-              name={["dropoff", "name"]}
-              rules={[{ required: true, message: "Please enter name" }]}
-            >
-              <Input placeholder="Enter name" size="large" />
-            </Form.Item>
-            <Form.Item
-              label="Address"
-              name={["dropoff", "address"]}
-              rules={[{ required: true, message: "Please enter address" }]}
-            >
-              <Input.TextArea placeholder="Enter address" rows={3} size="large" />
-            </Form.Item>
-          </>
-        );
+        return <LoadStopsFormList name="dropoffs" legLabel="Drop-off" />;
 
       case 6: // Files
         return (
@@ -514,6 +458,24 @@ const CreateLoadPage: React.FC = () => {
           size="large"
           initialValues={{
             chargeServiceFeeToOffice: false,
+            pickups: [
+              {
+                cityZipCode: null,
+                phone: null,
+                carrier: "",
+                name: "",
+                address: "",
+              },
+            ],
+            dropoffs: [
+              {
+                cityZipCode: null,
+                phone: null,
+                carrier: "",
+                name: "",
+                address: "",
+              },
+            ],
           }}
         >
           {renderStepContent()}

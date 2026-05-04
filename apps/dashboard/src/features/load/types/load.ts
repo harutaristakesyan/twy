@@ -35,8 +35,8 @@ export interface Load {
   soldAs: string;
   weight: string;
   temperature?: string | null;
-  pickup: Location;
-  dropoff: Location;
+  pickups: Location[];
+  dropoffs: Location[];
   branchId: string;
   status: LoadStatus;
   statusChangedBy: string | null;
@@ -64,8 +64,8 @@ export interface CreateLoadDto {
   soldAs: string;
   weight: string;
   temperature?: string | null;
-  pickup: Location;
-  dropoff: Location;
+  pickups: Location[];
+  dropoffs: Location[];
   files?: LoadFile[];
 }
 

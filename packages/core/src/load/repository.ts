@@ -5,8 +5,10 @@ import {
   file,
   type LoadRow,
   type LoadStatus,
+  type LoadStopKind,
   load,
   loadFiles,
+  loadStop,
   type OrderDirection,
 } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
@@ -57,8 +59,8 @@ export interface LoadRecord {
   soldAs: string;
   weight: string;
   temperature: string | null;
-  pickup: LoadLocationRecord;
-  dropoff: LoadLocationRecord;
+  pickups: LoadLocationRecord[];
+  dropoffs: LoadLocationRecord[];
   branchId: string;
   status: LoadStatus;
   statusChangedBy: string | null;
@@ -86,16 +88,8 @@ export type CreateLoadInput = {
   soldAs: string;
   weight: string;
   temperature?: string | null;
-  pickupCityZipCode?: string | null;
-  pickupPhone?: string | null;
-  pickupCarrier: string;
-  pickupName: string;
-  pickupAddress: string;
-  dropoffCityZipCode?: string | null;
-  dropoffPhone?: string | null;
-  dropoffCarrier: string;
-  dropoffName: string;
-  dropoffAddress: string;
+  pickups: LoadLocationRecord[];
+  dropoffs: LoadLocationRecord[];
   branchId: string;
   createdBy: string;
   files?: LoadFileInput[] | undefined;
@@ -200,7 +194,79 @@ const fetchFilesForLoads = async (
   return grouped;
 };
 
-const mapLoadRow = (row: LoadRow, files: LoadFileRecord[]): LoadRecord => ({
+type LoadStopSelectRow = {
+  loadId: string;
+  kind: LoadStopKind;
+  sortOrder: number;
+  cityZipCode: string | null;
+  phone: string | null;
+  carrier: string;
+  name: string;
+  address: string;
+};
+
+const mapStopRowToLocation = (row: LoadStopSelectRow): LoadLocationRecord => ({
+  cityZipCode: row.cityZipCode ?? null,
+  phone: row.phone ?? null,
+  carrier: row.carrier,
+  name: row.name,
+  address: row.address,
+});
+
+const fetchStopsForLoads = async (
+  executor: Executor,
+  loadIds: string[],
+): Promise<Map<string, { pickups: LoadLocationRecord[]; dropoffs: LoadLocationRecord[] }>> => {
+  if (loadIds.length === 0) {
+    return new Map();
+  }
+
+  const rows = await executor.select().from(loadStop).where(inArray(loadStop.loadId, loadIds));
+
+  type Agg = { pickupRows: LoadStopSelectRow[]; dropoffRows: LoadStopSelectRow[] };
+  const grouped = new Map<string, Agg>();
+
+  for (const row of rows) {
+    const mapped: LoadStopSelectRow = {
+      loadId: row.loadId,
+      kind: row.kind,
+      sortOrder: row.sortOrder,
+      cityZipCode: row.cityZipCode ?? null,
+      phone: row.phone ?? null,
+      carrier: row.carrier,
+      name: row.name,
+      address: row.address,
+    };
+    const g = grouped.get(row.loadId) ?? { pickupRows: [], dropoffRows: [] };
+    if (row.kind === "pickup") {
+      g.pickupRows.push(mapped);
+    } else if (row.kind === "dropoff") {
+      g.dropoffRows.push(mapped);
+    }
+    grouped.set(row.loadId, g);
+  }
+
+  const result = new Map<
+    string,
+    { pickups: LoadLocationRecord[]; dropoffs: LoadLocationRecord[] }
+  >();
+  for (const [loadId, { pickupRows, dropoffRows }] of grouped) {
+    pickupRows.sort((a, b) => a.sortOrder - b.sortOrder);
+    dropoffRows.sort((a, b) => a.sortOrder - b.sortOrder);
+    result.set(loadId, {
+      pickups: pickupRows.map(mapStopRowToLocation),
+      dropoffs: dropoffRows.map(mapStopRowToLocation),
+    });
+  }
+
+  return result;
+};
+
+const mapLoadRow = (
+  row: LoadRow,
+  files: LoadFileRecord[],
+  stops: { pickups: LoadLocationRecord[]; dropoffs: LoadLocationRecord[] },
+): LoadRecord => ({
   id: row.id,
   customer: row.customer ?? "",
   referenceNumber: row.referenceNumber,
@@ -222,20 +288,8 @@ const mapLoadRow = (row: LoadRow, files: LoadFileRecord[]): LoadRecord => ({
   soldAs: row.soldAs,
   weight: row.weight,
   temperature: row.temperature ?? null,
-  pickup: {
-    cityZipCode: row.pickupCityZipCode ?? null,
-    phone: row.pickupPhone,
-    carrier: row.pickupCarrier,
-    name: row.pickupName,
-    address: row.pickupAddress,
-  },
-  dropoff: {
-    cityZipCode: row.dropoffCityZipCode ?? null,
-    phone: row.dropoffPhone,
-    carrier: row.dropoffCarrier,
-    name: row.dropoffName,
-    address: row.dropoffAddress,
-  },
+  pickups: stops.pickups,
+  dropoffs: stops.dropoffs,
   branchId: row.branchId,
   status: row.status,
   statusChangedBy: row.statusChangedBy,
@@ -286,13 +340,21 @@ export const listLoads = async (input: ListLoadsInput) => {
     db.select({ value: count() }).from(load).where(whereClause),
   ]);
 
-  const filesMap = await fetchFilesForLoads(
-    db,
-    rows.map((row) => row.id),
-  );
+  const loadIds = rows.map((row) => row.id);
+
+  const [filesMap, stopsMap] = await Promise.all([
+    fetchFilesForLoads(db, loadIds),
+    fetchStopsForLoads(db, loadIds),
+  ]);
 
   return {
-    loads: rows.map((row) => mapLoadRow(row, filesMap.get(row.id) ?? [])),
+    loads: rows.map((row) =>
+      mapLoadRow(
+        row,
+        filesMap.get(row.id) ?? [],
+        stopsMap.get(row.id) ?? { pickups: [], dropoffs: [] },
+      ),
+    ),
     total: Number(totalRows[0]?.value ?? 0),
   };
 };
@@ -309,6 +371,32 @@ const replaceLoadFiles = async (
   }
 
   await executor.insert(loadFiles).values(fileIds.map((fileId) => ({ loadId, fileId })));
+};
+
+const replaceLoadStopsForKind = async (
+  executor: Executor,
+  loadId: string,
+  kind: LoadStopKind,
+  locations: LoadLocationRecord[],
+): Promise<void> => {
+  await executor.delete(loadStop).where(and(eq(loadStop.loadId, loadId), eq(loadStop.kind, kind)));
+
+  if (locations.length === 0) {
+    return;
+  }
+
+  await executor.insert(loadStop).values(
+    locations.map((loc, sortOrder) => ({
+      loadId,
+      kind,
+      sortOrder,
+      cityZipCode: loc.cityZipCode ?? null,
+      phone: loc.phone ?? null,
+      carrier: loc.carrier,
+      name: loc.name,
+      address: loc.address,
+    })),
+  );
 };
 
 export const createLoad = async (input: CreateLoadInput): Promise<string> =>
@@ -339,21 +427,14 @@ export const createLoad = async (input: CreateLoadInput): Promise<string> =>
       soldAs: input.soldAs,
       weight: input.weight,
       temperature: input.temperature ?? null,
-      pickupCityZipCode: input.pickupCityZipCode ?? null,
-      pickupPhone: input.pickupPhone ?? null,
-      pickupCarrier: input.pickupCarrier,
-      pickupName: input.pickupName,
-      pickupAddress: input.pickupAddress,
-      dropoffCityZipCode: input.dropoffCityZipCode ?? null,
-      dropoffPhone: input.dropoffPhone ?? null,
-      dropoffCarrier: input.dropoffCarrier,
-      dropoffName: input.dropoffName,
-      dropoffAddress: input.dropoffAddress,
       branchId: input.branchId,
       createdBy: input.createdBy,
       status: DEFAULT_LOAD_STATUS,
       statusChangedBy: null,
     });
+
+    await replaceLoadStopsForKind(tx, loadId, "pickup", input.pickups);
+    await replaceLoadStopsForKind(tx, loadId, "dropoff", input.dropoffs);
 
     if (fileIds.length > 0) {
       await tx.insert(loadFiles).values(fileIds.map((fileId) => ({ loadId, fileId })));
@@ -408,24 +489,6 @@ export const updateLoad = async (loadId: string, input: UpdateLoad): Promise<boo
     if (typeof input.weight !== "undefined") updatePayload.weight = input.weight;
     if (typeof input.temperature !== "undefined")
       updatePayload.temperature = input.temperature ?? null;
-    if (typeof input.pickupCityZipCode !== "undefined")
-      updatePayload.pickupCityZipCode = input.pickupCityZipCode ?? null;
-    if (typeof input.pickupPhone !== "undefined")
-      updatePayload.pickupPhone = input.pickupPhone ?? null;
-    if (typeof input.pickupCarrier !== "undefined")
-      updatePayload.pickupCarrier = input.pickupCarrier;
-    if (typeof input.pickupName !== "undefined") updatePayload.pickupName = input.pickupName;
-    if (typeof input.pickupAddress !== "undefined")
-      updatePayload.pickupAddress = input.pickupAddress;
-    if (typeof input.dropoffCityZipCode !== "undefined")
-      updatePayload.dropoffCityZipCode = input.dropoffCityZipCode ?? null;
-    if (typeof input.dropoffPhone !== "undefined")
-      updatePayload.dropoffPhone = input.dropoffPhone ?? null;
-    if (typeof input.dropoffCarrier !== "undefined")
-      updatePayload.dropoffCarrier = input.dropoffCarrier;
-    if (typeof input.dropoffName !== "undefined") updatePayload.dropoffName = input.dropoffName;
-    if (typeof input.dropoffAddress !== "undefined")
-      updatePayload.dropoffAddress = input.dropoffAddress;
     if (typeof input.branchId !== "undefined") updatePayload.branchId = input.branchId;
 
     if (Object.keys(updatePayload).length > 0) {
@@ -437,6 +500,13 @@ export const updateLoad = async (loadId: string, input: UpdateLoad): Promise<boo
 
     if (typeof normalizedFiles !== "undefined") {
       await replaceLoadFiles(tx, loadId, normalizedFiles);
+    }
+
+    if (typeof input.pickups !== "undefined") {
+      await replaceLoadStopsForKind(tx, loadId, "pickup", input.pickups);
+    }
+    if (typeof input.dropoffs !== "undefined") {
+      await replaceLoadStopsForKind(tx, loadId, "dropoff", input.dropoffs);
     }
 
     return true;
@@ -471,7 +541,6 @@ export const deleteLoad = async (loadId: string): Promise<boolean> =>
       return false;
     }
 
-    await tx.delete(loadFiles).where(eq(loadFiles.loadId, loadId));
     await tx.delete(load).where(eq(load.id, loadId));
 
     return true;

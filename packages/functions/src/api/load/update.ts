@@ -18,7 +18,7 @@ const updateLoad = async (event: UpdateLoadEvent): Promise<MessageResponse> => {
   assertPermission(ctx, "loads", "edit");
 
   const { loadId } = event.pathParameters;
-  const { pickup, dropoff, files, ...rest } = event.body;
+  const { files, ...rest } = event.body;
 
   const payload: UpdateLoad = { ...rest };
 
@@ -27,42 +27,6 @@ const updateLoad = async (event: UpdateLoadEvent): Promise<MessageResponse> => {
       id: file.id,
       fileName: file.fileName,
     }));
-  }
-
-  if (pickup) {
-    if (typeof pickup.cityZipCode !== "undefined") {
-      payload.pickupCityZipCode = pickup.cityZipCode;
-    }
-    if (typeof pickup.phone !== "undefined") {
-      payload.pickupPhone = pickup.phone;
-    }
-    if (typeof pickup.carrier !== "undefined") {
-      payload.pickupCarrier = pickup.carrier;
-    }
-    if (typeof pickup.name !== "undefined") {
-      payload.pickupName = pickup.name;
-    }
-    if (typeof pickup.address !== "undefined") {
-      payload.pickupAddress = pickup.address;
-    }
-  }
-
-  if (dropoff) {
-    if (typeof dropoff.cityZipCode !== "undefined") {
-      payload.dropoffCityZipCode = dropoff.cityZipCode;
-    }
-    if (typeof dropoff.phone !== "undefined") {
-      payload.dropoffPhone = dropoff.phone;
-    }
-    if (typeof dropoff.carrier !== "undefined") {
-      payload.dropoffCarrier = dropoff.carrier;
-    }
-    if (typeof dropoff.name !== "undefined") {
-      payload.dropoffName = dropoff.name;
-    }
-    if (typeof dropoff.address !== "undefined") {
-      payload.dropoffAddress = dropoff.address;
-    }
   }
 
   const updated = await updateLoadRecord(loadId, payload);

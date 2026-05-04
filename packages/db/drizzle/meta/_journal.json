@@ -36,6 +36,20 @@
       "when": 1777928340552,
       "tag": "0004_add_load_payment_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777929726586,
+      "tag": "0005_white_baron_zemo",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777929796158,
+      "tag": "0006_smart_havok",
+      "breakpoints": true
     }
   ]
 }

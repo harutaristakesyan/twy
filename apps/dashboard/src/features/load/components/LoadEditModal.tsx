@@ -3,7 +3,8 @@ import type { UploadFile } from "antd";
 import { App, Button, Form, Input, Modal, Space, Steps, Switch, Upload } from "antd";
 import { useEffect, useState } from "react";
 import { loadApi } from "@/features/load/api/loadApi";
-import type { Load, LoadFile, UpdateLoadDto } from "@/features/load/types/load";
+import { LoadStopsFormList } from "@/features/load/components/LoadStopsFormList";
+import type { Load, LoadFile, Location, UpdateLoadDto } from "@/features/load/types/load";
 import { fileApi } from "@/libs/fileApi";
 import { getErrorMessage } from "@/utils/errorUtils";
 
@@ -41,11 +42,15 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
         statusChangedBy,
         createdAt,
         updatedAt,
+        pickups,
+        dropoffs,
         ...formValues
       } = load;
 
       form.setFieldsValue({
         ...formValues,
+        pickups,
+        dropoffs,
         customerRate: load.customerRate != null ? String(load.customerRate) : undefined,
         carrierRate: load.carrierRate != null ? String(load.carrierRate) : undefined,
         temperature: load.temperature ?? undefined,
@@ -72,8 +77,8 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
     try {
       await form.validateFields(getFieldsForStep(currentStep));
       setCurrentStep(currentStep + 1);
-    } catch (error) {
-      console.error("Validation failed:", error);
+    } catch {
+      // validateFields failed — Ant Design shows field-level errors
     }
   };
 
@@ -89,8 +94,8 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
       await form.validateFields();
 
       const values = form.getFieldsValue(true);
-      const pickup = values.pickup || {};
-      const dropoff = values.dropoff || {};
+      const pickups = (values.pickups ?? []) as Location[];
+      const dropoffs = (values.dropoffs ?? []) as Location[];
 
       const toNumberOrNull = (value?: string, fieldName?: string): number | null | undefined => {
         if (value === undefined) return undefined;
@@ -121,7 +126,7 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
         return parsed;
       };
 
-      const toNullableString = (value?: string): string | null | undefined => {
+      const toNullableString = (value?: string | null): string | null | undefined => {
         if (value === undefined) return undefined;
         if (value === null) return null;
         const trimmed = value.trim();
@@ -147,20 +152,20 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
         soldAs: values.soldAs,
         weight: values.weight,
         temperature: toNullableString(values.temperature),
-        pickup: {
-          cityZipCode: toNullableString(pickup.cityZipCode),
-          phone: toNullableString(pickup.phone),
-          carrier: pickup.carrier,
-          name: pickup.name,
-          address: pickup.address,
-        },
-        dropoff: {
-          cityZipCode: toNullableString(dropoff.cityZipCode),
-          phone: toNullableString(dropoff.phone),
-          carrier: dropoff.carrier,
-          name: dropoff.name,
-          address: dropoff.address,
-        },
+        pickups: pickups.map((p) => ({
+          cityZipCode: toNullableString(p.cityZipCode),
+          phone: toNullableString(p.phone),
+          carrier: p.carrier,
+          name: p.name,
+          address: p.address,
+        })),
+        dropoffs: dropoffs.map((d) => ({
+          cityZipCode: toNullableString(d.cityZipCode),
+          phone: toNullableString(d.phone),
+          carrier: d.carrier,
+          name: d.name,
+          address: d.address,
+        })),
         files: uploadedFiles,
       };
 
@@ -169,7 +174,6 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
       handleClose();
       onSuccess();
     } catch (error) {
-      console.error("Failed to update load:", error);
       message.error(getErrorMessage(error));
     } finally {
       setLoading(false);
@@ -199,7 +203,6 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
         type: file.type,
       };
     } catch (error) {
-      console.error("File upload failed:", error);
       message.error({ content: getErrorMessage(error), key: "upload" });
       return null;
     }
@@ -229,18 +232,22 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
         return ["loadType", "serviceType", "serviceGivenAs", "commodity"];
       case 3: // Booking Information
         return ["bookedAs", "soldAs", "weight"];
-      case 4: // Pick-up Location
-        return [
-          ["pickup", "carrier"],
-          ["pickup", "name"],
-          ["pickup", "address"],
-        ];
-      case 5: // Drop-off Location
-        return [
-          ["dropoff", "carrier"],
-          ["dropoff", "name"],
-          ["dropoff", "address"],
-        ];
+      case 4: {
+        const list = (form.getFieldValue("pickups") ?? []) as unknown[];
+        return list.flatMap((_, i) => [
+          ["pickups", i, "carrier"],
+          ["pickups", i, "name"],
+          ["pickups", i, "address"],
+        ]);
+      }
+      case 5: {
+        const list = (form.getFieldValue("dropoffs") ?? []) as unknown[];
+        return list.flatMap((_, i) => [
+          ["dropoffs", i, "carrier"],
+          ["dropoffs", i, "name"],
+          ["dropoffs", i, "address"],
+        ]);
+      }
       case 6: // Files
         return [];
       default:
@@ -417,70 +424,10 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
         );
 
       case 4: // Pick-up Location
-        return (
-          <>
-            <Form.Item label="City / Zipcode" name={["pickup", "cityZipCode"]}>
-              <Input placeholder="Enter city or zipcode" />
-            </Form.Item>
-            <Form.Item label="Phone Number" name={["pickup", "phone"]}>
-              <Input placeholder="Enter phone number" />
-            </Form.Item>
-            <Form.Item
-              label="Select Carrier"
-              name={["pickup", "carrier"]}
-              rules={[{ required: true, message: "Please enter carrier" }]}
-            >
-              <Input placeholder="Enter carrier" />
-            </Form.Item>
-            <Form.Item
-              label="Name"
-              name={["pickup", "name"]}
-              rules={[{ required: true, message: "Please enter name" }]}
-            >
-              <Input placeholder="Enter name" />
-            </Form.Item>
-            <Form.Item
-              label="Address"
-              name={["pickup", "address"]}
-              rules={[{ required: true, message: "Please enter address" }]}
-            >
-              <Input.TextArea placeholder="Enter address" rows={3} />
-            </Form.Item>
-          </>
-        );
+        return <LoadStopsFormList name="pickups" legLabel="Pick-up" />;
 
       case 5: // Drop-off Location
-        return (
-          <>
-            <Form.Item label="City / Zipcode" name={["dropoff", "cityZipCode"]}>
-              <Input placeholder="Enter city or zipcode" />
-            </Form.Item>
-            <Form.Item label="Phone Number" name={["dropoff", "phone"]}>
-              <Input placeholder="Enter phone number" />
-            </Form.Item>
-            <Form.Item
-              label="Select Carrier"
-              name={["dropoff", "carrier"]}
-              rules={[{ required: true, message: "Please enter carrier" }]}
-            >
-              <Input placeholder="Enter carrier" />
-            </Form.Item>
-            <Form.Item
-              label="Name"
-              name={["dropoff", "name"]}
-              rules={[{ required: true, message: "Please enter name" }]}
-            >
-              <Input placeholder="Enter name" />
-            </Form.Item>
-            <Form.Item
-              label="Address"
-              name={["dropoff", "address"]}
-              rules={[{ required: true, message: "Please enter address" }]}
-            >
-              <Input.TextArea placeholder="Enter address" rows={3} />
-            </Form.Item>
-          </>
-        );
+        return <LoadStopsFormList name="dropoffs" legLabel="Drop-off" />;
 
       case 6: // Files
         return (

@@ -14,12 +14,32 @@ import { fileApi } from "@/libs/fileApi";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { formatCurrency } from "@/utils/formatters";
 import { useLoadModal } from "../providers/LoadModalProvider";
-import type { Load } from "../types/load";
+import type { Load, Location } from "../types/load";
+
+/** API list row during transition if cached JSON still has singular `pickup` / `dropoff`. */
+type LoadListRow = Load & { pickup?: Location; dropoff?: Location };
 
 const statusColorMap: Record<string, string> = {
   Pending: "gold",
   Approved: "green",
   Denied: "red",
+};
+
+/** Handles undefined arrays, stale cached list rows, or legacy single `pickup` / `dropoff` objects. */
+const resolveStops = (
+  record: LoadListRow,
+  key: "pickups" | "dropoffs",
+  legacyKey: "pickup" | "dropoff",
+): Load["pickups"] => {
+  const list = record[key];
+  if (Array.isArray(list) && list.length > 0) {
+    return list;
+  }
+  const legacy = record[legacyKey];
+  if (legacy && typeof legacy === "object") {
+    return [legacy];
+  }
+  return [];
 };
 
 export function useLoadColumns(
@@ -102,29 +122,43 @@ export function useLoadColumns(
       { title: "Booked As", dataIndex: "bookedAs", key: "bookedAs", width: 110 },
       {
         title: "Pickup",
-        key: "pickup",
+        key: "pickups",
         width: 150,
-        render: (_, record) => (
-          <div>
-            <div>{record.pickup.name}</div>
-            <div style={{ fontSize: "12px", color: "#666" }}>
-              {record.pickup.cityZipCode || "N/A"}
+        render: (_, record) => {
+          const pickups = resolveStops(record, "pickups", "pickup");
+          const first = pickups[0];
+          const extra = pickups.length - 1;
+          if (!first) return "-";
+          return (
+            <div>
+              <div>{first.name}</div>
+              <div style={{ fontSize: "12px", color: "#666" }}>{first.cityZipCode || "N/A"}</div>
+              {extra > 0 ? (
+                <div style={{ fontSize: "12px", color: "#888" }}>+{extra} more</div>
+              ) : null}
             </div>
-          </div>
-        ),
+          );
+        },
       },
       {
         title: "Dropoff",
-        key: "dropoff",
+        key: "dropoffs",
         width: 150,
-        render: (_, record) => (
-          <div>
-            <div>{record.dropoff.name}</div>
-            <div style={{ fontSize: "12px", color: "#666" }}>
-              {record.dropoff.cityZipCode || "N/A"}
+        render: (_, record) => {
+          const dropoffs = resolveStops(record, "dropoffs", "dropoff");
+          const first = dropoffs[0];
+          const extra = dropoffs.length - 1;
+          if (!first) return "-";
+          return (
+            <div>
+              <div>{first.name}</div>
+              <div style={{ fontSize: "12px", color: "#666" }}>{first.cityZipCode || "N/A"}</div>
+              {extra > 0 ? (
+                <div style={{ fontSize: "12px", color: "#888" }}>+{extra} more</div>
+              ) : null}
             </div>
-          </div>
-        ),
+          );
+        },
       },
       {
         title: "Carrier Rate",

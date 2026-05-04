@@ -41,18 +41,6 @@ export const load = pgTable("load", {
   weight: text().notNull(),
   temperature: text(),
 
-  pickupCityZipCode: text(),
-  pickupPhone: text(),
-  pickupCarrier: text().notNull(),
-  pickupName: text().notNull(),
-  pickupAddress: text().notNull(),
-
-  dropoffCityZipCode: text(),
-  dropoffPhone: text(),
-  dropoffCarrier: text().notNull(),
-  dropoffName: text().notNull(),
-  dropoffAddress: text().notNull(),
-
   branchId: uuid()
     .notNull()
     .references(() => branch.id, { onDelete: "restrict" }),

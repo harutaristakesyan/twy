@@ -31,8 +31,8 @@ export interface LoadResponse {
   soldAs: string;
   weight: string;
   temperature: string | null;
-  pickup: LoadLocationResponse;
-  dropoff: LoadLocationResponse;
+  pickups: LoadLocationResponse[];
+  dropoffs: LoadLocationResponse[];
   branchId: string;
   status: LoadStatus;
   statusChangedBy: string | null;

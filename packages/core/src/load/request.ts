@@ -17,6 +17,13 @@ const locationSchema = z.object({
   address: z.string().trim().min(1, "Address is required"),
 });
 
+const MAX_STOPS_PER_LEG = 10;
+
+const stopsArraySchema = z
+  .array(locationSchema)
+  .min(1, "At least one stop is required")
+  .max(MAX_STOPS_PER_LEG, `At most ${MAX_STOPS_PER_LEG} stops are allowed per leg`);
+
 const LoadBaseSchema = z.object({
   customer: z.string().trim().min(1, "Customer is required"),
   referenceNumber: z.string().trim().min(1, "Reference Number is required"),
@@ -36,8 +43,8 @@ const LoadBaseSchema = z.object({
   soldAs: z.string().trim().min(1, "Sold As is required"),
   weight: z.string().trim().min(1, "Weight is required"),
   temperature: z.string().trim().nullable().optional(),
-  pickup: locationSchema,
-  dropoff: locationSchema,
+  pickups: stopsArraySchema,
+  dropoffs: stopsArraySchema,
   files: z
     .array(
       z.object({
@@ -94,12 +101,15 @@ export const ListLoadsEventSchema = z.object({
 
 export type ListLoadsEvent = z.infer<typeof ListLoadsEventSchema>;
 
+/** PATCH-style: any subset of load fields; omitted keys are left unchanged server-side. */
+const UpdateLoadBodySchema = LoadBaseSchema.partial();
+
 export const UpdateLoadEventSchema = z.object({
   requestContext: AuthContext,
   pathParameters: z.object({
     loadId: uuidField,
   }),
-  body: LoadBaseSchema,
+  body: UpdateLoadBodySchema,
 });
 
 export type UpdateLoadEvent = z.infer<typeof UpdateLoadEventSchema>;
