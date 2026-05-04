@@ -40,7 +40,7 @@ export const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          { index: true, element: <Navigate to="/user-management" replace /> },
+          { index: true, element: <Navigate to="/loads" replace /> },
           {
             path: "user-management",
             element: <UserManagementPage />,
@@ -129,6 +129,6 @@ export const router = createBrowserRouter([
     ],
   },
 
-  { path: "/home", element: <Navigate to="/user-management" replace /> },
+  { path: "/home", element: <Navigate to="/loads" replace /> },
   { path: "*", element: <NotFound /> },
 ]);

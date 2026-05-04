@@ -29,7 +29,7 @@ const RequirePermission: React.FC<RequirePermissionProps> = ({ children, resourc
   }
 
   if (!permissions[resource]?.[action]) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/profile" replace />;
   }
 
   return <>{children}</>;

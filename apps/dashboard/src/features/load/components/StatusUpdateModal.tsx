@@ -1,5 +1,5 @@
 import { App, Button, Checkbox, InputNumber, Modal, Select, Space } from "antd";
-import React, { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { loadApi } from "@/features/load/api/loadApi";
 import type { Load, LoadStatus } from "@/features/load/types/load";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -11,29 +11,28 @@ interface StatusUpdateModalProps {
   onSuccess: () => void;
 }
 
-const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
-  open,
-  load,
-  onCancel,
-  onSuccess,
-}) => {
+const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModalProps) => {
   const { message: antMessage } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<LoadStatus | null>(null);
   const [isChargable, setIsChargable] = useState(false);
   const [chargeAmount, setChargeAmount] = useState<number | null>(null);
 
-  React.useEffect(() => {
+  const resetChargeFields = useCallback(() => {
+    setIsChargable(false);
+    setChargeAmount(null);
+  }, []);
+
+  useEffect(() => {
     if (open && load) {
       setSelectedStatus(load.status);
       setIsChargable(load.isChargable ?? false);
       setChargeAmount(load.chargeAmount ?? null);
     } else {
       setSelectedStatus(null);
-      setIsChargable(false);
-      setChargeAmount(null);
+      resetChargeFields();
     }
-  }, [open, load]);
+  }, [open, load, resetChargeFields]);
 
   const handleSubmit = async () => {
     if (!load || !selectedStatus) return;
@@ -62,7 +61,6 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
       antMessage.success("Load status updated successfully");
       onSuccess();
     } catch (error) {
-      console.error("Failed to update load status:", error);
       antMessage.error(getErrorMessage(error));
     } finally {
       setLoading(false);
@@ -71,8 +69,7 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
 
   const handleCancel = () => {
     setSelectedStatus(null);
-    setIsChargable(false);
-    setChargeAmount(null);
+    resetChargeFields();
     onCancel();
   };
 
@@ -126,7 +123,10 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
           <strong style={{ display: "block", marginBottom: 8 }}>New Status:</strong>
           <Select
             value={selectedStatus}
-            onChange={setSelectedStatus}
+            onChange={(v) => {
+              setSelectedStatus(v);
+              if (v !== "Approved") resetChargeFields();
+            }}
             style={{ width: "100%" }}
             size="large"
             options={[
@@ -136,31 +136,35 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
             ]}
           />
         </div>
-        <div style={{ marginBottom: isChargable ? 16 : 0 }}>
-          <Checkbox
-            checked={isChargable}
-            onChange={(e) => {
-              setIsChargable(e.target.checked);
-              if (!e.target.checked) setChargeAmount(null);
-            }}
-          >
-            <strong>Is Chargable</strong>
-          </Checkbox>
-        </div>
-        {isChargable && (
-          <div>
-            <strong style={{ display: "block", marginBottom: 8 }}>Charge Amount:</strong>
-            <InputNumber
-              value={chargeAmount}
-              onChange={setChargeAmount}
-              min={0}
-              precision={2}
-              prefix="$"
-              style={{ width: "100%" }}
-              size="large"
-              placeholder="Enter charge amount"
-            />
-          </div>
+        {selectedStatus === "Approved" && (
+          <>
+            <div style={{ marginBottom: isChargable ? 16 : 0 }}>
+              <Checkbox
+                checked={isChargable}
+                onChange={(e) => {
+                  setIsChargable(e.target.checked);
+                  if (!e.target.checked) setChargeAmount(null);
+                }}
+              >
+                <strong>Is Chargable</strong>
+              </Checkbox>
+            </div>
+            {isChargable && (
+              <div>
+                <strong style={{ display: "block", marginBottom: 8 }}>Charge Amount:</strong>
+                <InputNumber
+                  value={chargeAmount}
+                  onChange={setChargeAmount}
+                  min={0}
+                  precision={2}
+                  prefix="$"
+                  style={{ width: "100%" }}
+                  size="large"
+                  placeholder="Enter charge amount"
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </Modal>
