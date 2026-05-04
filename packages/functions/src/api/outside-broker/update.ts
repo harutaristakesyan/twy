@@ -25,7 +25,6 @@ const updateBroker = async (event: UpdateBrokerEvent): Promise<MessageResponse> 
     address,
     notes,
     status,
-    branchId,
     creditLimitUnlimited,
     creditLimit,
   } = event.body;
@@ -39,7 +38,6 @@ const updateBroker = async (event: UpdateBrokerEvent): Promise<MessageResponse> 
     address,
     notes,
     status,
-    branchId,
     creditLimitUnlimited,
     creditLimit,
   });

@@ -22,7 +22,6 @@ const submitBrokerRequestHandler = async (
     email,
     address,
     notes,
-    branchId,
     creditLimitUnlimited,
     creditLimit,
   } = event.body;
@@ -37,7 +36,6 @@ const submitBrokerRequestHandler = async (
     email: email ?? null,
     address: address ?? null,
     notes: notes ?? null,
-    branchId: branchId ?? null,
     creditLimitUnlimited,
     creditLimit: creditLimit ?? null,
     submittedBy: userId,
