@@ -233,10 +233,10 @@ export const getBrokerByMcNumber = async (mcNumber: string) => {
 
 export const assertBrokerExists = async (brokerId: string): Promise<void> => {
   const [row] = await db
-    .select({ id: outsideBroker.id })
+    .select({ id: outsideBroker.id, status: outsideBroker.status })
     .from(outsideBroker)
     .where(eq(outsideBroker.id, brokerId));
-  if (!row) {
+  if (!row || row.status !== "approved") {
     throw new createError.NotFound("Outside broker not found");
   }
 };
