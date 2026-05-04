@@ -1,19 +1,6 @@
-import {
-  Button,
-  Checkbox,
-  Col,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  message,
-  Row,
-  Select,
-  Space,
-} from "antd";
+import { Button, Checkbox, Form, Input, InputNumber, Modal, message, Select, Space } from "antd";
 import type React from "react";
 import { useEffect, useState } from "react";
-import type { Branch } from "@/features/branch/types/branch";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { updateOutsideBroker } from "../api/brokerApi";
 import type {
@@ -28,8 +15,6 @@ const { TextArea } = Input;
 interface OutsideBrokerEditModalProps {
   open: boolean;
   broker: OutsideBroker;
-  branches: Branch[];
-  loadingBranches: boolean;
   onCancel: () => void;
   onSuccess: () => void;
 }
@@ -37,8 +22,6 @@ interface OutsideBrokerEditModalProps {
 const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
   open,
   broker,
-  branches,
-  loadingBranches,
   onCancel,
   onSuccess,
 }) => {
@@ -47,7 +30,6 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
   const [creditLimitUnlimited, setCreditLimitUnlimited] = useState(true);
   const [creditLimit, setCreditLimit] = useState<number | null>(null);
 
-  // Set form values when modal opens or broker changes
   useEffect(() => {
     if (open && broker) {
       form.setFieldsValue({
@@ -59,7 +41,6 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
         address: broker.address || "",
         notes: broker.notes || "",
         status: broker.status,
-        branch: broker.branch?.id,
       });
       setCreditLimitUnlimited(broker.creditLimitUnlimited ?? true);
       setCreditLimit(broker.creditLimit ?? null);
@@ -85,7 +66,6 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
         address: values.address,
         notes: values.notes,
         status: values.status,
-        branch: values.branch,
         creditLimitUnlimited,
         creditLimit: creditLimitUnlimited ? null : creditLimit,
       };
@@ -123,14 +103,6 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
       footer={null}
       width={600}
     >
-      <Alert
-        title="Broker Information"
-        description="Update outside broker details. Broker name and MC number are required."
-        type="info"
-        showIcon
-        style={{ marginBottom: 24 }}
-      />
-
       <Form
         form={form}
         layout="vertical"
@@ -144,7 +116,6 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
           address: broker?.address || "",
           notes: broker?.notes || "",
           status: broker?.status,
-          branch: broker?.branch?.id,
         }}
       >
         <Form.Item
@@ -205,21 +176,6 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
               { value: BrokerStatus.PENDING, label: "Pending" },
               { value: BrokerStatus.DENIED, label: "Denied" },
             ]}
-          />
-        </Form.Item>
-
-        <Form.Item name="branch" label="Branch (Optional)">
-          <Select
-            placeholder="Select branch (optional)"
-            loading={loadingBranches}
-            showSearch={{
-              filterOption: (input, option) =>
-                String(option?.label ?? "")
-                  .toLowerCase()
-                  .includes(input.toLowerCase()),
-            }}
-            allowClear
-            options={branches.map((b) => ({ value: b.id, label: b.name }))}
           />
         </Form.Item>
 

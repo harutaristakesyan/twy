@@ -14,10 +14,6 @@ export interface OutsideBroker {
   address: string | null;
   notes: string | null;
   status: BrokerStatus;
-  branch: {
-    id: string;
-    name: string;
-  } | null;
   creditLimitUnlimited: boolean;
   creditLimit: number | null;
   createdAt?: string;
@@ -34,7 +30,6 @@ export interface OutsideBrokerFormData {
   notes?: string;
   /** Present when editing an approved broker */
   status?: BrokerStatus;
-  branch?: string; // Branch ID (optional)
   creditLimitUnlimited: boolean;
   creditLimit?: number | null;
 }
@@ -49,7 +44,6 @@ export interface UpdateOutsideBrokerRequest {
   address?: string;
   notes?: string;
   status?: BrokerStatus;
-  branch?: string; // Branch ID (optional)
   creditLimitUnlimited?: boolean;
   creditLimit?: number | null;
 }
@@ -57,7 +51,7 @@ export interface UpdateOutsideBrokerRequest {
 export interface GetOutsideBrokersParams {
   page?: number; // zero-indexed page number (default: 0)
   limit?: number; // number of brokers per page (default: 10)
-  sortField?: "brokerName" | "mcNumber" | "createdAt" | "branch" | undefined;
+  sortField?: "brokerName" | "mcNumber" | "createdAt" | undefined;
   sortOrder?: "ascend" | "descend" | undefined;
   query?: string; // search text for broker name, MC number
 }

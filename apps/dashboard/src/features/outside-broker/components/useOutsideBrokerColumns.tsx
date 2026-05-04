@@ -1,5 +1,4 @@
 import {
-  BankOutlined,
   DeleteOutlined,
   DollarOutlined,
   EditOutlined,
@@ -10,7 +9,6 @@ import {
 import { Button, Flex, Popconfirm, Space, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo } from "react";
-import type { Branch } from "@/features/branch/types/branch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useOutsideBrokerModal } from "../providers/OutsideBrokerModalProvider";
 import type { OutsideBroker } from "../types/broker";
@@ -20,8 +18,6 @@ const { Text } = Typography;
 export function useOutsideBrokerColumns(
   refresh: () => void,
   runDelete: (id: string) => void,
-  branches: Branch[],
-  branchesLoading: boolean,
 ): ColumnsType<OutsideBroker> {
   const { permissions } = useCurrentUser();
   const { openOutsideBrokerEdit } = useOutsideBrokerModal();
@@ -98,21 +94,6 @@ export function useOutsideBrokerColumns(
           ),
       },
       {
-        title: "Branch",
-        dataIndex: "branch",
-        key: "branch",
-        render: (branch) =>
-          branch ? (
-            <Space>
-              <BankOutlined />
-              <Text>{branch.name}</Text>
-            </Space>
-          ) : (
-            <Tag color="default">No Branch</Tag>
-          ),
-        sorter: true,
-      },
-      {
         title: "Created Date",
         dataIndex: "createdAt",
         key: "createdAt",
@@ -129,12 +110,7 @@ export function useOutsideBrokerColumns(
                 <Button
                   type="text"
                   icon={<EditOutlined />}
-                  onClick={() =>
-                    openOutsideBrokerEdit(
-                      { broker: record, branches, loadingBranches: branchesLoading },
-                      () => refresh(),
-                    )
-                  }
+                  onClick={() => openOutsideBrokerEdit({ broker: record }, () => refresh())}
                 />
               </Tooltip>
             )}
@@ -155,6 +131,6 @@ export function useOutsideBrokerColumns(
         ),
       },
     ],
-    [branches, branchesLoading, canDelete, canUpdate, openOutsideBrokerEdit, refresh, runDelete],
+    [canDelete, canUpdate, openOutsideBrokerEdit, refresh, runDelete],
   );
 }

@@ -1,19 +1,6 @@
-import {
-  Button,
-  Checkbox,
-  Col,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  message,
-  Row,
-  Select,
-  Space,
-} from "antd";
+import { Button, Checkbox, Col, Form, Input, InputNumber, Modal, message, Row, Space } from "antd";
 import type React from "react";
 import { useState } from "react";
-import type { Branch } from "@/features/branch/types/branch";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { submitBrokerRequest } from "../api/brokerRequestApi";
 import type { SubmitBrokerRequestBody } from "../types/brokerRequest";
@@ -22,8 +9,6 @@ const { TextArea } = Input;
 
 interface OutsideBrokerCreateModalProps {
   open: boolean;
-  branches: Branch[];
-  loadingBranches: boolean;
   onCancel: () => void;
   onSuccess: () => void;
 }
@@ -36,13 +21,10 @@ type CreateFormValues = {
   email?: string;
   address?: string;
   notes?: string;
-  branch?: string;
 };
 
 const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
   open,
-  branches,
-  loadingBranches,
   onCancel,
   onSuccess,
 }) => {
@@ -66,7 +48,6 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
         email: values.email,
         address: values.address,
         notes: values.notes,
-        branchId: values.branch,
         creditLimitUnlimited,
         creditLimit: creditLimitUnlimited ? null : creditLimit,
       };
@@ -144,29 +125,13 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
         </Row>
 
         <Row gutter={16}>
-          <Col span={12}>
+          <Col span={24}>
             <Form.Item
               name="email"
               label="Email"
               rules={[{ type: "email", message: "Please enter a valid email" }]}
             >
               <Input placeholder="Enter email address" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="branch" label="Branch (Optional)">
-              <Select
-                placeholder="Select branch"
-                loading={loadingBranches}
-                showSearch={{
-                  filterOption: (input, option) =>
-                    String(option?.label ?? "")
-                      .toLowerCase()
-                      .includes(input.toLowerCase()),
-                }}
-                allowClear
-                options={branches.map((b) => ({ value: b.id, label: b.name }))}
-              />
             </Form.Item>
           </Col>
         </Row>

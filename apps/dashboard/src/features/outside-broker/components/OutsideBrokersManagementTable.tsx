@@ -3,8 +3,6 @@ import { useAntdTable, useDebounce, useLatest, useRequest, useUpdateEffect } fro
 import { Button, Card, Empty, Flex, Input, message, Table, Typography } from "antd";
 import type React from "react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { getBranches } from "@/features/branch/api/branchApi";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { deleteOutsideBroker, getOutsideBrokers } from "../api/brokerApi";
@@ -14,10 +12,9 @@ import { useOutsideBrokerColumns } from "./useOutsideBrokerColumns";
 const { Title, Text } = Typography;
 const { Search } = Input;
 
-type SortField = "brokerName" | "mcNumber" | "createdAt" | "branch" | undefined;
+type SortField = "brokerName" | "mcNumber" | "createdAt" | undefined;
 
 const OutsideBrokersManagementTable: React.FC = () => {
-  const navigate = useNavigate();
   const { permissions } = useCurrentUser();
   const { openOutsideBrokerCreate } = useOutsideBrokerModal();
   const canCreate = permissions.brokers.add;
@@ -45,11 +42,6 @@ const OutsideBrokersManagementTable: React.FC = () => {
     void refresh();
   }, [searchText]);
 
-  const { data: branches = [], loading: branchesLoading } = useRequest(
-    async () => (await getBranches({ limit: 100 })).branches ?? [],
-    { cacheKey: "broker-branches" },
-  );
-
   const { run: runDelete } = useRequest(deleteOutsideBroker, {
     manual: true,
     onSuccess: () => {
@@ -59,7 +51,7 @@ const OutsideBrokersManagementTable: React.FC = () => {
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const columns = useOutsideBrokerColumns(refresh, runDelete, branches, branchesLoading);
+  const columns = useOutsideBrokerColumns(refresh, runDelete);
 
   return (
     <div>
@@ -80,12 +72,7 @@ const OutsideBrokersManagementTable: React.FC = () => {
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={() =>
-                  openOutsideBrokerCreate({ branches, loadingBranches: branchesLoading }, () => {
-                    void refresh();
-                    navigate("/outside-brokers/requests");
-                  })
-                }
+                onClick={() => openOutsideBrokerCreate()}
               >
                 Add Broker
               </Button>

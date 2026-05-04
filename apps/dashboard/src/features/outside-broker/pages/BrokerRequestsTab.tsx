@@ -20,7 +20,7 @@ import type React from "react";
 import { useState } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
-import { canEditBrokerRequests } from "@/utils/permissions";
+import { canEditBrokerRequests, canViewBrokerRequests } from "@/utils/permissions";
 import {
   approveBrokerRequest,
   listBrokerRequests,
@@ -39,6 +39,7 @@ const statusColors: Record<string, string> = {
 
 const BrokerRequestsTab: React.FC = () => {
   const { permissions } = useCurrentUser();
+  const canView = canViewBrokerRequests(permissions);
   const canReview = canEditBrokerRequests(permissions);
 
   const [statusFilter, setStatusFilter] = useState<BrokerRequestStatusFilter>("pending");
@@ -159,11 +160,12 @@ const BrokerRequestsTab: React.FC = () => {
       key: "actions",
       width: 90,
       fixed: "right",
-      render: (_, record) => (
-        <Button size="small" icon={<EyeOutlined />} onClick={() => openView(record)}>
-          View
-        </Button>
-      ),
+      render: (_, record) =>
+        canView ? (
+          <Button size="small" icon={<EyeOutlined />} onClick={() => openView(record)}>
+            View
+          </Button>
+        ) : null,
     },
   ];
 

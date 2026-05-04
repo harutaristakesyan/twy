@@ -9,7 +9,6 @@ export interface BrokerRequest {
   email: string | null;
   address: string | null;
   notes: string | null;
-  branchId: string | null;
   creditLimitUnlimited: boolean;
   creditLimit: number | null;
   status: "pending" | "approved" | "rejected";
@@ -46,7 +45,6 @@ export interface SubmitBrokerRequestBody {
   email?: string;
   address?: string;
   notes?: string;
-  branchId?: string;
   creditLimitUnlimited: boolean;
   creditLimit?: number | null;
 }

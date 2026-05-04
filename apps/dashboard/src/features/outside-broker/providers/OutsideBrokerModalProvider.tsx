@@ -1,19 +1,12 @@
 import type React from "react";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
-import type { Branch } from "@/features/branch/types/branch";
 import OutsideBrokerCreateModal from "../components/OutsideBrokerCreateModal";
 import OutsideBrokerEditModal from "../components/OutsideBrokerEditModal";
 import type { OutsideBroker } from "../types/broker";
 
 interface OutsideBrokerModalContextType {
-  openOutsideBrokerCreate: (
-    data: { branches: Branch[]; loadingBranches: boolean },
-    onSuccess?: () => void,
-  ) => void;
-  openOutsideBrokerEdit: (
-    data: { broker: OutsideBroker; branches: Branch[]; loadingBranches: boolean },
-    onSuccess?: () => void,
-  ) => void;
+  openOutsideBrokerCreate: (onSuccess?: () => void) => void;
+  openOutsideBrokerEdit: (data: { broker: OutsideBroker }, onSuccess?: () => void) => void;
 }
 
 const OutsideBrokerModalContext = createContext<OutsideBrokerModalContextType | null>(null);
@@ -28,37 +21,25 @@ export const useOutsideBrokerModal = (): OutsideBrokerModalContextType => {
 export const OutsideBrokerModalProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [brokerCreate, setBrokerCreate] = useState<{
-    open: boolean;
-    branches: Branch[];
-    loadingBranches: boolean;
-  }>({ open: false, branches: [], loadingBranches: false });
+  const [brokerCreateOpen, setBrokerCreateOpen] = useState(false);
 
   const [brokerEdit, setBrokerEdit] = useState<{
     open: boolean;
     broker: OutsideBroker | null;
-    branches: Branch[];
-    loadingBranches: boolean;
-  }>({ open: false, broker: null, branches: [], loadingBranches: false });
+  }>({ open: false, broker: null });
 
   const brokerCreateOnSuccess = useRef<(() => void) | undefined>(undefined);
   const brokerEditOnSuccess = useRef<(() => void) | undefined>(undefined);
 
-  const openOutsideBrokerCreate = useCallback(
-    (data: { branches: Branch[]; loadingBranches: boolean }, onSuccess?: () => void) => {
-      brokerCreateOnSuccess.current = onSuccess;
-      setBrokerCreate({ open: true, ...data });
-    },
-    [],
-  );
+  const openOutsideBrokerCreate = useCallback((onSuccess?: () => void) => {
+    brokerCreateOnSuccess.current = onSuccess;
+    setBrokerCreateOpen(true);
+  }, []);
 
   const openOutsideBrokerEdit = useCallback(
-    (
-      data: { broker: OutsideBroker; branches: Branch[]; loadingBranches: boolean },
-      onSuccess?: () => void,
-    ) => {
+    (data: { broker: OutsideBroker }, onSuccess?: () => void) => {
       brokerEditOnSuccess.current = onSuccess;
-      setBrokerEdit({ open: true, ...data });
+      setBrokerEdit({ open: true, broker: data.broker });
     },
     [],
   );
@@ -73,12 +54,10 @@ export const OutsideBrokerModalProvider: React.FC<{ children: React.ReactNode }>
       {children}
 
       <OutsideBrokerCreateModal
-        open={brokerCreate.open}
-        branches={brokerCreate.branches}
-        loadingBranches={brokerCreate.loadingBranches}
-        onCancel={() => setBrokerCreate((prev) => ({ ...prev, open: false }))}
+        open={brokerCreateOpen}
+        onCancel={() => setBrokerCreateOpen(false)}
         onSuccess={() => {
-          setBrokerCreate((prev) => ({ ...prev, open: false }));
+          setBrokerCreateOpen(false);
           brokerCreateOnSuccess.current?.();
         }}
       />
@@ -87,8 +66,6 @@ export const OutsideBrokerModalProvider: React.FC<{ children: React.ReactNode }>
         <OutsideBrokerEditModal
           open={brokerEdit.open}
           broker={brokerEdit.broker}
-          branches={brokerEdit.branches}
-          loadingBranches={brokerEdit.loadingBranches}
           onCancel={() => setBrokerEdit((prev) => ({ ...prev, open: false }))}
           onSuccess={() => {
             setBrokerEdit((prev) => ({ ...prev, open: false }));
