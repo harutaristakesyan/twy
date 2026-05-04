@@ -13,7 +13,6 @@ export const brokerSortFieldMap = {
   brokerName: "brokerName",
   mcNumber: "mcNumber",
   createdAt: "createdAt",
-  branch: "branch",
 } as const;
 
 export const brokerSortOrderMap = {
@@ -58,7 +57,6 @@ const UpdateBrokerPayloadSchema = z
     address: z.string().trim().nullable().optional(),
     notes: z.string().trim().nullable().optional(),
     status: brokerStatusEnum.optional(),
-    branchId: uuidField.nullable().optional(),
     creditLimitUnlimited: z.boolean().optional(),
     creditLimit: z.number().positive().nullable().optional(),
   })

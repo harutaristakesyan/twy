@@ -10,7 +10,6 @@ export interface OutsideBrokerResponse {
   address: string | null;
   notes: string | null;
   status: BrokerStatus;
-  branch: { id: string; name: string } | null;
   creditLimitUnlimited: boolean;
   creditLimit: number | null;
   createdAt: string;

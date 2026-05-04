@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { BrokerStatus } from "@twy/db";
-import { branch, db, type OrderDirection, outsideBroker } from "@twy/db";
+import { db, type OrderDirection, outsideBroker } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
 
@@ -14,7 +14,6 @@ export interface OutsideBrokerRecord {
   address: string | null;
   notes: string | null;
   status: BrokerStatus;
-  branch: { id: string; name: string } | null;
   creditLimitUnlimited: boolean;
   creditLimit: number | null;
   createdAt: string;
@@ -24,7 +23,7 @@ export interface OutsideBrokerRecord {
 export interface ListBrokersInput {
   page: number;
   limit: number;
-  sortField: "brokerName" | "mcNumber" | "createdAt" | "branch";
+  sortField: "brokerName" | "mcNumber" | "createdAt";
   sortOrder: OrderDirection;
   query?: string;
 }
@@ -38,7 +37,6 @@ export interface NewBrokerInput {
   address?: string | null;
   notes?: string | null;
   status?: string;
-  branchId?: string | null;
   creditLimitUnlimited: boolean;
   creditLimit?: number | null;
   createdBy: string;
@@ -53,7 +51,6 @@ export interface UpdateBrokerInput {
   address?: string | null;
   notes?: string | null;
   status?: string;
-  branchId?: string | null;
   creditLimitUnlimited?: boolean;
   creditLimit?: number | null;
 }
@@ -64,8 +61,6 @@ const sortColumn = (field: ListBrokersInput["sortField"]) => {
       return outsideBroker.brokerName;
     case "mcNumber":
       return outsideBroker.mcNumber;
-    case "branch":
-      return branch.name;
     default:
       return outsideBroker.createdAt;
   }
@@ -81,12 +76,10 @@ const mapRow = (row: {
   address: string | null;
   notes: string | null;
   status: BrokerStatus;
-  branchId: string | null;
   creditLimitUnlimited: boolean;
   creditLimit: string | null;
   createdAt: Date;
   updatedAt: Date;
-  branchName: string | null;
 }): OutsideBrokerRecord => ({
   id: row.id,
   brokerName: row.brokerName,
@@ -97,7 +90,6 @@ const mapRow = (row: {
   address: row.address,
   notes: row.notes,
   status: row.status,
-  branch: row.branchId && row.branchName ? { id: row.branchId, name: row.branchName } : null,
   creditLimitUnlimited: row.creditLimitUnlimited,
   creditLimit: row.creditLimit !== null ? Number(row.creditLimit) : null,
   createdAt: row.createdAt.toISOString(),
@@ -131,15 +123,12 @@ export const listBrokers = async (input: ListBrokersInput) => {
         address: outsideBroker.address,
         notes: outsideBroker.notes,
         status: outsideBroker.status,
-        branchId: outsideBroker.branchId,
         creditLimitUnlimited: outsideBroker.creditLimitUnlimited,
         creditLimit: outsideBroker.creditLimit,
         createdAt: outsideBroker.createdAt,
         updatedAt: outsideBroker.updatedAt,
-        branchName: branch.name,
       })
       .from(outsideBroker)
-      .leftJoin(branch, eq(outsideBroker.branchId, branch.id))
       .where(whereClause)
       .orderBy(direction(orderCol))
       .limit(input.limit)
@@ -165,7 +154,6 @@ export const createBroker = async (input: NewBrokerInput): Promise<string> => {
     address: input.address ?? null,
     notes: input.notes ?? null,
     status: (input.status ?? "approved") as BrokerStatus,
-    branchId: input.branchId ?? null,
     creditLimitUnlimited: input.creditLimitUnlimited,
     creditLimit:
       !input.creditLimitUnlimited && input.creditLimit != null
@@ -199,7 +187,6 @@ export const updateBroker = async (
   if (Object.hasOwn(input, "address")) payload.address = input.address ?? null;
   if (Object.hasOwn(input, "notes")) payload.notes = input.notes ?? null;
   if (typeof input.status !== "undefined") payload.status = input.status as BrokerStatus;
-  if (Object.hasOwn(input, "branchId")) payload.branchId = input.branchId ?? null;
 
   if (typeof input.creditLimitUnlimited !== "undefined") {
     payload.creditLimitUnlimited = input.creditLimitUnlimited;
@@ -244,13 +231,12 @@ export const getBrokerByMcNumber = async (mcNumber: string) => {
   return row ?? null;
 };
 
-// Validate that broker exists; throws 404 if not
 export const assertBrokerExists = async (brokerId: string): Promise<void> => {
   const [row] = await db
-    .select({ id: outsideBroker.id, status: outsideBroker.status })
+    .select({ id: outsideBroker.id })
     .from(outsideBroker)
     .where(eq(outsideBroker.id, brokerId));
-  if (!row || row.status !== "approved") {
+  if (!row) {
     throw new createError.NotFound("Outside broker not found");
   }
 };
