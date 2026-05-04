@@ -19,7 +19,6 @@ interface CreateLoadResponse extends MessageResponse {
 interface ChangeStatusResponse extends MessageResponse {
   loadId: string;
   status: string;
-  statusChangedBy: string | null;
 }
 
 export const loadApi = {

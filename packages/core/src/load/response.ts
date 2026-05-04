@@ -46,7 +46,6 @@ export interface CreateLoadResponse extends MessageResponse {
 export interface ChangeLoadStatusResponse extends MessageResponse {
   loadId: string;
   status: LoadStatus;
-  statusChangedBy: string | null;
 }
 
 export interface LoadDetailsResponse {

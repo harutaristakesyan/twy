@@ -20,7 +20,7 @@ const changeLoadStatus = async (
   const { loadId } = event.pathParameters;
   const { status, isChargable = false, chargeAmount = null } = event.body;
 
-  const { updated, statusChangedByEmail } = await changeLoadStatusRecord(
+  const { updated } = await changeLoadStatusRecord(
     loadId,
     status,
     changedBy,
@@ -36,7 +36,6 @@ const changeLoadStatus = async (
     message: "Load status updated successfully",
     loadId,
     status,
-    statusChangedBy: statusChangedByEmail,
   };
 };
 

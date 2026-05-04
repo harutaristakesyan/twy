@@ -8,7 +8,6 @@ import {
   load,
   loadFiles,
   type OrderDirection,
-  users,
 } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import createError from "http-errors";
@@ -438,30 +437,20 @@ export const changeLoadStatus = async (
   changedBy: string,
   isChargable: boolean,
   chargeAmount: number | null,
-): Promise<{ updated: boolean; statusChangedByEmail: string | null }> =>
-  db.transaction(async (tx) => {
-    const [updateResult, userRow] = await Promise.all([
-      tx
-        .update(load)
-        .set({
-          status,
-          statusChangedBy: changedBy,
-          isChargable,
-          chargeAmount: isChargable && chargeAmount != null ? chargeAmount.toString() : null,
-          updatedAt: new Date(),
-        })
-        .where(eq(load.id, loadId))
-        .returning({ id: load.id }),
-      tx.select({ email: users.email }).from(users).where(eq(users.id, changedBy)),
-    ]);
-
-    const updated = updateResult.length > 0;
-
-    return {
-      updated,
-      statusChangedByEmail: updated ? (userRow[0]?.email ?? null) : null,
-    };
-  });
+): Promise<{ updated: boolean }> => {
+  const result = await db
+    .update(load)
+    .set({
+      status,
+      statusChangedBy: changedBy,
+      isChargable,
+      chargeAmount: isChargable && chargeAmount != null ? chargeAmount.toString() : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(load.id, loadId))
+    .returning({ id: load.id });
+  return { updated: result.length > 0 };
+};
 
 export const deleteLoad = async (loadId: string): Promise<boolean> =>
   db.transaction(async (tx) => {

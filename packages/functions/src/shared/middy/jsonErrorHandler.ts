@@ -20,10 +20,16 @@ export const jsonErrorHandler = (): MiddlewareObj => ({
       } catch {
         response = { message: error.message };
       }
-    } else if (error instanceof Error) {
-      // Optional fallback for unexpected errors
-      message = error.message;
-      response = { message };
+    } else {
+      if (error instanceof Error) {
+        message = error.message;
+        response = { message };
+      }
+      console.error({
+        name: error instanceof Error ? error.name : typeof error,
+        message: error instanceof Error ? error.message : String(error),
+        cause: error instanceof Error ? (error as Error & { cause?: unknown }).cause : error,
+      });
     }
 
     return {

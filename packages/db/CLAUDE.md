@@ -68,6 +68,7 @@ Both commands need `Resource.Cluster.*` resolved. `db:generate` doesn't strictly
 
 ## Pitfalls
 
+- **Never `Promise.all([tx.X, tx.Y, ...])` inside `db.transaction(...)`** — Aurora Serverless v2's RDS Data API serialises `ExecuteStatement` calls per `transactionId`. Only one statement may be in flight per transaction at a time. Sending two in parallel causes a race: the second call is rejected with `BadRequestException: Transaction <id> is not in a state...`, which Drizzle re-throws as a generic `Failed query: …`. Use sequential `await`s on `tx.*`, or fan out on `db.*` outside the transaction when the calls aren't part of the atomic boundary.
 - **`Resource.Cluster is not defined`** — types come from the auto-generated `sst-env.d.ts` at the repo root (gitignored). Run `pnpm sst dev --stage <yourname>` once to materialize them.
 - **Migration runner can't find the folder** — the runner resolves `drizzle/` via `import.meta.url`. If launched from outside the package directory, the relative path still resolves correctly because it's anchored to the source file location, not `process.cwd()`.
 - **Lockfile shows two `drizzle-orm` versions** — only this package should depend on `drizzle-orm`. If a consumer adds it to their own `package.json`, remove it; rely on transitive resolution through `@twy/db`.
