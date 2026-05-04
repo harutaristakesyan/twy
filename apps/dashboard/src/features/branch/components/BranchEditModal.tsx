@@ -120,7 +120,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
           />
         </Form.Item>
 
-        <Form.Item name="owner" label="Branch Owner (optional)">
+        <Form.Item name="owner" label="Branch Owner">
           <Select
             placeholder="Select branch owner"
             loading={loadingOwners}

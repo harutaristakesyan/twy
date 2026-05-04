@@ -99,7 +99,7 @@ const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, o
         </Form.Item>
 
         <Form.Item name="description" label="Description">
-          <Input.TextArea placeholder="Optional description" rows={2} />
+          <Input.TextArea placeholder="Description" rows={2} />
         </Form.Item>
 
         <Form.Item label="Scope">

@@ -161,7 +161,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuc
           <Input placeholder="Enter email address" id="create-email" />
         </Form.Item>
 
-        <Form.Item name="branch" label="Branch (optional)">
+        <Form.Item name="branch" label="Branch">
           <Select
             placeholder="Search and select branch"
             allowClear

@@ -22,7 +22,6 @@ const CarriersLayout: React.FC = () => {
         activeKey={activeKey}
         items={tabItems}
         onChange={(key) => navigate(`/carriers/${key}`)}
-        style={{ marginBottom: 0 }}
       />
       <Outlet />
     </CarrierModalProvider>

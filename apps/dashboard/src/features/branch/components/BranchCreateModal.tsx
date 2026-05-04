@@ -93,7 +93,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
           />
         </Form.Item>
 
-        <Form.Item name="owner" label="Branch Owner (optional)">
+        <Form.Item name="owner" label="Branch Owner">
           <Select
             placeholder="Select branch owner"
             loading={loadingOwners}

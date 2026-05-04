@@ -14,7 +14,7 @@ const AppLayout = () => {
       <Sidebar />
       <Layout>
         <AppHeader />
-        <Content style={{ padding: 30 }}>
+        <Content style={{ padding: 20 }}>
           <Outlet />
         </Content>
       </Layout>

@@ -13,7 +13,7 @@ import { useBranchColumns } from "./useBranchColumns";
 const { Title } = Typography;
 const { Search } = Input;
 
-type SortField = "name" | "owner" | "createdAt" | undefined;
+type SortField = "name" | "createdAt" | undefined;
 
 const BranchManagementTable: React.FC = () => {
   const { openBranchCreate } = useBranchModal();

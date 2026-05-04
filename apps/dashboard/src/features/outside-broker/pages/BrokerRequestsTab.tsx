@@ -231,7 +231,7 @@ const BrokerRequestsTab: React.FC = () => {
               <Flex vertical gap="small">
                 <Input.TextArea
                   rows={3}
-                  placeholder="Rejection reason (optional)"
+                  placeholder="Rejection reason"
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   autoFocus

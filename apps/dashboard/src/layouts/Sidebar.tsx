@@ -92,8 +92,8 @@ const Sidebar: React.FC = () => {
       breakpoint="md"
     >
       {!collapsed && (
-        <Flex vertical justify="center" style={{ padding: 15 }}>
-          <Title>TWY</Title>
+        <Flex justify="center" align="center" style={{ padding: 15 }}>
+          <Title style={{ margin: 0 }}>TWY</Title>
         </Flex>
       )}
 

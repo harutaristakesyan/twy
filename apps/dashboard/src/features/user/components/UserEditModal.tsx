@@ -196,7 +196,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onCancel, onS
 
         <Divider />
 
-        <Form.Item name="branch" label="Branch (optional)">
+        <Form.Item name="branch" label="Branch">
           <Select
             placeholder="Search and select branch"
             allowClear
