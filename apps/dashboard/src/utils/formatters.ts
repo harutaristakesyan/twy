@@ -8,11 +8,19 @@ export const formatDate = (date?: Date | null): string => {
   });
 };
 
-export const formatCurrency = (amount: number | string, decimals = 2): string => {
-  return `$${amount.toLocaleString(undefined, {
+export const formatCurrency = (
+  amount: number | string | null | undefined,
+  decimals = 2,
+): string => {
+  if (amount === null || amount === undefined) return "-";
+  const num = typeof amount === "string" ? Number.parseFloat(amount) : amount;
+  if (Number.isNaN(num)) return "-";
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "EUR",
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  })}`;
+  }).format(num);
 };
 
 export const formatChangePercent = (percent: number): string => {
@@ -22,9 +30,13 @@ export const formatChangePercent = (percent: number): string => {
 
 export const formatChangeAmount = (amount: number): string => {
   const sign = amount >= 0 ? "+" : "-";
-  return `${sign}$${Math.abs(amount).toLocaleString(undefined, {
+  const formatted = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "EUR",
     minimumFractionDigits: 2,
-  })}`;
+    maximumFractionDigits: 2,
+  }).format(Math.abs(amount));
+  return `${sign}${formatted}`;
 };
 
 export const toDate = (s: string): Date => new Date(s);

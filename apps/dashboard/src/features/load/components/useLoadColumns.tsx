@@ -12,6 +12,7 @@ import { useCallback, useMemo } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { fileApi } from "@/libs/fileApi";
 import { getErrorMessage } from "@/utils/errorUtils";
+import { formatCurrency } from "@/utils/formatters";
 import { useLoadModal } from "../providers/LoadModalProvider";
 import type { Load } from "../types/load";
 
@@ -19,11 +20,6 @@ const statusColorMap: Record<string, string> = {
   Pending: "gold",
   Approved: "green",
   Denied: "red",
-};
-
-const formatCurrency = (value?: number | null) => {
-  if (value === null || value === undefined) return "-";
-  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export function useLoadColumns(

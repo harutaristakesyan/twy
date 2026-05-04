@@ -284,7 +284,7 @@ const BrokerRequestsTab: React.FC = () => {
                 {viewRecord.creditLimitUnlimited ? (
                   <Tag color="blue">Unlimited</Tag>
                 ) : viewRecord.creditLimit !== null ? (
-                  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+                  new Intl.NumberFormat(undefined, { style: "currency", currency: "EUR" }).format(
                     viewRecord.creditLimit,
                   )
                 ) : (

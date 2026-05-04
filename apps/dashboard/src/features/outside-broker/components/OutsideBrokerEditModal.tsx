@@ -220,7 +220,7 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
               onChange={setCreditLimit}
               min={0.01}
               precision={2}
-              prefix="$"
+              prefix="€"
               style={{ width: "100%", marginTop: 8 }}
               placeholder="Enter credit limit"
             />

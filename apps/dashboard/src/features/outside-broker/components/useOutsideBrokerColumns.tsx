@@ -1,7 +1,7 @@
 import {
   DeleteOutlined,
-  DollarOutlined,
   EditOutlined,
+  EuroOutlined,
   MailOutlined,
   PhoneOutlined,
   TeamOutlined,
@@ -83,7 +83,7 @@ export function useOutsideBrokerColumns(
             <Tag color="green">Unlimited</Tag>
           ) : (
             <Text>
-              <DollarOutlined style={{ marginRight: 4 }} />
+              <EuroOutlined style={{ marginRight: 4 }} />
               {record.creditLimit !== null
                 ? record.creditLimit.toLocaleString("en-US", {
                     minimumFractionDigits: 2,
