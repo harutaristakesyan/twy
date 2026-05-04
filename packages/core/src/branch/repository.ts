@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { branch, db, type OrderDirection, users } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
+import { rebuildAuthContext } from "../auth-context/rebuild.js";
 
 export interface BranchOwner {
   id: string;
@@ -124,8 +125,8 @@ export const listBranches = async (input: ListBranchesInput) => {
   };
 };
 
-export const createBranch = async (input: NewBranchInput) =>
-  db.transaction(async (tx) => {
+export const createBranch = async (input: NewBranchInput) => {
+  await db.transaction(async (tx) => {
     if (input.ownerId) {
       await ensureOwnerExists(tx, input.ownerId);
     }
@@ -147,12 +148,24 @@ export const createBranch = async (input: NewBranchInput) =>
     }
   });
 
-export const updateBranch = async (branchId: string, input: UpdateBranchInput) =>
-  db.transaction(async (tx) => {
+  // Rebuild after commit — branch assignment changes branchId in the auth context.
+  if (input.ownerId) {
+    rebuildAuthContext(input.ownerId).catch((err) => {
+      console.warn("auth-context rebuild after createBranch failed:", err);
+    });
+  }
+};
+
+export const updateBranch = async (branchId: string, input: UpdateBranchInput) => {
+  let newOwnerId: string | null | undefined;
+  let prevOwnerId: string | null | undefined;
+
+  const result = await db.transaction(async (tx) => {
     const [existing] = await tx
-      .select({ id: branch.id })
+      .select({ id: branch.id, ownerId: branch.ownerId })
       .from(branch)
       .where(eq(branch.id, branchId));
+    prevOwnerId = existing?.ownerId ?? null;
 
     if (!existing) {
       return null;
@@ -169,7 +182,7 @@ export const updateBranch = async (branchId: string, input: UpdateBranchInput) =
     }
 
     if (Object.hasOwn(input, "ownerId")) {
-      const newOwnerId = input.ownerId ?? null;
+      newOwnerId = input.ownerId ?? null;
       if (newOwnerId) {
         await ensureOwnerExists(tx, newOwnerId);
         await tx
@@ -188,8 +201,31 @@ export const updateBranch = async (branchId: string, input: UpdateBranchInput) =
     return true as const;
   });
 
-export const deleteBranch = async (branchId: string): Promise<boolean> =>
-  db.transaction(async (tx) => {
+  // Rebuild both previous and new owner — each gets a changed branchId.
+  if (result) {
+    if (newOwnerId) {
+      rebuildAuthContext(newOwnerId).catch((err) => {
+        console.warn("auth-context rebuild (new owner) after updateBranch failed:", err);
+      });
+    }
+    if (prevOwnerId && prevOwnerId !== newOwnerId) {
+      rebuildAuthContext(prevOwnerId).catch((err) => {
+        console.warn("auth-context rebuild (prev owner) after updateBranch failed:", err);
+      });
+    }
+  }
+
+  return result;
+};
+
+export const deleteBranch = async (branchId: string): Promise<boolean> => {
+  // Capture owner before deletion so we can evict their DDB cache entry after commit.
+  const [branchRow] = await db
+    .select({ ownerId: branch.ownerId })
+    .from(branch)
+    .where(eq(branch.id, branchId));
+
+  const deleted = await db.transaction(async (tx) => {
     const [existing] = await tx
       .select({ id: branch.id })
       .from(branch)
@@ -203,3 +239,12 @@ export const deleteBranch = async (branchId: string): Promise<boolean> =>
 
     return true;
   });
+
+  if (deleted && branchRow?.ownerId) {
+    rebuildAuthContext(branchRow.ownerId).catch((err) => {
+      console.warn("auth-context rebuild after deleteBranch failed:", err);
+    });
+  }
+
+  return deleted;
+};

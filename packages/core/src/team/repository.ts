@@ -1,6 +1,7 @@
 import { db, team, teamPermissions, users } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import createError from "http-errors";
+import { putAuthContext } from "../auth-context/store.js";
 import {
   ACTIONS,
   type Action,
@@ -152,6 +153,22 @@ export const updateTeam = async (teamId: string, input: UpdateTeamInput): Promis
       await upsertPermissions(tx, teamId, input.permissions);
     }
   });
+
+  // Rebuild fire-and-forget — each member isolated so one failure doesn't skip the rest.
+  db.select({ id: users.id })
+    .from(users)
+    .where(eq(users.teamId, teamId))
+    .then((members) =>
+      Promise.allSettled(
+        members.map(async (m) => {
+          const ctx = await getEffectivePermissionsForUser(m.id);
+          await putAuthContext(ctx);
+        }),
+      ),
+    )
+    .catch((err) => {
+      console.warn("auth-context rebuild after updateTeam failed:", err);
+    });
 };
 
 export const deleteTeam = async (teamId: string): Promise<void> => {
@@ -351,6 +368,12 @@ export const addMemberToTeam = async (teamId: string, userId: string): Promise<v
   if (userRow.teamId === teamId) return;
 
   await db.update(users).set({ teamId, updatedAt: new Date() }).where(eq(users.id, userId));
+
+  getEffectivePermissionsForUser(userId)
+    .then((ctx) => putAuthContext(ctx))
+    .catch((err) => {
+      console.warn("auth-context rebuild after addMemberToTeam failed:", err);
+    });
 };
 
 export const removeMemberFromTeam = async (teamId: string, userId: string): Promise<void> => {
@@ -364,6 +387,12 @@ export const removeMemberFromTeam = async (teamId: string, userId: string): Prom
     throw new createError.NotFound("User is not a member of this team");
 
   await db.update(users).set({ teamId: null, updatedAt: new Date() }).where(eq(users.id, userId));
+
+  getEffectivePermissionsForUser(userId)
+    .then((ctx) => putAuthContext(ctx))
+    .catch((err) => {
+      console.warn("auth-context rebuild after removeMemberFromTeam failed:", err);
+    });
 };
 
 export const getEffectivePermissionsForUser = async (

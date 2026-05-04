@@ -1,12 +1,17 @@
 import { branch, db, type NewUser, type OrderDirection, team, users } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
+import { rebuildAuthContext } from "../auth-context/rebuild.js";
+import { deleteAuthContext } from "../auth-context/store.js";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Tx;
 
 export const createUser = async (input: NewUser): Promise<void> => {
   await db.insert(users).values(input);
+  rebuildAuthContext(input.id).catch((err) => {
+    console.warn("auth-context rebuild after createUser failed:", err);
+  });
 };
 
 interface UserDetailsRow {
@@ -159,8 +164,8 @@ export interface UpdateUserInput {
   isActive?: boolean;
 }
 
-export const updateUser = async (userId: string, input: UpdateUserInput): Promise<boolean> =>
-  db.transaction(async (tx) => {
+export const updateUser = async (userId: string, input: UpdateUserInput): Promise<boolean> => {
+  const updated = await db.transaction(async (tx) => {
     const [existing] = await tx.select({ id: users.id }).from(users).where(eq(users.id, userId));
 
     if (!existing) {
@@ -203,8 +208,18 @@ export const updateUser = async (userId: string, input: UpdateUserInput): Promis
     return true;
   });
 
-export const deleteUser = async (userId: string): Promise<boolean> =>
-  db.transaction(async (tx) => {
+  // Rebuild after commit so getEffectivePermissionsForUser reads the new row.
+  if (updated) {
+    rebuildAuthContext(userId).catch((err) => {
+      console.warn("auth-context rebuild after updateUser failed:", err);
+    });
+  }
+
+  return updated;
+};
+
+export const deleteUser = async (userId: string): Promise<boolean> => {
+  const deleted = await db.transaction(async (tx) => {
     const [existing] = await tx.select({ id: users.id }).from(users).where(eq(users.id, userId));
 
     if (!existing) {
@@ -215,6 +230,15 @@ export const deleteUser = async (userId: string): Promise<boolean> =>
 
     return true;
   });
+
+  if (deleted) {
+    deleteAuthContext(userId).catch((err) => {
+      console.warn("auth-context delete after deleteUser failed:", err);
+    });
+  }
+
+  return deleted;
+};
 
 export interface SelfUpdateUserInput {
   firstName?: string;

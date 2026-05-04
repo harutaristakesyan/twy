@@ -36,6 +36,10 @@ declare module "sst" {
       name: string;
       arn: string;
     };
+    AuthContext: {
+      type: "sst.aws.Dynamo";
+      name: string;
+    };
   }
 }
 

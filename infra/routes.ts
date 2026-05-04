@@ -7,7 +7,7 @@
  * `requiresAuth: true` attaches the Cognito JWT authorizer; `false` (or
  * unset) leaves the route public (Cognito sign-in flows themselves).
  */
-export type LinkKey = "cluster" | "userPool" | "userPoolClient" | "filesBucket";
+export type LinkKey = "cluster" | "userPool" | "userPoolClient" | "filesBucket" | "authContext";
 
 export interface RouteDef {
   /** Path to the handler entry, including the exported name (default `handler`). */
@@ -71,62 +71,62 @@ export const appRoutes: RouteDef[] = [
     handler: "packages/functions/src/api/user/get.handler",
     routeKey: "GET /api/user",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/user/self-update.handler",
     routeKey: "PATCH /api/user",
     requiresAuth: true,
-    linkKeys: ["cluster", "userPool"],
+    linkKeys: ["cluster", "userPool", "authContext"],
   },
   {
     handler: "packages/functions/src/api/user/list.handler",
     routeKey: "GET /api/users",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/user/create.handler",
     routeKey: "POST /api/users",
     requiresAuth: true,
-    linkKeys: ["cluster", "userPool"],
+    linkKeys: ["cluster", "userPool", "authContext"],
   },
   {
     handler: "packages/functions/src/api/user/update.handler",
     routeKey: "PATCH /api/users/{userId}",
     requiresAuth: true,
-    linkKeys: ["cluster", "userPool"],
+    linkKeys: ["cluster", "userPool", "authContext"],
   },
   {
     handler: "packages/functions/src/api/user/delete.handler",
     routeKey: "DELETE /api/users/{userId}",
     requiresAuth: true,
-    linkKeys: ["cluster", "userPool"],
+    linkKeys: ["cluster", "userPool", "authContext"],
   },
   // branch
   {
     handler: "packages/functions/src/api/branch/list.handler",
     routeKey: "GET /api/branches",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/branch/create.handler",
     routeKey: "POST /api/branches",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/branch/update.handler",
     routeKey: "PUT /api/branches/{branchId}",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/branch/delete.handler",
     routeKey: "DELETE /api/branches/{branchId}",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   // file
   {
@@ -152,186 +152,186 @@ export const appRoutes: RouteDef[] = [
     handler: "packages/functions/src/api/load/create.handler",
     routeKey: "POST /api/loads",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/load/list.handler",
     routeKey: "GET /api/loads",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/load/update.handler",
     routeKey: "PUT /api/loads/{loadId}",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/load/changeStatus.handler",
     routeKey: "PATCH /api/loads/{loadId}/status",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/load/delete.handler",
     routeKey: "DELETE /api/loads/{loadId}",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   // auth/me — permissions snapshot for the current user
   {
     handler: "packages/functions/src/api/auth/me.handler",
     routeKey: "GET /api/auth/me",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   // team
   {
     handler: "packages/functions/src/api/team/list.handler",
     routeKey: "GET /api/teams",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/team/create.handler",
     routeKey: "POST /api/teams",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/team/update.handler",
     routeKey: "PUT /api/teams/{teamId}",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/team/delete.handler",
     routeKey: "DELETE /api/teams/{teamId}",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/team/unassigned-users.handler",
     routeKey: "GET /api/teams/unassigned-users",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/team/members/list.handler",
     routeKey: "GET /api/teams/{teamId}/members",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/team/members/add.handler",
     routeKey: "POST /api/teams/{teamId}/members",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/team/members/remove.handler",
     routeKey: "DELETE /api/teams/{teamId}/members/{userId}",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   // outside-broker
   {
     handler: "packages/functions/src/api/outside-broker/list.handler",
     routeKey: "GET /api/outside-brokers",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/broker-request/list.handler",
     routeKey: "GET /api/broker-requests",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/broker-request/create.handler",
     routeKey: "POST /api/broker-requests",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/broker-request/approve.handler",
     routeKey: "POST /api/broker-requests/{requestId}/approve",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/broker-request/reject.handler",
     routeKey: "POST /api/broker-requests/{requestId}/reject",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/outside-broker/update.handler",
     routeKey: "PUT /api/outside-brokers/{brokerId}",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/outside-broker/delete.handler",
     routeKey: "DELETE /api/outside-brokers/{brokerId}",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   // carrier
   {
     handler: "packages/functions/src/api/carrier/list.handler",
     routeKey: "GET /api/carriers",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/carrier/get.handler",
     routeKey: "GET /api/carriers/{carrierId}",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/carrier/create.handler",
     routeKey: "POST /api/carriers",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/carrier/update.handler",
     routeKey: "PUT /api/carriers/{carrierId}",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/carrier/delete.handler",
     routeKey: "DELETE /api/carriers/{carrierId}",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   // carrier requests (approval queue)
   {
     handler: "packages/functions/src/api/carrier-request/list.handler",
     routeKey: "GET /api/carrier-requests",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/carrier-request/create.handler",
     routeKey: "POST /api/carrier-requests",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/carrier-request/approve.handler",
     routeKey: "POST /api/carrier-requests/{requestId}/approve",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
   {
     handler: "packages/functions/src/api/carrier-request/reject.handler",
     routeKey: "POST /api/carrier-requests/{requestId}/reject",
     requiresAuth: true,
-    linkKeys: ["cluster"],
+    linkKeys: ["cluster", "authContext"],
   },
 ];
 

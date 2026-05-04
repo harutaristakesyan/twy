@@ -11,6 +11,7 @@ interface CreateApiArgs {
   };
   db: { cluster: sst.aws.Aurora };
   filesBucket: sst.aws.Bucket;
+  authContextTable: sst.aws.Dynamo;
 }
 
 /**
@@ -20,7 +21,7 @@ interface CreateApiArgs {
  * api.route() call.
  */
 export function createApi(args: CreateApiArgs) {
-  const { cfg, auth, db, filesBucket } = args;
+  const { cfg, auth, db, filesBucket, authContextTable } = args;
 
   const allowedOrigins = [
     `https://${cfg.appDomain}`,
@@ -51,12 +52,14 @@ export function createApi(args: CreateApiArgs) {
     | sst.aws.Aurora
     | sst.aws.CognitoUserPool
     | sst.aws.Bucket
+    | sst.aws.Dynamo
     | ReturnType<sst.aws.CognitoUserPool["addClient"]>
   > = {
     cluster: db.cluster,
     userPool: auth.userPool,
     userPoolClient: auth.userPoolClient,
     filesBucket,
+    authContext: authContextTable,
   };
 
   for (const route of allRoutes) {

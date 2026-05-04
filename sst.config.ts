@@ -33,18 +33,25 @@ export default $config({
     const { createAuth } = await import("./infra/auth");
     const { createApi } = await import("./infra/api");
     const { createWeb } = await import("./infra/web");
+    const { createAuthContextTable } = await import("./infra/authContextTable");
 
     const cfg = stageConfig();
 
     const db = createDatabase();
     const storage = createStorage(cfg);
     const email = createEmail(cfg);
-    const auth = createAuth({ db, filesBucket: storage.filesBucket });
+    const authContext = createAuthContextTable();
+    const auth = createAuth({
+      db,
+      filesBucket: storage.filesBucket,
+      authContextTable: authContext.table,
+    });
     const api = createApi({
       cfg,
       auth,
       db,
       filesBucket: storage.filesBucket,
+      authContextTable: authContext.table,
     });
     const web = createWeb({ cfg, api });
 

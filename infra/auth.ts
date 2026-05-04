@@ -12,10 +12,14 @@
  * primary key and stores the Cognito sub as `cognitoSub`. It also writes
  * `custom:appUserId` back to Cognito so the PreTokenGen trigger can emit it.
  */
-export function createAuth(args: { db: { cluster: sst.aws.Aurora }; filesBucket: sst.aws.Bucket }) {
+export function createAuth(args: {
+  db: { cluster: sst.aws.Aurora };
+  filesBucket: sst.aws.Bucket;
+  authContextTable: sst.aws.Dynamo;
+}) {
   const postConfirmationFn = new sst.aws.Function("PostConfirmation", {
     handler: "packages/functions/src/events/postConfirmation.handler",
-    link: [args.db.cluster, args.filesBucket],
+    link: [args.db.cluster, args.filesBucket, args.authContextTable],
     permissions: [
       {
         actions: [

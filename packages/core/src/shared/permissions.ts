@@ -1,9 +1,21 @@
 import createError from "http-errors";
+import { getCachedAuthContext, putAuthContext } from "../auth-context/store.js";
 import type { Action, Resource } from "../team/contracts.js";
 import { getEffectivePermissionsForUser, type UserPermissionsContext } from "../team/repository.js";
 
-export const loadAuthContext = (userId: string): Promise<UserPermissionsContext> =>
-  getEffectivePermissionsForUser(userId);
+export const loadAuthContext = async (userId: string): Promise<UserPermissionsContext> => {
+  try {
+    const cached = await getCachedAuthContext(userId);
+    if (cached) return cached;
+  } catch {
+    // DDB unavailable — fall through to Aurora
+  }
+  const ctx = await getEffectivePermissionsForUser(userId);
+  putAuthContext(ctx).catch((err) => {
+    console.warn("auth-context DDB write failed on cache miss:", err);
+  });
+  return ctx;
+};
 
 export const assertPermission = (
   ctx: UserPermissionsContext,
