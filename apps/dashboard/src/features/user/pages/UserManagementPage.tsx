@@ -1,4 +1,4 @@
-import { Tabs } from "antd";
+import { Spin, Tabs } from "antd";
 import type React from "react";
 import { useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -9,13 +9,14 @@ import { UserModalProvider } from "@/features/user/providers/UserModalProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const UserManagementPage: React.FC = () => {
-  const { permissions } = useCurrentUser();
+  const { permissions, loading } = useCurrentUser();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const canViewUsers = permissions.users?.view ?? false;
   const canViewTeams = permissions.teams?.view ?? false;
   const showTabs = canViewUsers && canViewTeams;
-  const activeTab = searchParams.get("tab") ?? "users";
+  const defaultTab = canViewUsers ? "users" : "teams";
+  const activeTab = searchParams.get("tab") ?? defaultTab;
 
   const handleTabChange = useCallback(
     (key: string) => {
@@ -23,6 +24,10 @@ const UserManagementPage: React.FC = () => {
     },
     [setSearchParams],
   );
+
+  if (loading) {
+    return <Spin size="large" />;
+  }
 
   if (showTabs) {
     return (
@@ -59,6 +64,10 @@ const UserManagementPage: React.FC = () => {
         <TeamManagementTable />
       </TeamModalProvider>
     );
+  }
+
+  if (!canViewUsers) {
+    return null;
   }
 
   return (
