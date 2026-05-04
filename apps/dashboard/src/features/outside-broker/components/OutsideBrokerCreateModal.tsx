@@ -1,12 +1,13 @@
 import {
-  Alert,
   Button,
   Checkbox,
+  Col,
   Form,
   Input,
   InputNumber,
   Modal,
   message,
+  Row,
   Select,
   Space,
 } from "antd";
@@ -104,74 +105,74 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
       footer={null}
       width={600}
     >
-      <Alert
-        title="Broker information"
-        description="Submit a request for a new outside broker. It appears in the directory only after an admin approves it."
-        type="info"
-        showIcon
-        style={{ marginBottom: 24 }}
-      />
-
       <Form form={form} layout="vertical" onFinish={handleSubmit} id="outsideBrokerCreateForm">
-        <Form.Item
-          name="brokerName"
-          label="Broker Name"
-          rules={[
-            { required: true, message: "Please enter broker name" },
-            { min: 2, message: "Broker name must be at least 2 characters" },
-          ]}
-        >
-          <Input placeholder="Enter broker name" id="create-brokerName" />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="brokerName"
+              label="Broker Name"
+              rules={[
+                { required: true, message: "Please enter broker name" },
+                { min: 2, message: "At least 2 characters" },
+              ]}
+            >
+              <Input placeholder="Enter broker name" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="mcNumber"
+              label="MC Number"
+              rules={[{ required: true, message: "Please enter MC number" }]}
+            >
+              <Input placeholder="Enter MC number" />
+            </Form.Item>
+          </Col>
+        </Row>
 
-        <Form.Item
-          name="mcNumber"
-          label="MC Number"
-          rules={[
-            { required: true, message: "Please enter MC number" },
-            { min: 1, message: "MC number is required" },
-          ]}
-        >
-          <Input placeholder="Enter MC number" id="create-mcNumber" />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="contactName" label="Contact Name">
+              <Input placeholder="Enter contact name" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="phone" label="Phone">
+              <Input placeholder="Enter phone number" />
+            </Form.Item>
+          </Col>
+        </Row>
 
-        <Form.Item name="contactName" label="Contact Name">
-          <Input placeholder="Enter contact name" id="create-contactName" />
-        </Form.Item>
-
-        <Form.Item name="phone" label="Phone">
-          <Input placeholder="Enter phone number" id="create-phone" />
-        </Form.Item>
-
-        <Form.Item
-          name="email"
-          label="Email"
-          rules={[{ type: "email", message: "Please enter a valid email address" }]}
-        >
-          <Input placeholder="Enter email address" id="create-email" />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[{ type: "email", message: "Please enter a valid email" }]}
+            >
+              <Input placeholder="Enter email address" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="branch" label="Branch (Optional)">
+              <Select
+                placeholder="Select branch"
+                loading={loadingBranches}
+                showSearch={{
+                  filterOption: (input, option) =>
+                    String(option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase()),
+                }}
+                allowClear
+                options={branches.map((b) => ({ value: b.id, label: b.name }))}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
 
         <Form.Item name="address" label="Address">
-          <TextArea placeholder="Enter address" rows={3} id="create-address" />
-        </Form.Item>
-
-        <Form.Item name="notes" label="Notes">
-          <TextArea placeholder="Enter notes" rows={3} id="create-notes" />
-        </Form.Item>
-
-        <Form.Item name="branch" label="Branch (Optional)">
-          <Select
-            placeholder="Select branch (optional)"
-            loading={loadingBranches}
-            showSearch={{
-              filterOption: (input, option) =>
-                String(option?.label ?? "")
-                  .toLowerCase()
-                  .includes(input.toLowerCase()),
-            }}
-            allowClear
-            options={branches.map((b) => ({ value: b.id, label: b.name }))}
-          />
+          <TextArea placeholder="Enter address" rows={2} />
         </Form.Item>
 
         <Form.Item label="Credit Limit">
@@ -195,6 +196,10 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
               placeholder="Enter credit limit"
             />
           )}
+        </Form.Item>
+
+        <Form.Item name="notes" label="Notes">
+          <TextArea placeholder="Enter notes" rows={2} />
         </Form.Item>
 
         <Form.Item>
