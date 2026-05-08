@@ -3,6 +3,7 @@ import type { MessageResponse } from "@twy/core";
 import {
   assertPermission,
   loadAuthContext,
+  rebuildAuthContextForTeam,
   type UpdateTeamEvent,
   UpdateTeamEventSchema,
   updateTeam as updateTeamRecord,
@@ -17,6 +18,7 @@ const updateTeam = async (event: UpdateTeamEvent): Promise<MessageResponse> => {
   const { teamId } = event.pathParameters;
   const { name, description, branchRestricted, onlyOwnData, permissions } = event.body;
   await updateTeamRecord(teamId, { name, description, branchRestricted, onlyOwnData, permissions });
+  await rebuildAuthContextForTeam(teamId);
 
   return { message: "Team updated successfully" };
 };

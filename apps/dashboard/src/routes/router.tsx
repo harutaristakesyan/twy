@@ -1,5 +1,8 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import AccountingPage from "@/features/accounting/pages/AccountingPage";
+import ExternalBillingTab from "@/features/accounting/pages/ExternalBillingTab";
+import InternalBillingTab from "@/features/accounting/pages/InternalBillingTab";
+import TwyAccountingTab from "@/features/accounting/pages/TwyAccountingTab";
 import CreatePasswordPage from "@/features/auth/pages/CreatePasswordPage";
 import ForgotPasswordPage from "@/features/auth/pages/ForgotPasswordPage";
 import LoginPage from "@/features/auth/pages/LoginPage";
@@ -131,6 +134,21 @@ export const router = createBrowserRouter([
                 <AccountingPage />
               </RequirePermission>
             ),
+            children: [
+              { index: true, element: <Navigate to="/accounting/twy" replace /> },
+              {
+                path: "twy",
+                element: <TwyAccountingTab />,
+              },
+              {
+                path: "external",
+                element: <ExternalBillingTab />,
+              },
+              {
+                path: "internal",
+                element: <InternalBillingTab />,
+              },
+            ],
           },
           { path: "profile", element: <ProfilePage /> },
         ],

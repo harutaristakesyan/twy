@@ -8,7 +8,7 @@ import {
 } from "@ant-design/icons";
 import { Flex, Layout, Menu, type MenuProps, Typography } from "antd";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { EventType, useEvent } from "@/libs/EventBus.ts";
@@ -28,65 +28,145 @@ const siderStyle: React.CSSProperties = {
   scrollbarGutter: "stable",
 };
 
+type ChildMenuItem = {
+  key: string;
+  label: string;
+  resources: Resource[];
+};
+
+type FlatMenuItem = {
+  key: string;
+  icon: React.ReactNode;
+  label: string;
+  resources: Resource[];
+  children?: never;
+};
+
+type GroupMenuItem = {
+  key: string;
+  icon: React.ReactNode;
+  label: string;
+  resources: Resource[];
+  children: ChildMenuItem[];
+};
+
+type SidebarMenuItem = FlatMenuItem | GroupMenuItem;
+
+const allMenuItems: SidebarMenuItem[] = [
+  {
+    key: "/user-management",
+    icon: <UsergroupAddOutlined />,
+    label: "User Management",
+    resources: ["users", "teams"],
+  },
+  { key: "/branches", icon: <BranchesOutlined />, label: "Branches", resources: ["branches"] },
+  { key: "/loads", icon: <TruckOutlined />, label: "Loads", resources: ["loads"] },
+  {
+    key: "/outside-brokers",
+    icon: <TeamOutlined />,
+    label: "Outside Brokers",
+    resources: ["brokers", "brokers_requests"],
+  },
+  {
+    key: "/carriers",
+    icon: <CarOutlined />,
+    label: "Carriers",
+    resources: ["carriers_twy", "carriers_outside", "carriers_requests"],
+  },
+  {
+    key: "/accounting",
+    icon: <AccountBookOutlined />,
+    label: "Accounting",
+    resources: ["billing"],
+    children: [
+      { key: "/accounting/twy", label: "TWY Accounting", resources: ["billing"] as Resource[] },
+      {
+        key: "/accounting/external",
+        label: "External Billing",
+        resources: ["billing"] as Resource[],
+      },
+      {
+        key: "/accounting/internal",
+        label: "Internal Billing",
+        resources: ["billing"] as Resource[],
+      },
+    ],
+  },
+];
+
+const getParentKeys = (pathname: string): string[] => {
+  for (const item of allMenuItems) {
+    if (item.children) {
+      const match = item.children.some(
+        (c) => pathname === c.key || pathname.startsWith(`${c.key}/`),
+      );
+      if (match) return [item.key];
+    }
+  }
+  return [];
+};
+
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+  const [openKeys, setOpenKeys] = useState<string[]>(() => getParentKeys(location.pathname));
   const { permissions } = useCurrentUser();
 
   useEvent(EventType.SidebarCollapsed, (payload) => setCollapsed(payload));
+
+  useEffect(() => {
+    const parents = getParentKeys(location.pathname);
+    setOpenKeys((prev) => {
+      const missing = parents.filter((k) => !prev.includes(k));
+      return missing.length ? [...prev, ...missing] : prev;
+    });
+  }, [location.pathname]);
 
   const handleMenuClick = ({ key }: { key: string }) => {
     navigate(key);
   };
 
-  const allMenuItems: Array<{
-    key: string;
-    icon: React.ReactNode;
-    label: string;
-    resources: Resource[];
-  }> = [
-    {
-      key: "/user-management",
-      icon: <UsergroupAddOutlined />,
-      label: "User Management",
-      resources: ["users", "teams"],
-    },
-    { key: "/branches", icon: <BranchesOutlined />, label: "Branches", resources: ["branches"] },
-    { key: "/loads", icon: <TruckOutlined />, label: "Loads", resources: ["loads"] },
-    {
-      key: "/outside-brokers",
-      icon: <TeamOutlined />,
-      label: "Outside Brokers",
-      resources: ["brokers", "brokers_requests"],
-    },
-    {
-      key: "/carriers",
-      icon: <CarOutlined />,
-      label: "Carriers",
-      resources: ["carriers_twy", "carriers_outside", "carriers_requests"],
-    },
-    {
-      key: "/accounting",
-      icon: <AccountBookOutlined />,
-      label: "Accounting",
-      resources: ["billing"] as Resource[],
-    },
-  ];
+  const getSelectedKey = (): string | undefined => {
+    for (const item of allMenuItems) {
+      if (item.children) {
+        for (const child of item.children) {
+          if (location.pathname === child.key || location.pathname.startsWith(`${child.key}/`)) {
+            return child.key;
+          }
+        }
+      } else if (location.pathname === item.key || location.pathname.startsWith(`${item.key}/`)) {
+        return item.key;
+      }
+    }
+    return undefined;
+  };
 
-  const filteredItems = allMenuItems.filter((item) =>
-    item.resources.some((r) => permissions[r]?.view),
-  );
+  const buildItems = (): MenuProps["items"] => {
+    const result: MenuProps["items"] = [];
 
-  const selectedKey = filteredItems.find(
-    (item) => location.pathname === item.key || location.pathname.startsWith(`${item.key}/`),
-  )?.key;
+    for (const item of allMenuItems) {
+      if (item.children) {
+        const visibleChildren = item.children.filter((c) =>
+          c.resources.some((r) => permissions[r]?.view),
+        );
+        if (visibleChildren.length === 0) continue;
+        result.push({
+          key: item.key,
+          icon: item.icon,
+          label: item.label,
+          children: visibleChildren.map(({ key, label }) => ({ key, label })),
+        });
+      } else {
+        if (!item.resources.some((r) => permissions[r]?.view)) continue;
+        result.push({ key: item.key, icon: item.icon, label: item.label });
+      }
+    }
 
-  const items: MenuProps["items"] = filteredItems.map(({ key, icon, label }) => ({
-    key,
-    icon,
-    label,
-  }));
+    return result;
+  };
+
+  const selectedKey = getSelectedKey();
 
   return (
     <Sider
@@ -108,7 +188,9 @@ const Sidebar: React.FC = () => {
         mode="inline"
         style={{ borderInlineEnd: "none" }}
         selectedKeys={selectedKey ? [selectedKey] : []}
-        items={items}
+        openKeys={openKeys}
+        onOpenChange={setOpenKeys}
+        items={buildItems()}
         onClick={handleMenuClick}
       />
     </Sider>
