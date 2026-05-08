@@ -26,6 +26,9 @@ const RESOURCE_LABELS: Record<Resource, string> = {
   teams: "Teams",
   users: "Users",
   loads: "Loads",
+  invoices: "Invoices",
+  payments: "Payments",
+  billing: "Billing",
 };
 
 interface MatrixRow {
