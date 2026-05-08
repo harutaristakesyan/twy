@@ -1,5 +1,6 @@
 import { brokerStatusValues } from "@twy/db";
 import z from "zod";
+import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
 
 const brokerStatusEnum = z.enum([...brokerStatusValues] as [
@@ -42,6 +43,7 @@ export const ListBrokersEventSchema = z.object({
       .default("descend")
       .transform((val) => brokerSortOrderMap[val as keyof typeof brokerSortOrderMap]),
     query: z.string().optional(),
+    filters: filtersQueryParamSchema,
   }),
 });
 

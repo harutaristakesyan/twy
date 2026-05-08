@@ -13,13 +13,14 @@ import type {
 
 // Get users with pagination, sorting, and search
 export const getUsers = async (params?: GetUsersParams) => {
-  const queryParams: Record<string, string | number> = {};
+  const queryParams: Record<string, string | number | boolean> = {};
 
   if (params?.page !== undefined) queryParams.page = params.page;
   if (params?.limit !== undefined) queryParams.limit = params.limit;
   if (params?.sortField) queryParams.sortField = params.sortField;
   if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
   if (params?.query) queryParams.query = params.query;
+  if (params?.filters !== undefined) queryParams.filters = params.filters;
 
   const response = await ApiClient.get<ApiResponse<PaginatedUsersResponse>>("/users", queryParams);
   return response.data;

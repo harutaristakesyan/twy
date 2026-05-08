@@ -1,5 +1,6 @@
 import { carrierKindValues, insuranceStatusValues } from "@twy/db";
 import z from "zod";
+import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
 
 const carrierKindEnum = z.enum([...carrierKindValues] as [
@@ -52,6 +53,7 @@ export const ListCarrierRequestsEventSchema = z.object({
       .transform((val) => carrierRequestSortOrderMap[val]),
     status: listStatusEnum.default("all"),
     query: z.string().optional(),
+    filters: filtersQueryParamSchema,
   }),
 });
 

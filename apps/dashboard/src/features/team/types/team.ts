@@ -30,6 +30,7 @@ export interface GetTeamsParams {
   limit?: number;
   sortOrder?: "ascend" | "descend";
   query?: string;
+  filters?: string;
 }
 
 export interface TeamMember {

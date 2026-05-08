@@ -17,7 +17,7 @@ const listUsers = async (event: ListUsersEvent): Promise<UserListResponse> => {
   const scope = buildScope(ctx);
   if (scope.denyAll) return { users: [], total: 0 };
 
-  const { page, limit, sortField, sortOrder, query } = event.queryStringParameters;
+  const { page, limit, sortField, sortOrder, query, filters } = event.queryStringParameters;
 
   const { users, total } = await listUserRecords({
     page,
@@ -26,6 +26,7 @@ const listUsers = async (event: ListUsersEvent): Promise<UserListResponse> => {
     sortOrder,
     query,
     branchId: scope.branchId,
+    advancedFilter: filters,
   });
 
   return {

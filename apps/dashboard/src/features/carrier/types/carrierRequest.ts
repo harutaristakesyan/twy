@@ -38,6 +38,7 @@ export interface ListCarrierRequestsParams {
   sortField?: "createdAt" | "carrierName" | "mcDotNumber" | "status";
   sortOrder?: "ascend" | "descend";
   status?: CarrierRequestStatusFilter;
+  filters?: string;
   query?: string;
 }
 

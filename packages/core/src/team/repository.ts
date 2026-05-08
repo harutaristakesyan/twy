@@ -1,7 +1,10 @@
 import { db, team, teamPermissions, users } from "@twy/db";
+import type { SQL } from "drizzle-orm";
 import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import createError from "http-errors";
 import { putAuthContext } from "../auth-context/store.js";
+import type { AdvancedFilter, AdvancedFilterRule } from "../shared/advanced-filter-schema.js";
+import { buildAdvancedFilterSql } from "../shared/advanced-filter-sql.js";
 import {
   ACTIONS,
   type Action,
@@ -34,6 +37,7 @@ export interface ListTeamsInput {
   limit: number;
   sortOrder: "asc" | "desc";
   query?: string;
+  advancedFilter?: AdvancedFilter;
 }
 
 export interface UserPermissionsContext {
@@ -207,22 +211,64 @@ export const getTeamWithPermissions = async (teamId: string): Promise<TeamRespon
   return formatTeamRow(teamRow, permRows, Number(memberRows[0]?.value ?? 0));
 };
 
+const buildTeamRuleCondition = (rule: AdvancedFilterRule): SQL<unknown> | undefined => {
+  const { field, operator, value } = rule;
+  if (!field || !operator || value === "") return undefined;
+  const asBool = value === "true";
+
+  switch (field) {
+    case "name":
+      if (operator === "contains") return ilike(team.name, `%${value}%`);
+      if (operator === "equals") return eq(team.name, value);
+      if (operator === "starts_with") return ilike(team.name, `${value}%`);
+      return undefined;
+    case "description":
+      if (operator === "contains") return ilike(team.description, `%${value}%`);
+      if (operator === "equals") return eq(team.description, value);
+      if (operator === "starts_with") return ilike(team.description, `${value}%`);
+      return undefined;
+    case "branchRestricted":
+      if (operator === "is") return eq(team.branchRestricted, asBool);
+      if (operator === "is_not") return eq(team.branchRestricted, !asBool);
+      return undefined;
+    case "onlyOwnData":
+      if (operator === "is") return eq(team.onlyOwnData, asBool);
+      if (operator === "is_not") return eq(team.onlyOwnData, !asBool);
+      return undefined;
+    default:
+      return undefined;
+  }
+};
+
+const teamDateColumn = (key: string) => {
+  if (key === "updatedAt") return team.updatedAt;
+  if (key === "createdAt") return team.createdAt;
+  return undefined;
+};
+
+const buildTeamAdvancedClause = (filter: AdvancedFilter | undefined): SQL<unknown> | undefined => {
+  if (!filter) return undefined;
+  return buildAdvancedFilterSql(filter, buildTeamRuleCondition, teamDateColumn);
+};
+
 export const listTeams = async (
   input: ListTeamsInput,
 ): Promise<{ teams: TeamResponse[]; total: number }> => {
   const direction = input.sortOrder === "asc" ? asc : desc;
   const offset = input.page * input.limit;
   const searchClause = input.query ? ilike(team.name, `%${input.query}%`) : undefined;
+  const filterClause = buildTeamAdvancedClause(input.advancedFilter);
+  const whereClause = and(searchClause, filterClause);
 
   const [teamRows, totalRows] = await Promise.all([
     db
       .select()
       .from(team)
-      .where(searchClause)
+      .where(whereClause)
       .orderBy(direction(team.name))
       .limit(input.limit)
       .offset(offset),
-    db.select({ value: count() }).from(team).where(searchClause),
+    db.select({ value: count() }).from(team).where(whereClause),
   ]);
 
   if (teamRows.length === 0) {

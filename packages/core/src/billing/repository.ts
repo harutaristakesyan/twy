@@ -1,5 +1,7 @@
 import { branch, db, invoice, load } from "@twy/db";
 import { and, desc, eq, gte, inArray, lte, sql, sum } from "drizzle-orm";
+import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
+import { buildLoadAdvancedFilterClause } from "../shared/load-advanced-filter.js";
 import { calculateProfit } from "./profit.js";
 
 const numericToNumber = (value: string | null): number | null =>
@@ -11,6 +13,7 @@ export interface ListBillingInput {
   dateTo?: string;
   page?: number;
   limit?: number;
+  advancedFilter?: AdvancedFilter;
 }
 
 export interface TwyAccountingRow {
@@ -81,8 +84,11 @@ export const getTwyAccountingRows = async (
     ...(input.branchId ? [eq(load.branchId, input.branchId)] : []),
     ...buildDateFilter(input.dateFrom, input.dateTo),
   ];
-
-  const whereClause = filters.length > 0 ? and(...filters) : undefined;
+  const advancedClause = buildLoadAdvancedFilterClause(input.advancedFilter);
+  const twyAccountingWhereParts = [...filters];
+  if (advancedClause !== undefined) twyAccountingWhereParts.push(advancedClause);
+  const whereClause =
+    twyAccountingWhereParts.length > 0 ? and(...twyAccountingWhereParts) : undefined;
 
   const loadRows = await db
     .select({
@@ -225,8 +231,10 @@ export const getInternalBillingByBranch = async (
     ...(input.branchId ? [eq(load.branchId, input.branchId)] : []),
     ...buildDateFilter(input.dateFrom, input.dateTo),
   ];
-
-  const whereClause = filters.length > 0 ? and(...filters) : undefined;
+  const advancedClause = buildLoadAdvancedFilterClause(input.advancedFilter);
+  const internalWhereParts = [...filters];
+  if (advancedClause !== undefined) internalWhereParts.push(advancedClause);
+  const whereClause = internalWhereParts.length > 0 ? and(...internalWhereParts) : undefined;
 
   const loadRows = await db
     .select({

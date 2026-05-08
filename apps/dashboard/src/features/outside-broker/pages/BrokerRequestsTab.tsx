@@ -1,6 +1,13 @@
-import { CheckOutlined, CloseOutlined, EyeOutlined, SearchOutlined } from "@ant-design/icons";
-import { useAntdTable, useDebounce, useLatest, useUpdateEffect } from "ahooks";
 import {
+  CheckOutlined,
+  CloseOutlined,
+  EyeOutlined,
+  FilterOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
+import { useAntdTable, useDebounce } from "ahooks";
+import {
+  Badge,
   Button,
   Card,
   Descriptions,
@@ -13,11 +20,14 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type React from "react";
 import { useState } from "react";
+import type { AdvancedFilter, FieldConfig } from "@/components/AdvancedFilter";
+import { AdvancedFilterDrawer } from "@/components/AdvancedFilter";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { canEditBrokerRequests, canViewBrokerRequests } from "@/utils/permissions";
@@ -30,6 +40,39 @@ import type { BrokerRequest, BrokerRequestStatusFilter } from "../types/brokerRe
 
 const { Title, Text } = Typography;
 const { Search } = Input;
+
+const BOOL_OPTIONS = [
+  { label: "Yes", value: "true" },
+  { label: "No", value: "false" },
+];
+
+const BROKER_REQ_FILTER_FIELDS: FieldConfig[] = [
+  { key: "brokerName", label: "Broker name", type: "text" },
+  { key: "mcNumber", label: "MC #", type: "text" },
+  { key: "contactName", label: "Contact name", type: "text" },
+  { key: "phone", label: "Phone", type: "text" },
+  { key: "email", label: "Email", type: "text" },
+  { key: "address", label: "Address", type: "text" },
+  { key: "notes", label: "Notes", type: "text" },
+  {
+    key: "status",
+    label: "Request status",
+    type: "enum",
+    options: [
+      { label: "Pending", value: "pending" },
+      { label: "Approved", value: "approved" },
+      { label: "Rejected", value: "rejected" },
+    ],
+  },
+  {
+    key: "creditLimitUnlimited",
+    label: "Credit unlimited",
+    type: "enum",
+    options: BOOL_OPTIONS,
+  },
+  { key: "creditLimit", label: "Credit limit", type: "number" },
+  { key: "rejectionReason", label: "Rejection reason", type: "text" },
+];
 
 const statusColors: Record<string, string> = {
   pending: "processing",
@@ -45,7 +88,12 @@ const BrokerRequestsTab: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<BrokerRequestStatusFilter>("pending");
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 400 });
-  const searchTextRef = useLatest(searchText);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
+
+  const isAdvFilterActive = (activeFilter?.rules?.length ?? 0) > 0;
+
+  const activeRuleCount = activeFilter?.rules?.length ?? 0;
 
   const [viewRecord, setViewRecord] = useState<BrokerRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -61,16 +109,18 @@ const BrokerRequestsTab: React.FC = () => {
         sortField: (s?.field ?? "createdAt") as "createdAt" | "brokerName" | "mcNumber" | "status",
         sortOrder: (s?.order ?? undefined) as "ascend" | "descend" | undefined,
         status: statusFilter,
-        query: searchTextRef.current || undefined,
+        query: isAdvFilterActive ? undefined : searchText || undefined,
+        filters: isAdvFilterActive ? JSON.stringify(activeFilter) : undefined,
       });
       return { total: result.total, list: result.requests };
     },
-    { refreshDeps: [statusFilter], defaultPageSize: 10 },
+    { refreshDeps: [statusFilter, searchText, activeFilter], defaultPageSize: 10 },
   );
 
-  useUpdateEffect(() => {
-    void refresh();
-  }, [searchText]);
+  const handleFilterApply = (filter: AdvancedFilter) => {
+    setActiveFilter(filter.rules.length > 0 ? filter : undefined);
+    setFilterDrawerOpen(false);
+  };
 
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
@@ -192,14 +242,35 @@ const BrokerRequestsTab: React.FC = () => {
                 { value: "all", label: "All" },
               ]}
             />
-            <Search
-              placeholder="Search by name or MC number…"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              prefix={<SearchOutlined />}
-              allowClear
-              style={{ width: 260 }}
-            />
+            <Tooltip
+              title={isAdvFilterActive ? "Clear advanced filters to use simple search" : undefined}
+            >
+              <Search
+                placeholder="Search by name or MC number…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                prefix={<SearchOutlined />}
+                allowClear
+                disabled={isAdvFilterActive}
+                style={{ width: 260, opacity: isAdvFilterActive ? 0.5 : 1 }}
+              />
+            </Tooltip>
+            <Badge count={isAdvFilterActive ? activeRuleCount : 0} size="small">
+              <Space.Compact>
+                <Button
+                  icon={<FilterOutlined />}
+                  type={isAdvFilterActive ? "primary" : "default"}
+                  onClick={() => setFilterDrawerOpen(true)}
+                >
+                  Advanced Search
+                </Button>
+                {isAdvFilterActive && (
+                  <Button type="primary" onClick={() => setActiveFilter(undefined)} title="Clear">
+                    ×
+                  </Button>
+                )}
+              </Space.Compact>
+            </Badge>
           </Flex>
         </Flex>
 
@@ -212,7 +283,9 @@ const BrokerRequestsTab: React.FC = () => {
             emptyText: (
               <Empty
                 description={
-                  searchText ? `No requests match "${searchText}"` : "No broker requests yet"
+                  searchText && !isAdvFilterActive
+                    ? `No requests match "${searchText}"`
+                    : "No broker requests yet"
                 }
               />
             ),
@@ -326,6 +399,15 @@ const BrokerRequestsTab: React.FC = () => {
           </Flex>
         )}
       </Drawer>
+
+      <AdvancedFilterDrawer
+        open={filterDrawerOpen}
+        title="Advanced Search — Broker Requests"
+        fields={BROKER_REQ_FILTER_FIELDS}
+        initialFilter={activeFilter}
+        onApply={handleFilterApply}
+        onClose={() => setFilterDrawerOpen(false)}
+      />
     </div>
   );
 };

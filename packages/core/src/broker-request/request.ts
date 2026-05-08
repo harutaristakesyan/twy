@@ -1,4 +1,5 @@
 import z from "zod";
+import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
 
 const uuidField = z.uuid("Value must be a valid UUID");
@@ -41,6 +42,7 @@ export const ListBrokerRequestsEventSchema = z.object({
       .transform((val) => brokerRequestSortOrderMap[val]),
     status: listStatusEnum.default("all"),
     query: z.string().optional(),
+    filters: filtersQueryParamSchema,
   }),
 });
 

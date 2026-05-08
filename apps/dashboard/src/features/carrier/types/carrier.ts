@@ -64,6 +64,7 @@ export interface GetCarriersParams {
     | undefined;
   sortOrder?: "ascend" | "descend" | undefined;
   query?: string;
+  filters?: string;
 }
 
 export interface CarrierListResponse {

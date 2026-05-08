@@ -8,6 +8,7 @@ interface TwyAccountingParams {
   limit: number;
   dateFrom?: string;
   dateTo?: string;
+  filters?: string;
 }
 
 interface TwyAccountingResponse {
@@ -27,6 +28,7 @@ interface InternalBillingParams {
   limit: number;
   dateFrom?: string;
   dateTo?: string;
+  filters?: string;
 }
 
 interface InternalBillingResponse {
@@ -36,10 +38,14 @@ interface InternalBillingResponse {
 
 export const billingApi = {
   getTwyAccounting: async (params: TwyAccountingParams): Promise<TwyAccountingResponse> => {
-    const q: Record<string, string | number> = { page: params.page, limit: params.limit };
+    const q: Record<string, string | number | boolean> = {
+      page: params.page,
+      limit: params.limit,
+    };
     if (params.branchId !== undefined) q.branchId = params.branchId;
     if (params.dateFrom !== undefined) q.dateFrom = params.dateFrom;
     if (params.dateTo !== undefined) q.dateTo = params.dateTo;
+    if (params.filters !== undefined) q.filters = params.filters;
     const response = await ApiClient.get<ApiResponse<TwyAccountingResponse>>("/billing/twy", q);
     return response.data;
   },
@@ -57,10 +63,14 @@ export const billingApi = {
   },
 
   getInternalBilling: async (params: InternalBillingParams): Promise<InternalBillingResponse> => {
-    const q: Record<string, string | number> = { page: params.page, limit: params.limit };
+    const q: Record<string, string | number | boolean> = {
+      page: params.page,
+      limit: params.limit,
+    };
     if (params.branchId !== undefined) q.branchId = params.branchId;
     if (params.dateFrom !== undefined) q.dateFrom = params.dateFrom;
     if (params.dateTo !== undefined) q.dateTo = params.dateTo;
+    if (params.filters !== undefined) q.filters = params.filters;
     const response = await ApiClient.get<ApiResponse<InternalBillingResponse>>(
       "/billing/internal",
       q,

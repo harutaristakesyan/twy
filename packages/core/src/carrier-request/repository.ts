@@ -9,9 +9,12 @@ import {
   type OrderDirection,
   users,
 } from "@twy/db";
-import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, ne, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import createError from "http-errors";
+import type { AdvancedFilter, AdvancedFilterRule } from "../shared/advanced-filter-schema.js";
+import { buildAdvancedFilterSql } from "../shared/advanced-filter-sql.js";
 import type { CarrierRequestResponse } from "./response.js";
 
 export interface ListCarrierRequestsInput {
@@ -21,6 +24,7 @@ export interface ListCarrierRequestsInput {
   sortOrder: OrderDirection;
   status: CarrierRequestStatus | "all";
   query?: string;
+  advancedFilter?: AdvancedFilter;
 }
 
 export interface SubmitCarrierRequestInput {
@@ -109,6 +113,80 @@ const mapRow = (row: {
   updatedAt: row.updatedAt.toISOString(),
 });
 
+const buildCarrierRequestRuleCondition = (rule: AdvancedFilterRule): SQL<unknown> | undefined => {
+  const { field, operator, value } = rule;
+  if (!field || !operator || value === "") return undefined;
+
+  switch (field) {
+    case "kind":
+      if (operator === "is" || operator === "equals")
+        return eq(carrierRequest.kind, value as CarrierKind);
+      if (operator === "is_not") return ne(carrierRequest.kind, value as CarrierKind);
+      return undefined;
+    case "carrierName":
+      if (operator === "contains") return ilike(carrierRequest.carrierName, `%${value}%`);
+      if (operator === "equals") return eq(carrierRequest.carrierName, value);
+      if (operator === "starts_with") return ilike(carrierRequest.carrierName, `${value}%`);
+      return undefined;
+    case "mcDotNumber":
+      if (operator === "contains") return ilike(carrierRequest.mcDotNumber, `%${value}%`);
+      if (operator === "equals") return eq(carrierRequest.mcDotNumber, value);
+      if (operator === "starts_with") return ilike(carrierRequest.mcDotNumber, `${value}%`);
+      return undefined;
+    case "equipmentType":
+      if (operator === "contains") return ilike(carrierRequest.equipmentType, `%${value}%`);
+      if (operator === "equals") return eq(carrierRequest.equipmentType, value);
+      if (operator === "starts_with") return ilike(carrierRequest.equipmentType, `${value}%`);
+      return undefined;
+    case "phone":
+      if (operator === "contains") return ilike(carrierRequest.phone, `%${value}%`);
+      if (operator === "equals") return eq(carrierRequest.phone, value);
+      if (operator === "starts_with") return ilike(carrierRequest.phone, `${value}%`);
+      return undefined;
+    case "email":
+      if (operator === "contains") return ilike(carrierRequest.email, `%${value}%`);
+      if (operator === "equals") return eq(carrierRequest.email, value);
+      if (operator === "starts_with") return ilike(carrierRequest.email, `${value}%`);
+      return undefined;
+    case "notes":
+      if (operator === "contains") return ilike(carrierRequest.notes, `%${value}%`);
+      if (operator === "equals") return eq(carrierRequest.notes, value);
+      if (operator === "starts_with") return ilike(carrierRequest.notes, `${value}%`);
+      return undefined;
+    case "rejectionReason":
+      if (operator === "contains") return ilike(carrierRequest.rejectionReason, `%${value}%`);
+      if (operator === "equals") return eq(carrierRequest.rejectionReason, value);
+      if (operator === "starts_with") return ilike(carrierRequest.rejectionReason, `${value}%`);
+      return undefined;
+    case "status":
+      if (operator === "is") return eq(carrierRequest.status, value as CarrierRequestStatus);
+      if (operator === "is_not") return ne(carrierRequest.status, value as CarrierRequestStatus);
+      return undefined;
+    case "insuranceStatus":
+      if (operator === "is") return eq(carrierRequest.insuranceStatus, value as InsuranceStatus);
+      if (operator === "is_not")
+        return ne(carrierRequest.insuranceStatus, value as InsuranceStatus);
+      return undefined;
+    default:
+      return undefined;
+  }
+};
+
+const carrierRequestDateColumn = (key: string) => {
+  if (key === "updatedAt") return carrierRequest.updatedAt;
+  if (key === "createdAt") return carrierRequest.createdAt;
+  if (key === "reviewedAt") return carrierRequest.reviewedAt;
+  if (key === "insuranceExpiry") return carrierRequest.insuranceExpiry;
+  return undefined;
+};
+
+const buildCarrierRequestAdvancedClause = (
+  filter: AdvancedFilter | undefined,
+): SQL<unknown> | undefined => {
+  if (!filter) return undefined;
+  return buildAdvancedFilterSql(filter, buildCarrierRequestRuleCondition, carrierRequestDateColumn);
+};
+
 export const listCarrierRequests = async (input: ListCarrierRequestsInput) => {
   const direction = input.sortOrder === "asc" ? asc : desc;
   const orderCol = sortColumn(input.sortField);
@@ -123,7 +201,16 @@ export const listCarrierRequests = async (input: ListCarrierRequestsInput) => {
       )
     : undefined;
 
-  const whereClause = and(statusClause, searchClause);
+  const filterClause = buildCarrierRequestAdvancedClause(input.advancedFilter);
+  const whereParts = [statusClause, searchClause, filterClause].filter(
+    (x): x is SQL<unknown> => x !== undefined,
+  );
+  const whereClause =
+    whereParts.length === 0
+      ? undefined
+      : whereParts.length === 1
+        ? whereParts[0]
+        : and(...whereParts);
 
   const [rows, totalRows] = await Promise.all([
     db

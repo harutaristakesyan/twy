@@ -1,10 +1,14 @@
+import { FilterOutlined } from "@ant-design/icons";
 import { useAntdTable, useRequest } from "ahooks";
-import { Button, Card, DatePicker, Flex, Select, Space, Table, Typography } from "antd";
+import { Badge, Button, Card, DatePicker, Flex, Select, Space, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { Dayjs } from "dayjs";
 import type React from "react";
 import { useCallback, useState } from "react";
+import type { AdvancedFilter } from "@/components/AdvancedFilter";
+import { AdvancedFilterDrawer } from "@/components/AdvancedFilter";
 import { getBranches } from "@/features/branch/api/branchApi.ts";
+import { LOAD_FILTER_FIELDS } from "@/features/load/constants/loadAdvancedFilterFields";
 import { formatCurrency } from "@/utils/formatters.ts";
 import { billingApi } from "../api/billingApi.ts";
 import StatusTag from "../components/StatusTag.tsx";
@@ -18,6 +22,12 @@ const TwyAccountingTab: React.FC = () => {
   const { openInvoiceModal, openPaymentModal } = useAccountingModal();
   const [branchId, setBranchId] = useState<string | undefined>(undefined);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
+
+  const isAdvFilterActive = (activeFilter?.rules?.length ?? 0) > 0;
+
+  const activeRuleCount = activeFilter?.rules?.length ?? 0;
 
   const { data: branchesData, loading: branchesLoading } = useRequest(
     () => getBranches({ limit: 200 }),
@@ -31,20 +41,27 @@ const TwyAccountingTab: React.FC = () => {
 
   const fetchData = useCallback(
     async ({ current, pageSize }: { current: number; pageSize: number }) => {
+      const hasAdvFilter = (activeFilter?.rules?.length ?? 0) > 0;
       const result = await billingApi.getTwyAccounting({
         page: current - 1,
         limit: pageSize,
         branchId,
         dateFrom: dateRange?.[0]?.toISOString() ?? undefined,
         dateTo: dateRange?.[1]?.toISOString() ?? undefined,
+        filters: hasAdvFilter ? JSON.stringify(activeFilter) : undefined,
       });
       return { total: result.total, list: result.rows };
     },
-    [branchId, dateRange],
+    [branchId, dateRange, activeFilter],
   );
 
+  const handleFilterApply = (filter: AdvancedFilter) => {
+    setActiveFilter(filter.rules.length > 0 ? filter : undefined);
+    setFilterDrawerOpen(false);
+  };
+
   const { tableProps, refresh } = useAntdTable(fetchData, {
-    refreshDeps: [branchId, dateRange],
+    refreshDeps: [branchId, dateRange, activeFilter],
     defaultPageSize: 10,
   });
 
@@ -217,9 +234,34 @@ const TwyAccountingTab: React.FC = () => {
             onChange={(val) => setBranchId(val)}
           />
           <RangePicker onChange={(range) => setDateRange(range)} allowClear />
+          <Badge count={isAdvFilterActive ? activeRuleCount : 0} size="small">
+            <Space.Compact>
+              <Button
+                icon={<FilterOutlined />}
+                type={isAdvFilterActive ? "primary" : "default"}
+                onClick={() => setFilterDrawerOpen(true)}
+              >
+                Advanced Search
+              </Button>
+              {isAdvFilterActive && (
+                <Button type="primary" onClick={() => setActiveFilter(undefined)} title="Clear">
+                  ×
+                </Button>
+              )}
+            </Space.Compact>
+          </Badge>
         </Flex>
       </Flex>
       <Table columns={columns} rowKey="loadId" scroll={{ x: 1600 }} {...tableProps} />
+
+      <AdvancedFilterDrawer
+        open={filterDrawerOpen}
+        title="Load filters — TWY Accounting"
+        fields={LOAD_FILTER_FIELDS}
+        initialFilter={activeFilter}
+        onApply={handleFilterApply}
+        onClose={() => setFilterDrawerOpen(false)}
+      />
     </Card>
   );
 };

@@ -17,7 +17,7 @@ const listBranches = async (event: ListBranchesEvent): Promise<BranchListRespons
   const scope = buildScope(ctx);
   if (scope.denyAll) return { branches: [], total: 0 };
 
-  const { page, limit, sortField, sortOrder, query } = event.queryStringParameters;
+  const { page, limit, sortField, sortOrder, query, filters } = event.queryStringParameters;
 
   const { branches, total } = await listBranchRecords({
     page,
@@ -26,6 +26,7 @@ const listBranches = async (event: ListBranchesEvent): Promise<BranchListRespons
     sortOrder,
     query,
     branchId: scope.branchId,
+    advancedFilter: filters,
   });
 
   return {

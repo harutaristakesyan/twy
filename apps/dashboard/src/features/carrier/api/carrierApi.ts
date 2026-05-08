@@ -19,12 +19,13 @@ function carriersListKey(params?: GetCarriersParams): string {
     sortField: params?.sortField ?? "",
     sortOrder: params?.sortOrder ?? "",
     query: params?.query ?? "",
+    filters: params?.filters ?? "",
   });
 }
 
 export const getCarriers = async (params?: GetCarriersParams): Promise<CarrierListResponse> => {
   return shareInFlightPromise(carriersListInFlight, carriersListKey(params), async () => {
-    const queryParams: Record<string, string | number> = {};
+    const queryParams: Record<string, string | number | boolean> = {};
 
     if (params?.kind) queryParams.kind = params.kind;
     if (params?.page !== undefined) queryParams.page = params.page;
@@ -32,6 +33,7 @@ export const getCarriers = async (params?: GetCarriersParams): Promise<CarrierLi
     if (params?.sortField) queryParams.sortField = params.sortField;
     if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
     if (params?.query) queryParams.query = params.query;
+    if (params?.filters !== undefined) queryParams.filters = params.filters;
 
     const response = await ApiClient.get<ApiResponse<CarrierListResponse>>(
       "/carriers",

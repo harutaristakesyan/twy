@@ -1,4 +1,5 @@
 import z from "zod";
+import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
 import { ACTIONS, RESOURCES } from "./contracts.js";
 
@@ -27,6 +28,7 @@ export const ListTeamsEventSchema = z.object({
       .default("descend")
       .transform((val) => teamSortOrderMap[val as keyof typeof teamSortOrderMap]),
     query: z.string().optional(),
+    filters: filtersQueryParamSchema,
   }),
 });
 

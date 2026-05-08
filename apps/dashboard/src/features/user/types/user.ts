@@ -56,6 +56,7 @@ export interface GetUsersParams {
   sortField?: "firstName" | "lastName" | "email" | "isActive" | "createdAt" | "branch" | undefined;
   sortOrder?: "ascend" | "descend" | undefined;
   query?: string; // search text for firstName, lastName, email
+  filters?: string;
 }
 
 export interface PaginatedUsersResponse {

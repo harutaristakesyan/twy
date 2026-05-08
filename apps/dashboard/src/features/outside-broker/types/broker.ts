@@ -54,6 +54,7 @@ export interface GetOutsideBrokersParams {
   sortField?: "brokerName" | "mcNumber" | "createdAt" | undefined;
   sortOrder?: "ascend" | "descend" | undefined;
   query?: string; // search text for broker name, MC number
+  filters?: string;
 }
 
 export interface PaginatedOutsideBrokersResponse {

@@ -14,7 +14,7 @@ const listBrokers = async (event: ListBrokersEvent): Promise<OutsideBrokerListRe
   const ctx = await loadAuthContext(userId);
   assertPermission(ctx, "brokers", "view");
 
-  const { page, limit, sortField, sortOrder, query } = event.queryStringParameters;
+  const { page, limit, sortField, sortOrder, query, filters } = event.queryStringParameters;
 
   const { brokers, total } = await listBrokerRecords({
     page,
@@ -22,6 +22,7 @@ const listBrokers = async (event: ListBrokersEvent): Promise<OutsideBrokerListRe
     sortField,
     sortOrder,
     query,
+    advancedFilter: filters,
   });
 
   return { brokers, total };

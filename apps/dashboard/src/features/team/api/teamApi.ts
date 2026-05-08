@@ -9,11 +9,12 @@ import type {
 } from "../types/team";
 
 export const getTeams = async (params?: GetTeamsParams): Promise<TeamListResponse> => {
-  const queryParams: Record<string, string | number> = {};
+  const queryParams: Record<string, string | number | boolean> = {};
   if (params?.page !== undefined) queryParams.page = params.page;
   if (params?.limit !== undefined) queryParams.limit = params.limit;
   if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
   if (params?.query) queryParams.query = params.query;
+  if (params?.filters !== undefined) queryParams.filters = params.filters;
   const response = await ApiClient.get<ApiResponse<TeamListResponse>>("/teams", queryParams);
   return response.data;
 };

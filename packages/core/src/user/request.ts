@@ -1,4 +1,5 @@
 import z from "zod";
+import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
 
 export const GetUserEventSchema = z.object({
@@ -43,6 +44,7 @@ export const ListUsersEventSchema = z.object({
       .default("descend")
       .transform((val) => userSortOrderMap[val as keyof typeof userSortOrderMap]),
     query: z.string().optional(),
+    filters: filtersQueryParamSchema,
   }),
 });
 

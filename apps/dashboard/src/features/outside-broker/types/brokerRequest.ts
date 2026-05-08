@@ -35,6 +35,7 @@ export interface ListBrokerRequestsParams {
   sortOrder?: "ascend" | "descend";
   status?: BrokerRequestStatusFilter;
   query?: string;
+  filters?: string;
 }
 
 export interface SubmitBrokerRequestBody {

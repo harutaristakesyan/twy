@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
 
 const uuidField = z.uuid("Value must be a valid UUID");
@@ -13,6 +14,7 @@ export const TwyAccountingEventSchema = z.object({
     dateTo: z.string().optional(),
     page: z.coerce.number().int().min(0).default(0),
     limit: z.coerce.number().int().min(1).default(20),
+    filters: filtersQueryParamSchema,
   }),
 });
 
@@ -37,6 +39,7 @@ export const InternalBillingEventSchema = z.object({
     dateTo: z.string().optional(),
     page: z.coerce.number().int().min(0).default(0),
     limit: z.coerce.number().int().min(1).default(20),
+    filters: filtersQueryParamSchema,
   }),
 });
 

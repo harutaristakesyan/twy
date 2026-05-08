@@ -13,7 +13,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 const listCarriersHandler = async (event: ListCarriersEvent): Promise<CarrierListResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  const { kind, page, limit, sortField, sortOrder, query } = event.queryStringParameters;
+  const { kind, page, limit, sortField, sortOrder, query, filters } = event.queryStringParameters;
   assertPermission(ctx, carrierResource(kind), "view");
 
   const { carriers, total } = await listCarriers({
@@ -23,6 +23,7 @@ const listCarriersHandler = async (event: ListCarriersEvent): Promise<CarrierLis
     sortField,
     sortOrder,
     query,
+    advancedFilter: filters,
   });
 
   return { carriers, total };

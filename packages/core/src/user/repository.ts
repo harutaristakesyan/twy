@@ -1,8 +1,11 @@
 import { branch, db, type NewUser, type OrderDirection, team, users } from "@twy/db";
-import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, ne, or } from "drizzle-orm";
 import createError from "http-errors";
 import { rebuildAuthContext } from "../auth-context/rebuild.js";
 import { deleteAuthContext } from "../auth-context/store.js";
+import type { AdvancedFilter, AdvancedFilterRule } from "../shared/advanced-filter-schema.js";
+import { buildAdvancedFilterSql } from "../shared/advanced-filter-sql.js";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Tx;
@@ -104,7 +107,59 @@ export interface ListUsersInput {
   sortOrder: OrderDirection;
   query?: string;
   branchId?: string;
+  advancedFilter?: AdvancedFilter;
 }
+
+const buildUserRuleCondition = (rule: AdvancedFilterRule): SQL<unknown> | undefined => {
+  const { field, operator, value } = rule;
+  if (!field || !operator || value === "") return undefined;
+  const asBool = value === "true";
+
+  switch (field) {
+    case "firstName":
+      if (operator === "contains") return ilike(users.firstName, `%${value}%`);
+      if (operator === "equals") return eq(users.firstName, value);
+      if (operator === "starts_with") return ilike(users.firstName, `${value}%`);
+      return undefined;
+    case "lastName":
+      if (operator === "contains") return ilike(users.lastName, `%${value}%`);
+      if (operator === "equals") return eq(users.lastName, value);
+      if (operator === "starts_with") return ilike(users.lastName, `${value}%`);
+      return undefined;
+    case "email":
+      if (operator === "contains") return ilike(users.email, `%${value}%`);
+      if (operator === "equals") return eq(users.email, value);
+      if (operator === "starts_with") return ilike(users.email, `${value}%`);
+      return undefined;
+    case "isActive":
+      if (operator === "is") return eq(users.isActive, asBool);
+      if (operator === "is_not") return ne(users.isActive, asBool);
+      return undefined;
+    case "branchName":
+      if (operator === "contains") return ilike(branch.name, `%${value}%`);
+      if (operator === "equals") return eq(branch.name, value);
+      if (operator === "starts_with") return ilike(branch.name, `${value}%`);
+      return undefined;
+    case "teamName":
+      if (operator === "contains") return ilike(team.name, `%${value}%`);
+      if (operator === "equals") return eq(team.name, value);
+      if (operator === "starts_with") return ilike(team.name, `${value}%`);
+      return undefined;
+    default:
+      return undefined;
+  }
+};
+
+const userDateColumn = (key: string) => {
+  if (key === "updatedAt") return users.updatedAt;
+  if (key === "createdAt") return users.createdAt;
+  return undefined;
+};
+
+const buildUserAdvancedClause = (filter: AdvancedFilter | undefined): SQL<unknown> | undefined => {
+  if (!filter) return undefined;
+  return buildAdvancedFilterSql(filter, buildUserRuleCondition, userDateColumn);
+};
 
 const userSortColumn = (field: ListUsersInput["sortField"]) => {
   switch (field) {
@@ -136,7 +191,8 @@ export const listUsers = async (input: ListUsersInput) => {
       )
     : undefined;
   const branchClause = input.branchId ? eq(users.branch, input.branchId) : undefined;
-  const whereClause = and(searchClause, branchClause);
+  const filterClause = buildUserAdvancedClause(input.advancedFilter);
+  const whereClause = and(searchClause, branchClause, filterClause);
 
   const [rows, totalRows] = await Promise.all([
     db
@@ -159,7 +215,12 @@ export const listUsers = async (input: ListUsersInput) => {
       .orderBy(direction(orderColumn))
       .limit(input.limit)
       .offset(offset),
-    db.select({ value: count() }).from(users).where(whereClause),
+    db
+      .select({ value: count() })
+      .from(users)
+      .leftJoin(branch, eq(users.branch, branch.id))
+      .leftJoin(team, eq(users.teamId, team.id))
+      .where(whereClause),
   ]);
 
   return {

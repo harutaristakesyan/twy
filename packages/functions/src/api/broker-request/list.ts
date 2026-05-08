@@ -16,7 +16,7 @@ const listBrokerRequestsHandler = async (
   const ctx = await loadAuthContext(userId);
   assertBrokerRequestsView(ctx);
 
-  const { page, limit, sortField, sortOrder, status, query } = event.queryStringParameters;
+  const { page, limit, sortField, sortOrder, status, query, filters } = event.queryStringParameters;
 
   const { requests, total } = await listBrokerRequests({
     page,
@@ -25,6 +25,7 @@ const listBrokerRequestsHandler = async (
     sortOrder,
     status,
     query,
+    advancedFilter: filters,
   });
 
   return { requests, total };

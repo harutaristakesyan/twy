@@ -20,7 +20,7 @@ const internalBillingHandler = async (
 
   if (scope.denyAll) return { rows: [], total: 0 };
 
-  const { page, limit, branchId, dateFrom, dateTo } = event.queryStringParameters;
+  const { page, limit, branchId, dateFrom, dateTo, filters } = event.queryStringParameters;
 
   const { rows, total } = await getInternalBillingByBranch({
     page,
@@ -28,6 +28,7 @@ const internalBillingHandler = async (
     branchId: scope.branchId ?? branchId,
     dateFrom,
     dateTo,
+    advancedFilter: filters,
   });
 
   return { rows, total };

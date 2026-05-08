@@ -16,7 +16,7 @@ const listCarrierRequestsHandler = async (
   const ctx = await loadAuthContext(userId);
   assertPermission(ctx, "carriers_requests", "view");
 
-  const { page, limit, sortField, sortOrder, status, query } = event.queryStringParameters;
+  const { page, limit, sortField, sortOrder, status, query, filters } = event.queryStringParameters;
 
   const { requests, total } = await listCarrierRequests({
     page,
@@ -25,6 +25,7 @@ const listCarrierRequestsHandler = async (
     sortOrder,
     status,
     query,
+    advancedFilter: filters,
   });
 
   return { requests, total };

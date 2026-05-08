@@ -1,5 +1,6 @@
 import { loadStatusValues } from "@twy/db";
 import z from "zod";
+import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
 
 const loadStatusEnum = z.enum([...loadStatusValues] as [
@@ -23,20 +24,6 @@ const stopsArraySchema = z
   .array(locationSchema)
   .min(1, "At least one stop is required")
   .max(MAX_STOPS_PER_LEG, `At most ${MAX_STOPS_PER_LEG} stops are allowed per leg`);
-
-const FilterRuleSchema = z.object({
-  field: z.string(),
-  operator: z.string(),
-  value: z.string(),
-});
-
-const AdvancedFilterSchema = z.object({
-  matchMode: z.enum(["all", "any"]).default("all"),
-  rules: z.array(FilterRuleSchema).default([]),
-  dateField: z.string().optional(),
-  dateFrom: z.string().optional(),
-  dateTo: z.string().optional(),
-});
 
 const LoadBaseSchema = z.object({
   customer: z.string().trim().min(1, "Customer is required"),
@@ -111,17 +98,7 @@ export const ListLoadsEventSchema = z.object({
       .default("descend")
       .transform((val) => loadSortOrderMap[val as keyof typeof loadSortOrderMap]),
     query: z.string().optional(),
-    filters: z
-      .string()
-      .optional()
-      .transform((val) => {
-        if (!val) return undefined;
-        try {
-          return AdvancedFilterSchema.parse(JSON.parse(val));
-        } catch {
-          return undefined;
-        }
-      }),
+    filters: filtersQueryParamSchema,
   }),
 });
 

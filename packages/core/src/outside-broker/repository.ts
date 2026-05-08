@@ -1,8 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { BrokerStatus } from "@twy/db";
 import { db, type OrderDirection, outsideBroker } from "@twy/db";
-import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, ilike, lt, lte, ne, or } from "drizzle-orm";
 import createError from "http-errors";
+import type { AdvancedFilter, AdvancedFilterRule } from "../shared/advanced-filter-schema.js";
+import { buildAdvancedFilterSql } from "../shared/advanced-filter-sql.js";
 
 export interface OutsideBrokerRecord {
   id: string;
@@ -26,6 +29,7 @@ export interface ListBrokersInput {
   sortField: "brokerName" | "mcNumber" | "createdAt";
   sortOrder: OrderDirection;
   query?: string;
+  advancedFilter?: AdvancedFilter;
 }
 
 export interface NewBrokerInput {
@@ -54,6 +58,80 @@ export interface UpdateBrokerInput {
   creditLimitUnlimited?: boolean;
   creditLimit?: number | null;
 }
+
+const buildOutsideBrokerRuleCondition = (rule: AdvancedFilterRule): SQL<unknown> | undefined => {
+  const { field, operator, value } = rule;
+  if (!field || !operator || value === "") return undefined;
+  const asBool = value === "true";
+
+  switch (field) {
+    case "brokerName":
+      if (operator === "contains") return ilike(outsideBroker.brokerName, `%${value}%`);
+      if (operator === "equals") return eq(outsideBroker.brokerName, value);
+      if (operator === "starts_with") return ilike(outsideBroker.brokerName, `${value}%`);
+      return undefined;
+    case "mcNumber":
+      if (operator === "contains") return ilike(outsideBroker.mcNumber, `%${value}%`);
+      if (operator === "equals") return eq(outsideBroker.mcNumber, value);
+      if (operator === "starts_with") return ilike(outsideBroker.mcNumber, `${value}%`);
+      return undefined;
+    case "contactName":
+      if (operator === "contains") return ilike(outsideBroker.contactName, `%${value}%`);
+      if (operator === "equals") return eq(outsideBroker.contactName, value);
+      if (operator === "starts_with") return ilike(outsideBroker.contactName, `${value}%`);
+      return undefined;
+    case "phone":
+      if (operator === "contains") return ilike(outsideBroker.phone, `%${value}%`);
+      if (operator === "equals") return eq(outsideBroker.phone, value);
+      if (operator === "starts_with") return ilike(outsideBroker.phone, `${value}%`);
+      return undefined;
+    case "email":
+      if (operator === "contains") return ilike(outsideBroker.email, `%${value}%`);
+      if (operator === "equals") return eq(outsideBroker.email, value);
+      if (operator === "starts_with") return ilike(outsideBroker.email, `${value}%`);
+      return undefined;
+    case "address":
+      if (operator === "contains") return ilike(outsideBroker.address, `%${value}%`);
+      if (operator === "equals") return eq(outsideBroker.address, value);
+      if (operator === "starts_with") return ilike(outsideBroker.address, `${value}%`);
+      return undefined;
+    case "notes":
+      if (operator === "contains") return ilike(outsideBroker.notes, `%${value}%`);
+      if (operator === "equals") return eq(outsideBroker.notes, value);
+      if (operator === "starts_with") return ilike(outsideBroker.notes, `${value}%`);
+      return undefined;
+    case "status":
+      if (operator === "is") return eq(outsideBroker.status, value as BrokerStatus);
+      if (operator === "is_not") return ne(outsideBroker.status, value as BrokerStatus);
+      return undefined;
+    case "creditLimitUnlimited":
+      if (operator === "is") return eq(outsideBroker.creditLimitUnlimited, asBool);
+      if (operator === "is_not") return eq(outsideBroker.creditLimitUnlimited, !asBool);
+      return undefined;
+    case "creditLimit":
+      if (operator === "eq") return eq(outsideBroker.creditLimit, value);
+      if (operator === "gt") return gt(outsideBroker.creditLimit, value);
+      if (operator === "lt") return lt(outsideBroker.creditLimit, value);
+      if (operator === "gte") return gte(outsideBroker.creditLimit, value);
+      if (operator === "lte") return lte(outsideBroker.creditLimit, value);
+      return undefined;
+    default:
+      return undefined;
+  }
+};
+
+const outsideBrokerDateColumn = (key: string) => {
+  if (key === "updatedAt") return outsideBroker.updatedAt;
+  if (key === "createdAt") return outsideBroker.createdAt;
+  return undefined;
+};
+
+const buildOutsideBrokerAdvancedClause = (
+  filter: AdvancedFilter | undefined,
+): SQL<unknown> | undefined => {
+  if (!filter) return undefined;
+  return buildAdvancedFilterSql(filter, buildOutsideBrokerRuleCondition, outsideBrokerDateColumn);
+};
 
 const sortColumn = (field: ListBrokersInput["sortField"]) => {
   switch (field) {
@@ -109,7 +187,8 @@ export const listBrokers = async (input: ListBrokersInput) => {
     : undefined;
 
   const approvedOnly = eq(outsideBroker.status, "approved");
-  const whereClause = searchClause ? and(approvedOnly, searchClause) : approvedOnly;
+  const filterClause = buildOutsideBrokerAdvancedClause(input.advancedFilter);
+  const whereClause = and(approvedOnly, searchClause, filterClause);
 
   const [rows, totalRows] = await Promise.all([
     db

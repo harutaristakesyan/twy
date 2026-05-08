@@ -1,8 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { branch, db, type OrderDirection, users } from "@twy/db";
+import type { SQL } from "drizzle-orm";
 import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
 import { rebuildAuthContext } from "../auth-context/rebuild.js";
+import type { AdvancedFilter, AdvancedFilterRule } from "../shared/advanced-filter-schema.js";
+import { buildAdvancedFilterSql } from "../shared/advanced-filter-sql.js";
 
 export interface BranchOwner {
   id: string;
@@ -38,6 +41,7 @@ export interface ListBranchesInput {
   sortOrder: OrderDirection;
   query?: string;
   branchId?: string;
+  advancedFilter?: AdvancedFilter;
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -52,6 +56,61 @@ const ensureOwnerExists = async (executor: Executor, ownerId: string): Promise<v
   if (!existing) {
     throw new createError.NotFound("Owner not found");
   }
+};
+
+const buildBranchRuleCondition = (
+  rule: AdvancedFilterRule,
+  owner: typeof users,
+): SQL<unknown> | undefined => {
+  const { field, operator, value } = rule;
+  if (!field || !operator || value === "") return undefined;
+
+  switch (field) {
+    case "name":
+      if (operator === "contains") return ilike(branch.name, `%${value}%`);
+      if (operator === "equals") return eq(branch.name, value);
+      if (operator === "starts_with") return ilike(branch.name, `${value}%`);
+      return undefined;
+    case "contact":
+      if (operator === "contains") return ilike(branch.contact, `%${value}%`);
+      if (operator === "equals") return eq(branch.contact, value);
+      if (operator === "starts_with") return ilike(branch.contact, `${value}%`);
+      return undefined;
+    case "ownerEmail":
+      if (operator === "contains") return ilike(owner.email, `%${value}%`);
+      if (operator === "equals") return eq(owner.email, value);
+      if (operator === "starts_with") return ilike(owner.email, `${value}%`);
+      return undefined;
+    case "ownerFirstName":
+      if (operator === "contains") return ilike(owner.firstName, `%${value}%`);
+      if (operator === "equals") return eq(owner.firstName, value);
+      if (operator === "starts_with") return ilike(owner.firstName, `${value}%`);
+      return undefined;
+    case "ownerLastName":
+      if (operator === "contains") return ilike(owner.lastName, `%${value}%`);
+      if (operator === "equals") return eq(owner.lastName, value);
+      if (operator === "starts_with") return ilike(owner.lastName, `${value}%`);
+      return undefined;
+    default:
+      return undefined;
+  }
+};
+
+const branchDateColumn = (key: string) => {
+  if (key === "createdAt") return branch.createdAt;
+  return undefined;
+};
+
+const buildBranchAdvancedClause = (
+  filter: AdvancedFilter | undefined,
+  owner: typeof users,
+): SQL<unknown> | undefined => {
+  if (!filter) return undefined;
+  return buildAdvancedFilterSql(
+    filter,
+    (rule) => buildBranchRuleCondition(rule, owner),
+    branchDateColumn,
+  );
 };
 
 const sortColumn = (field: ListBranchesInput["sortField"]) => {
@@ -94,9 +153,9 @@ export const listBranches = async (input: ListBranchesInput) => {
     ? or(ilike(branch.name, `%${input.query}%`), ilike(branch.contact, `%${input.query}%`))
     : undefined;
   const branchClause = input.branchId ? eq(branch.id, input.branchId) : undefined;
-  const whereClause = and(searchClause, branchClause);
-
   const owner = users;
+  const filterClause = buildBranchAdvancedClause(input.advancedFilter, owner);
+  const whereClause = and(searchClause, branchClause, filterClause);
 
   const [rows, totalRows] = await Promise.all([
     db
@@ -116,7 +175,11 @@ export const listBranches = async (input: ListBranchesInput) => {
       .orderBy(direction(orderColumn))
       .limit(input.limit)
       .offset(offset),
-    db.select({ value: count() }).from(branch).where(whereClause),
+    db
+      .select({ value: count() })
+      .from(branch)
+      .leftJoin(owner, eq(owner.id, branch.ownerId))
+      .where(whereClause),
   ]);
 
   return {

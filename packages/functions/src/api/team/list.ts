@@ -14,8 +14,8 @@ const listTeams = async (event: ListTeamsEvent): Promise<TeamListResponse> => {
   const ctx = await loadAuthContext(userId);
   assertPermission(ctx, "teams", "view");
 
-  const { page, limit, sortOrder, query } = event.queryStringParameters;
-  return listTeamRecords({ page, limit, sortOrder, query });
+  const { page, limit, sortOrder, query, filters } = event.queryStringParameters;
+  return listTeamRecords({ page, limit, sortOrder, query, advancedFilter: filters });
 };
 
 export const handler = middyfy<

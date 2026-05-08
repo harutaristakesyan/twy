@@ -1,8 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { CarrierKind, CarrierStatus, InsuranceStatus } from "@twy/db";
 import { carrier, db, type OrderDirection } from "@twy/db";
-import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, ne, or } from "drizzle-orm";
 import createError from "http-errors";
+import type { AdvancedFilter, AdvancedFilterRule } from "../shared/advanced-filter-schema.js";
+import { buildAdvancedFilterSql } from "../shared/advanced-filter-sql.js";
 
 export interface CarrierRecord {
   id: string;
@@ -27,6 +30,7 @@ export interface ListCarriersInput {
   sortField: "carrierName" | "mcDotNumber" | "status" | "insuranceStatus" | "createdAt";
   sortOrder: OrderDirection;
   query?: string;
+  advancedFilter?: AdvancedFilter;
 }
 
 export interface NewCarrierInput {
@@ -54,6 +58,68 @@ export interface UpdateCarrierInput {
   notes?: string | null;
   status?: string;
 }
+
+const buildCarrierRuleCondition = (rule: AdvancedFilterRule): SQL<unknown> | undefined => {
+  const { field, operator, value } = rule;
+  if (!field || !operator || value === "") return undefined;
+
+  switch (field) {
+    case "carrierName":
+      if (operator === "contains") return ilike(carrier.carrierName, `%${value}%`);
+      if (operator === "equals") return eq(carrier.carrierName, value);
+      if (operator === "starts_with") return ilike(carrier.carrierName, `${value}%`);
+      return undefined;
+    case "mcDotNumber":
+      if (operator === "contains") return ilike(carrier.mcDotNumber, `%${value}%`);
+      if (operator === "equals") return eq(carrier.mcDotNumber, value);
+      if (operator === "starts_with") return ilike(carrier.mcDotNumber, `${value}%`);
+      return undefined;
+    case "equipmentType":
+      if (operator === "contains") return ilike(carrier.equipmentType, `%${value}%`);
+      if (operator === "equals") return eq(carrier.equipmentType, value);
+      if (operator === "starts_with") return ilike(carrier.equipmentType, `${value}%`);
+      return undefined;
+    case "phone":
+      if (operator === "contains") return ilike(carrier.phone, `%${value}%`);
+      if (operator === "equals") return eq(carrier.phone, value);
+      if (operator === "starts_with") return ilike(carrier.phone, `${value}%`);
+      return undefined;
+    case "email":
+      if (operator === "contains") return ilike(carrier.email, `%${value}%`);
+      if (operator === "equals") return eq(carrier.email, value);
+      if (operator === "starts_with") return ilike(carrier.email, `${value}%`);
+      return undefined;
+    case "notes":
+      if (operator === "contains") return ilike(carrier.notes, `%${value}%`);
+      if (operator === "equals") return eq(carrier.notes, value);
+      if (operator === "starts_with") return ilike(carrier.notes, `${value}%`);
+      return undefined;
+    case "status":
+      if (operator === "is") return eq(carrier.status, value as CarrierStatus);
+      if (operator === "is_not") return ne(carrier.status, value as CarrierStatus);
+      return undefined;
+    case "insuranceStatus":
+      if (operator === "is") return eq(carrier.insuranceStatus, value as InsuranceStatus);
+      if (operator === "is_not") return ne(carrier.insuranceStatus, value as InsuranceStatus);
+      return undefined;
+    default:
+      return undefined;
+  }
+};
+
+const carrierDateColumn = (key: string) => {
+  if (key === "updatedAt") return carrier.updatedAt;
+  if (key === "createdAt") return carrier.createdAt;
+  if (key === "insuranceExpiry") return carrier.insuranceExpiry;
+  return undefined;
+};
+
+const buildCarrierAdvancedClause = (
+  filter: AdvancedFilter | undefined,
+): SQL<unknown> | undefined => {
+  if (!filter) return undefined;
+  return buildAdvancedFilterSql(filter, buildCarrierRuleCondition, carrierDateColumn);
+};
 
 const sortColumn = (field: ListCarriersInput["sortField"]) => {
   switch (field) {
@@ -112,7 +178,8 @@ export const listCarriers = async (input: ListCarriersInput) => {
       )
     : undefined;
 
-  const whereClause = and(eq(carrier.kind, input.kind), searchClause);
+  const filterClause = buildCarrierAdvancedClause(input.advancedFilter);
+  const whereClause = and(eq(carrier.kind, input.kind), searchClause, filterClause);
 
   const [rows, totalRows] = await Promise.all([
     db

@@ -1,4 +1,5 @@
 import z from "zod";
+import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
 
 const BranchBaseSchema = z.object({
@@ -40,6 +41,7 @@ export const ListBranchesEventSchema = z.object({
       .default("descend")
       .transform((val) => sortOrderMap[val as keyof typeof sortOrderMap]),
     query: z.string().optional(),
+    filters: filtersQueryParamSchema,
   }),
 });
 

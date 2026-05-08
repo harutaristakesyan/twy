@@ -28,9 +28,10 @@ export interface UpdateBranchRequest {
 export interface GetBranchesParams {
   page?: number; // zero-indexed page number (default: 0)
   limit?: number; // number of branches per page (default: 10)
-  sortField?: "name" | "createdAt" | undefined;
+  sortField?: "name" | "createdAt" | "contact" | undefined;
   sortOrder?: "ascend" | "descend" | undefined;
   query?: string; // search text for name, contact
+  filters?: string;
 }
 
 export interface PaginatedBranchesResponse {
