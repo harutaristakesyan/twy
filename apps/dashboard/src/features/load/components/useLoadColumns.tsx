@@ -22,7 +22,26 @@ type LoadListRow = Load & { pickup?: Location; dropoff?: Location };
 const statusColorMap: Record<string, string> = {
   Pending: "gold",
   Approved: "green",
+  ApprovedPaid: "cyan",
   Denied: "red",
+  Hold: "orange",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  rate_confirmation: "RateCon",
+  pod: "POD",
+  carrier_invoice: "Carrier Inv",
+  broker_invoice: "Broker Inv",
+  other: "Other",
+};
+
+const formatDueDate = (iso: string | null): string => {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 };
 
 /** Handles undefined arrays, stale cached list rows, or legacy single `pickup` / `dropoff` objects. */
@@ -75,10 +94,16 @@ export function useLoadColumns(
         render: (text) => <strong>{text}</strong>,
       },
       {
+        title: "Branch",
+        dataIndex: "branchName",
+        key: "branchName",
+        width: 130,
+      },
+      {
         title: "Status",
         dataIndex: "status",
         key: "status",
-        width: 120,
+        width: 130,
         sorter: true,
         render: (status: Load["status"]) => (
           <Tag color={statusColorMap[status] || "default"} style={{ textTransform: "capitalize" }}>
@@ -86,28 +111,93 @@ export function useLoadColumns(
           </Tag>
         ),
       },
-      { title: "Customer", dataIndex: "customer", key: "customer", width: 150 },
+      {
+        title: "Broker",
+        dataIndex: "customer",
+        key: "customer",
+        width: 150,
+        sorter: true,
+      },
       { title: "Contact", dataIndex: "contactName", key: "contactName", width: 130 },
       {
         title: "Carrier",
         dataIndex: "carrier",
         key: "carrier",
         width: 130,
-        render: (text) => text || "-",
+        render: (text) => text || "—",
+      },
+      {
+        title: "Carrier Payable",
+        dataIndex: "carrierRate",
+        key: "carrierRate",
+        width: 140,
+        render: (value: number | null | undefined) =>
+          value != null ? (
+            <strong style={{ color: "#52c41a" }}>{formatCurrency(value)}</strong>
+          ) : (
+            "—"
+          ),
+      },
+      {
+        title: "Broker Receivable",
+        dataIndex: "customerRate",
+        key: "customerRate",
+        width: 150,
+        render: (value: number | null | undefined) =>
+          value != null ? (
+            <strong style={{ color: "#1890ff" }}>{formatCurrency(value)}</strong>
+          ) : (
+            "—"
+          ),
+      },
+      {
+        title: "Service Fee",
+        dataIndex: "serviceFee",
+        key: "serviceFee",
+        width: 120,
+        render: (value: number | null) => formatCurrency(value),
+      },
+      {
+        title: "Income %",
+        dataIndex: "incomePercentage",
+        key: "incomePercentage",
+        width: 100,
+        render: (value: number | null) => (value !== null ? `${value.toFixed(2)}%` : "—"),
+      },
+      {
+        title: "Charges",
+        dataIndex: "charges",
+        key: "charges",
+        width: 110,
+        render: (value: number | null) => formatCurrency(value),
+      },
+      {
+        title: "Carrier Due",
+        dataIndex: "carrierDueAt",
+        key: "carrierDueAt",
+        width: 120,
+        render: (value: string | null) => formatDueDate(value),
+      },
+      {
+        title: "Broker Due",
+        dataIndex: "brokerDueAt",
+        key: "brokerDueAt",
+        width: 120,
+        render: (value: string | null) => formatDueDate(value),
       },
       {
         title: "Payment Method",
         dataIndex: "paymentMethod",
         key: "paymentMethod",
         width: 140,
-        render: (text) => text || "-",
+        render: (text) => text || "—",
       },
       {
         title: "Payment Terms",
         dataIndex: "paymentTerms",
         key: "paymentTerms",
         width: 140,
-        render: (text) => text || "-",
+        render: (text) => text || "—",
       },
       {
         title: "Load Type",
@@ -119,7 +209,6 @@ export function useLoadColumns(
       { title: "Service Type", dataIndex: "serviceType", key: "serviceType", width: 120 },
       { title: "Commodity", dataIndex: "commodity", key: "commodity", width: 130 },
       { title: "Weight", dataIndex: "weight", key: "weight", width: 100 },
-      { title: "Booked As", dataIndex: "bookedAs", key: "bookedAs", width: 110 },
       {
         title: "Pickup",
         key: "pickups",
@@ -128,14 +217,12 @@ export function useLoadColumns(
           const pickups = resolveStops(record, "pickups", "pickup");
           const first = pickups[0];
           const extra = pickups.length - 1;
-          if (!first) return "-";
+          if (!first) return "—";
           return (
             <div>
               <div>{first.name}</div>
               <div style={{ fontSize: "12px", color: "#666" }}>{first.cityZipCode || "N/A"}</div>
-              {extra > 0 ? (
-                <div style={{ fontSize: "12px", color: "#888" }}>+{extra} more</div>
-              ) : null}
+              {extra > 0 && <div style={{ fontSize: "12px", color: "#888" }}>+{extra} more</div>}
             </div>
           );
         },
@@ -148,64 +235,42 @@ export function useLoadColumns(
           const dropoffs = resolveStops(record, "dropoffs", "dropoff");
           const first = dropoffs[0];
           const extra = dropoffs.length - 1;
-          if (!first) return "-";
+          if (!first) return "—";
           return (
             <div>
               <div>{first.name}</div>
               <div style={{ fontSize: "12px", color: "#666" }}>{first.cityZipCode || "N/A"}</div>
-              {extra > 0 ? (
-                <div style={{ fontSize: "12px", color: "#888" }}>+{extra} more</div>
-              ) : null}
+              {extra > 0 && <div style={{ fontSize: "12px", color: "#888" }}>+{extra} more</div>}
             </div>
           );
         },
       },
       {
-        title: "Carrier Rate",
-        dataIndex: "carrierRate",
-        key: "carrierRate",
-        width: 120,
-        render: (value: number | null | undefined) =>
-          value != null ? (
-            <strong style={{ color: "#52c41a" }}>{formatCurrency(value)}</strong>
-          ) : (
-            "-"
-          ),
-      },
-      {
-        title: "Customer Rate",
-        dataIndex: "customerRate",
-        key: "customerRate",
-        width: 130,
-        render: (value: number | null | undefined) =>
-          value != null ? (
-            <strong style={{ color: "#1890ff" }}>{formatCurrency(value)}</strong>
-          ) : (
-            "-"
-          ),
-      },
-      {
-        title: "Files",
+        title: "Documents",
         dataIndex: "files",
         key: "files",
-        width: 120,
+        width: 130,
         align: "center",
         render: (files: Load["files"]) => {
-          if (!files || files.length === 0) return <Tag color="default">0</Tag>;
-          const menuItems: MenuProps["items"] = files.map((file) => ({
-            key: file.id,
+          if (!files || files.length === 0) return <Tag color="default">None</Tag>;
+          const menuItems: MenuProps["items"] = files.map((f) => ({
+            key: f.id,
             label: (
               <Space>
                 <DownloadOutlined />
-                {file.fileName}
+                <span>
+                  {f.documentCategory
+                    ? (CATEGORY_LABELS[f.documentCategory] ?? f.documentCategory)
+                    : f.fileName}
+                </span>
               </Space>
             ),
-            onClick: () => handleFileDownload(file.id, file.fileName),
+            onClick: () => handleFileDownload(f.id, f.fileName),
           }));
           return (
             <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
               <Tag color="green" style={{ cursor: "pointer" }}>
-                {files.length} file{files.length > 1 ? "s" : ""}
+                {files.length} doc{files.length > 1 ? "s" : ""}
               </Tag>
             </Dropdown>
           );

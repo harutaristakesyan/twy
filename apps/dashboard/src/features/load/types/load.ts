@@ -3,6 +3,7 @@ export type LoadStatus = "Pending" | "Approved" | "Denied";
 export interface LoadFile {
   id: string;
   fileName: string;
+  documentCategory: string | null;
 }
 
 export interface Location {
@@ -38,6 +39,12 @@ export interface Load {
   pickups: Location[];
   dropoffs: Location[];
   branchId: string;
+  branchName: string;
+  serviceFee: number | null;
+  incomePercentage: number | null;
+  charges: number | null;
+  carrierDueAt: string | null;
+  brokerDueAt: string | null;
   status: LoadStatus;
   statusChangedBy: string | null;
   files: LoadFile[];

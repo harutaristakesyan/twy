@@ -3,6 +3,7 @@ import {
   branch,
   db,
   file,
+  invoice,
   type LoadRow,
   type LoadStatus,
   type LoadStopKind,
@@ -51,6 +52,7 @@ export interface LoadFileInput {
 export interface LoadFileRecord {
   id: string;
   fileName: string;
+  documentCategory: string | null;
 }
 
 export interface LoadLocationRecord {
@@ -86,6 +88,12 @@ export interface LoadRecord {
   pickups: LoadLocationRecord[];
   dropoffs: LoadLocationRecord[];
   branchId: string;
+  branchName: string;
+  serviceFee: number | null;
+  incomePercentage: number | null;
+  charges: number | null;
+  carrierDueAt: string | null;
+  brokerDueAt: string | null;
   status: LoadStatus;
   statusChangedBy: string | null;
   files: LoadFileRecord[];
@@ -218,6 +226,7 @@ const fetchFilesForLoads = async (
       loadId: loadFiles.loadId,
       fileId: loadFiles.fileId,
       fileName: file.fileName,
+      documentCategory: file.documentCategory,
     })
     .from(loadFiles)
     .innerJoin(file, eq(file.id, loadFiles.fileId))
@@ -227,7 +236,11 @@ const fetchFilesForLoads = async (
 
   for (const row of rows) {
     const existing = grouped.get(row.loadId) ?? [];
-    existing.push({ id: row.fileId, fileName: row.fileName });
+    existing.push({
+      id: row.fileId,
+      fileName: row.fileName,
+      documentCategory: row.documentCategory ?? null,
+    });
     grouped.set(row.loadId, existing);
   }
 
@@ -252,6 +265,26 @@ const mapStopRowToLocation = (row: LoadStopSelectRow): LoadLocationRecord => ({
   name: row.name,
   address: row.address,
 });
+
+const fetchInvoiceDueDatesForLoads = async (
+  loadIds: string[],
+): Promise<Map<string, { carrierDueAt: string | null; brokerDueAt: string | null }>> => {
+  if (loadIds.length === 0) return new Map();
+
+  const rows = await db
+    .select({ loadId: invoice.loadId, type: invoice.type, dueAt: invoice.dueAt })
+    .from(invoice)
+    .where(inArray(invoice.loadId, loadIds));
+
+  const result = new Map<string, { carrierDueAt: string | null; brokerDueAt: string | null }>();
+  for (const row of rows) {
+    const entry = result.get(row.loadId) ?? { carrierDueAt: null, brokerDueAt: null };
+    if (row.type === "carrier") entry.carrierDueAt = row.dueAt.toISOString();
+    if (row.type === "broker") entry.brokerDueAt = row.dueAt.toISOString();
+    result.set(row.loadId, entry);
+  }
+  return result;
+};
 
 const fetchStopsForLoads = async (
   executor: Executor,
@@ -304,8 +337,10 @@ const fetchStopsForLoads = async (
 
 const mapLoadRow = (
   row: LoadRow,
+  branchName: string,
   files: LoadFileRecord[],
   stops: { pickups: LoadLocationRecord[]; dropoffs: LoadLocationRecord[] },
+  dueDates: { carrierDueAt: string | null; brokerDueAt: string | null },
 ): LoadRecord => ({
   id: row.id,
   customer: row.customer ?? "",
@@ -331,6 +366,12 @@ const mapLoadRow = (
   pickups: stops.pickups,
   dropoffs: stops.dropoffs,
   branchId: row.branchId,
+  branchName,
+  serviceFee: numericToNumber(row.serviceFee),
+  incomePercentage: numericToNumber(row.incomePercentage),
+  charges: numericToNumber(row.charges),
+  carrierDueAt: dueDates.carrierDueAt,
+  brokerDueAt: dueDates.brokerDueAt,
   status: row.status,
   statusChangedBy: row.statusChangedBy,
   files,
@@ -476,8 +517,12 @@ export const listLoads = async (input: ListLoadsInput) => {
 
   const [rows, totalRows] = await Promise.all([
     db
-      .select()
+      .select({
+        load: load,
+        branchName: branch.name,
+      })
       .from(load)
+      .innerJoin(branch, eq(branch.id, load.branchId))
       .where(whereClause)
       .orderBy(direction(orderColumn))
       .limit(input.limit)
@@ -485,19 +530,22 @@ export const listLoads = async (input: ListLoadsInput) => {
     db.select({ value: count() }).from(load).where(whereClause),
   ]);
 
-  const loadIds = rows.map((row) => row.id);
+  const loadIds = rows.map((r) => r.load.id);
 
-  const [filesMap, stopsMap] = await Promise.all([
+  const [filesMap, stopsMap, dueDatesMap] = await Promise.all([
     fetchFilesForLoads(db, loadIds),
     fetchStopsForLoads(db, loadIds),
+    fetchInvoiceDueDatesForLoads(loadIds),
   ]);
 
   return {
-    loads: rows.map((row) =>
+    loads: rows.map(({ load: row, branchName }) =>
       mapLoadRow(
         row,
+        branchName,
         filesMap.get(row.id) ?? [],
         stopsMap.get(row.id) ?? { pickups: [], dropoffs: [] },
+        dueDatesMap.get(row.id) ?? { carrierDueAt: null, brokerDueAt: null },
       ),
     ),
     total: Number(totalRows[0]?.value ?? 0),
