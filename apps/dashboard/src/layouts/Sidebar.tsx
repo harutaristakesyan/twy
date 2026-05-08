@@ -59,8 +59,8 @@ const allMenuItems: SidebarMenuItem[] = [
     label: "User Management",
     resources: ["users", "teams"],
     children: [
-      { key: "/user-management/users", label: "Users", resources: ["users"] as Resource[] },
-      { key: "/user-management/teams", label: "Teams", resources: ["teams"] as Resource[] },
+      { key: "/user-management/users", label: "Users", resources: ["users"] },
+      { key: "/user-management/teams", label: "Teams", resources: ["teams"] },
     ],
   },
   { key: "/branches", icon: <BranchesOutlined />, label: "Branches", resources: ["branches"] },
@@ -74,12 +74,12 @@ const allMenuItems: SidebarMenuItem[] = [
       {
         key: "/outside-brokers/directory",
         label: "Directory",
-        resources: ["brokers"] as Resource[],
+        resources: ["brokers"],
       },
       {
         key: "/outside-brokers/requests",
         label: "Requests",
-        resources: ["brokers_requests"] as Resource[],
+        resources: ["brokers_requests"],
       },
     ],
   },
@@ -92,17 +92,17 @@ const allMenuItems: SidebarMenuItem[] = [
       {
         key: "/carriers/twy",
         label: "TWY Carriers",
-        resources: ["carriers_twy"] as Resource[],
+        resources: ["carriers_twy"],
       },
       {
         key: "/carriers/outside",
         label: "Outside Carriers",
-        resources: ["carriers_outside"] as Resource[],
+        resources: ["carriers_outside"],
       },
       {
         key: "/carriers/requests",
         label: "Requests",
-        resources: ["carriers_requests"] as Resource[],
+        resources: ["carriers_requests"],
       },
     ],
   },
@@ -112,16 +112,16 @@ const allMenuItems: SidebarMenuItem[] = [
     label: "Accounting",
     resources: ["billing"],
     children: [
-      { key: "/accounting/twy", label: "TWY Accounting", resources: ["billing"] as Resource[] },
+      { key: "/accounting/twy", label: "TWY Accounting", resources: ["billing"] },
       {
         key: "/accounting/external",
         label: "External Billing",
-        resources: ["billing"] as Resource[],
+        resources: ["billing"],
       },
       {
         key: "/accounting/internal",
         label: "Internal Billing",
-        resources: ["billing"] as Resource[],
+        resources: ["billing"],
       },
     ],
   },
