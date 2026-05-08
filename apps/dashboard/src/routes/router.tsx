@@ -22,7 +22,9 @@ import OutsideBrokersIndexRedirect from "@/features/outside-broker/pages/Outside
 import OutsideBrokersLayout from "@/features/outside-broker/pages/OutsideBrokersLayout";
 import OutsideBrokersPage from "@/features/outside-broker/pages/OutsideBrokersPage";
 import ProfilePage from "@/features/user/pages/ProfilePage";
-import UserManagementPage from "@/features/user/pages/UserManagementPage";
+import TeamsPage from "@/features/user/pages/TeamsPage";
+import UserManagementLayout from "@/features/user/pages/UserManagementLayout";
+import UsersPage from "@/features/user/pages/UsersPage";
 import AppLayout from "@/layouts/AppLayout.tsx";
 import ProtectedRoute from "@/routes/ProtectedRoute";
 import RequireBrokerRequestsView from "@/routes/RequireBrokerRequestsView";
@@ -47,7 +49,26 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/loads" replace /> },
           {
             path: "user-management",
-            element: <UserManagementPage />,
+            element: <UserManagementLayout />,
+            children: [
+              { index: true, element: <Navigate to="/user-management/users" replace /> },
+              {
+                path: "users",
+                element: (
+                  <RequirePermission resource="users" action="view">
+                    <UsersPage />
+                  </RequirePermission>
+                ),
+              },
+              {
+                path: "teams",
+                element: (
+                  <RequirePermission resource="teams" action="view">
+                    <TeamsPage />
+                  </RequirePermission>
+                ),
+              },
+            ],
           },
           {
             path: "branches",
@@ -136,18 +157,9 @@ export const router = createBrowserRouter([
             ),
             children: [
               { index: true, element: <Navigate to="/accounting/twy" replace /> },
-              {
-                path: "twy",
-                element: <TwyAccountingTab />,
-              },
-              {
-                path: "external",
-                element: <ExternalBillingTab />,
-              },
-              {
-                path: "internal",
-                element: <InternalBillingTab />,
-              },
+              { path: "twy", element: <TwyAccountingTab /> },
+              { path: "external", element: <ExternalBillingTab /> },
+              { path: "internal", element: <InternalBillingTab /> },
             ],
           },
           { path: "profile", element: <ProfilePage /> },

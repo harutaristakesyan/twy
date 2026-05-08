@@ -58,6 +58,10 @@ const allMenuItems: SidebarMenuItem[] = [
     icon: <UsergroupAddOutlined />,
     label: "User Management",
     resources: ["users", "teams"],
+    children: [
+      { key: "/user-management/users", label: "Users", resources: ["users"] as Resource[] },
+      { key: "/user-management/teams", label: "Teams", resources: ["teams"] as Resource[] },
+    ],
   },
   { key: "/branches", icon: <BranchesOutlined />, label: "Branches", resources: ["branches"] },
   { key: "/loads", icon: <TruckOutlined />, label: "Loads", resources: ["loads"] },
@@ -66,12 +70,41 @@ const allMenuItems: SidebarMenuItem[] = [
     icon: <TeamOutlined />,
     label: "Outside Brokers",
     resources: ["brokers", "brokers_requests"],
+    children: [
+      {
+        key: "/outside-brokers/directory",
+        label: "Directory",
+        resources: ["brokers"] as Resource[],
+      },
+      {
+        key: "/outside-brokers/requests",
+        label: "Requests",
+        resources: ["brokers_requests"] as Resource[],
+      },
+    ],
   },
   {
     key: "/carriers",
     icon: <CarOutlined />,
     label: "Carriers",
     resources: ["carriers_twy", "carriers_outside", "carriers_requests"],
+    children: [
+      {
+        key: "/carriers/twy",
+        label: "TWY Carriers",
+        resources: ["carriers_twy"] as Resource[],
+      },
+      {
+        key: "/carriers/outside",
+        label: "Outside Carriers",
+        resources: ["carriers_outside"] as Resource[],
+      },
+      {
+        key: "/carriers/requests",
+        label: "Requests",
+        resources: ["carriers_requests"] as Resource[],
+      },
+    ],
   },
   {
     key: "/accounting",
@@ -95,15 +128,16 @@ const allMenuItems: SidebarMenuItem[] = [
 ];
 
 const getParentKeys = (pathname: string): string[] => {
+  const keys: string[] = [];
   for (const item of allMenuItems) {
     if (item.children) {
       const match = item.children.some(
         (c) => pathname === c.key || pathname.startsWith(`${c.key}/`),
       );
-      if (match) return [item.key];
+      if (match) keys.push(item.key);
     }
   }
-  return [];
+  return keys;
 };
 
 const Sidebar: React.FC = () => {
