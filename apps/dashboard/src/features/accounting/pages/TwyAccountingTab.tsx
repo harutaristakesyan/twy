@@ -72,6 +72,13 @@ const TwyAccountingTab: React.FC = () => {
       render: (text: string) => <strong>{text}</strong>,
     },
     {
+      title: "Branch",
+      dataIndex: "branchName",
+      key: "branchName",
+      width: 140,
+      render: (text: string) => text,
+    },
+    {
       title: "Carrier",
       dataIndex: "carrier",
       key: "carrier",

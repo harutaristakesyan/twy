@@ -48,6 +48,7 @@ export interface TwyAccountingRow {
   loadId: string;
   referenceNumber: string;
   branchId: string;
+  branchName: string;
   carrier: string | null;
   customerRate: number | null;
   carrierRate: number;

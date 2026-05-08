@@ -17,6 +17,7 @@ export interface TwyAccountingRow {
   loadId: string;
   referenceNumber: string;
   branchId: string;
+  branchName: string;
   carrier: string | null;
   customerRate: number | null;
   carrierRate: number;
@@ -84,8 +85,21 @@ export const getTwyAccountingRows = async (
   const whereClause = filters.length > 0 ? and(...filters) : undefined;
 
   const loadRows = await db
-    .select()
+    .select({
+      id: load.id,
+      referenceNumber: load.referenceNumber,
+      branchId: load.branchId,
+      branchName: branch.name,
+      carrier: load.carrier,
+      customerRate: load.customerRate,
+      carrierRate: load.carrierRate,
+      serviceFee: load.serviceFee,
+      incomePercentage: load.incomePercentage,
+      charges: load.charges,
+      status: load.status,
+    })
     .from(load)
+    .innerJoin(branch, eq(branch.id, load.branchId))
     .where(whereClause)
     .orderBy(desc(load.createdAt))
     .limit(limit)
@@ -125,6 +139,7 @@ export const getTwyAccountingRows = async (
       loadId: row.id,
       referenceNumber: row.referenceNumber,
       branchId: row.branchId,
+      branchName: row.branchName,
       carrier: row.carrier ?? null,
       customerRate: numericToNumber(row.customerRate),
       carrierRate: Number(row.carrierRate),
