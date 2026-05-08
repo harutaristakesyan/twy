@@ -73,3 +73,5 @@ jobs:
         run: pnpm sst deploy --stage "$STAGE"
       - name: Run DB migrations
         run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @twy/db migrate
+      - name: Seed billing permissions
+        run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @twy/db seed:billing-permissions
