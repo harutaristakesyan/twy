@@ -2,6 +2,7 @@ import { middyfy } from "@shared/index";
 import type { MessageResponse } from "@twy/core";
 import {
   assertPermission,
+  FinancialsLockedError,
   type LoadFileInput,
   loadAuthContext,
   type UpdateLoad,
@@ -29,7 +30,13 @@ const updateLoad = async (event: UpdateLoadEvent): Promise<MessageResponse> => {
     }));
   }
 
-  const updated = await updateLoadRecord(loadId, payload);
+  let updated: boolean;
+  try {
+    updated = await updateLoadRecord(loadId, payload);
+  } catch (err) {
+    if (err instanceof FinancialsLockedError) throw new createError.Conflict(err.message);
+    throw err;
+  }
 
   if (!updated) {
     throw new createError.NotFound("Load not found");

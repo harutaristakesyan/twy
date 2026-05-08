@@ -46,6 +46,7 @@ const LoadBaseSchema = z.object({
   paymentMethod: z.string().trim().min(1, "Payment Method is required"),
   paymentTerms: z.string().trim().min(1, "Payment Terms is required"),
   carrier: z.string().trim().nullable().optional(),
+  carrierId: uuidField.nullable().optional(),
   carrierPaymentMethod: z.string().trim().nullable().optional(),
   carrierRate: z.number().nonnegative("Carrier Rate cannot be negative"),
   chargeServiceFeeToOffice: z.boolean().optional().default(false),

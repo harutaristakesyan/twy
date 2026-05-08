@@ -50,6 +50,13 @@
       "when": 1777929796158,
       "tag": "0006_smart_havok",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778260235586,
+      "tag": "0007_nifty_forge",
+      "breakpoints": true
     }
   ]
 }

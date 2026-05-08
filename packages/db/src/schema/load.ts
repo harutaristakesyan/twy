@@ -9,10 +9,11 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { branch } from "./branch.js";
+import { carrier } from "./carrier.js";
 import { file } from "./file.js";
 import { users } from "./users.js";
 
-export const loadStatusValues = ["Pending", "Approved", "Denied"] as const;
+export const loadStatusValues = ["Pending", "Approved", "ApprovedPaid", "Denied", "Hold"] as const;
 export type LoadStatus = (typeof loadStatusValues)[number];
 
 export const load = pgTable("load", {
@@ -26,11 +27,17 @@ export const load = pgTable("load", {
   paymentTerms: text(),
 
   carrier: text(),
+  carrierId: uuid().references(() => carrier.id, { onDelete: "restrict" }),
   carrierPaymentMethod: text(),
   carrierRate: numeric({ precision: 10, scale: 2 }).notNull(),
   chargeServiceFeeToOffice: boolean().default(false),
   isChargable: boolean().notNull().default(false),
   chargeAmount: numeric({ precision: 10, scale: 2 }),
+
+  serviceFee: numeric({ precision: 10, scale: 2 }),
+  incomePercentage: numeric({ precision: 5, scale: 2 }),
+  charges: numeric({ precision: 10, scale: 2 }),
+  financialsLockedAt: timestamp(),
 
   loadType: text().notNull(),
   serviceType: text().notNull(),

@@ -1,4 +1,5 @@
 import {
+  AccountBookOutlined,
   BranchesOutlined,
   CarOutlined,
   TeamOutlined,
@@ -64,6 +65,12 @@ const Sidebar: React.FC = () => {
       icon: <CarOutlined />,
       label: "Carriers",
       resources: ["carriers_twy", "carriers_outside", "carriers_requests"],
+    },
+    {
+      key: "/accounting",
+      icon: <AccountBookOutlined />,
+      label: "Accounting",
+      resources: ["billing"] as Resource[],
     },
   ];
 

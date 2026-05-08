@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
+import AccountingPage from "@/features/accounting/pages/AccountingPage";
 import CreatePasswordPage from "@/features/auth/pages/CreatePasswordPage";
 import ForgotPasswordPage from "@/features/auth/pages/ForgotPasswordPage";
 import LoginPage from "@/features/auth/pages/LoginPage";
@@ -122,6 +123,14 @@ export const router = createBrowserRouter([
                 ),
               },
             ],
+          },
+          {
+            path: "accounting",
+            element: (
+              <RequirePermission resource="billing" action="view">
+                <AccountingPage />
+              </RequirePermission>
+            ),
           },
           { path: "profile", element: <ProfilePage /> },
         ],

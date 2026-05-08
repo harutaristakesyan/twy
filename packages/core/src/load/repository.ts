@@ -29,8 +29,16 @@ import {
   or,
 } from "drizzle-orm";
 import createError from "http-errors";
+import { assertValidTransition } from "../billing/status-machine.js";
 
 const DEFAULT_LOAD_STATUS: LoadStatus = "Pending";
+
+export class FinancialsLockedError extends Error {
+  constructor() {
+    super("Financial fields cannot be modified after load is approved");
+    this.name = "FinancialsLockedError";
+  }
+}
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Tx;
@@ -93,6 +101,7 @@ export type CreateLoadInput = {
   paymentMethod: string;
   paymentTerms: string;
   carrier?: string | null;
+  carrierId?: string | null;
   carrierPaymentMethod?: string | null;
   carrierRate: number;
   chargeServiceFeeToOffice?: boolean;
@@ -552,6 +561,7 @@ export const createLoad = async (input: CreateLoadInput): Promise<string> =>
       paymentMethod: input.paymentMethod,
       paymentTerms: input.paymentTerms,
       carrier: input.carrier ?? null,
+      carrierId: input.carrierId ?? null,
       carrierPaymentMethod: input.carrierPaymentMethod ?? null,
       carrierRate: input.carrierRate.toString(),
       chargeServiceFeeToOffice: Boolean(input.chargeServiceFeeToOffice),
@@ -579,12 +589,22 @@ export const createLoad = async (input: CreateLoadInput): Promise<string> =>
     return loadId;
   });
 
+const FINANCIAL_FIELDS = ["customerRate", "carrierRate"] as const;
+
 export const updateLoad = async (loadId: string, input: UpdateLoad): Promise<boolean> =>
   db.transaction(async (tx) => {
-    const [existing] = await tx.select({ id: load.id }).from(load).where(eq(load.id, loadId));
+    const [existing] = await tx
+      .select({ id: load.id, financialsLockedAt: load.financialsLockedAt })
+      .from(load)
+      .where(eq(load.id, loadId));
 
     if (!existing) {
       return false;
+    }
+
+    if (existing.financialsLockedAt !== null) {
+      const touchesFinancial = FINANCIAL_FIELDS.some((f) => typeof input[f] !== "undefined");
+      if (touchesFinancial) throw new FinancialsLockedError();
     }
 
     if (typeof input.branchId !== "undefined") {
@@ -609,6 +629,7 @@ export const updateLoad = async (loadId: string, input: UpdateLoad): Promise<boo
       updatePayload.paymentMethod = input.paymentMethod;
     if (typeof input.paymentTerms !== "undefined") updatePayload.paymentTerms = input.paymentTerms;
     if (typeof input.carrier !== "undefined") updatePayload.carrier = input.carrier ?? null;
+    if (typeof input.carrierId !== "undefined") updatePayload.carrierId = input.carrierId ?? null;
     if (typeof input.carrierPaymentMethod !== "undefined")
       updatePayload.carrierPaymentMethod = input.carrierPaymentMethod ?? null;
     if (typeof input.carrierRate !== "undefined")
@@ -655,6 +676,15 @@ export const changeLoadStatus = async (
   isChargable: boolean,
   chargeAmount: number | null,
 ): Promise<{ updated: boolean }> => {
+  const [existing] = await db
+    .select({ id: load.id, status: load.status })
+    .from(load)
+    .where(eq(load.id, loadId));
+
+  if (!existing) return { updated: false };
+
+  assertValidTransition(existing.status, status);
+
   const result = await db
     .update(load)
     .set({
@@ -662,11 +692,22 @@ export const changeLoadStatus = async (
       statusChangedBy: changedBy,
       isChargable,
       chargeAmount: isChargable && chargeAmount != null ? chargeAmount.toString() : null,
+      ...(status === "Hold"
+        ? { financialsLockedAt: null }
+        : status === "Approved" || status === "ApprovedPaid"
+          ? { financialsLockedAt: new Date() }
+          : {}),
       updatedAt: new Date(),
     })
     .where(eq(load.id, loadId))
     .returning({ id: load.id });
+
   return { updated: result.length > 0 };
+};
+
+export const getLoadBranchId = async (loadId: string): Promise<string | null> => {
+  const [row] = await db.select({ branchId: load.branchId }).from(load).where(eq(load.id, loadId));
+  return row?.branchId ?? null;
 };
 
 export const deleteLoad = async (loadId: string): Promise<boolean> =>

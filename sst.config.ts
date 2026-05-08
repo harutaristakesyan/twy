@@ -34,6 +34,7 @@ export default $config({
     const { createApi } = await import("./infra/api");
     const { createWeb } = await import("./infra/web");
     const { createAuthContextTable } = await import("./infra/authContextTable");
+    const { createCron } = await import("./infra/cron");
 
     const cfg = stageConfig();
 
@@ -54,6 +55,9 @@ export default $config({
       authContextTable: authContext.table,
     });
     const web = createWeb({ cfg, api });
+    if (email.identities[0]) {
+      createCron({ db, emailIdentity: email.identities[0] });
+    }
 
     return {
       stage: $app.stage,

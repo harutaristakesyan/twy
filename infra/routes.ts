@@ -333,6 +333,63 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
+  // invoices
+  {
+    handler: "packages/functions/src/api/invoice/create.handler",
+    routeKey: "POST /api/invoices",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext", "filesBucket"],
+  },
+  {
+    handler: "packages/functions/src/api/invoice/list.handler",
+    routeKey: "GET /api/invoices",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/invoice/update-status.handler",
+    routeKey: "PATCH /api/invoices/{invoiceId}/status",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/invoice/delete.handler",
+    routeKey: "DELETE /api/invoices/{invoiceId}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  // payments
+  {
+    handler: "packages/functions/src/api/payment/create.handler",
+    routeKey: "POST /api/payments",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/payment/list.handler",
+    routeKey: "GET /api/invoices/{invoiceId}/payments",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  // billing
+  {
+    handler: "packages/functions/src/api/billing/twy-accounting.handler",
+    routeKey: "GET /api/billing/twy",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/billing/external.handler",
+    routeKey: "GET /api/billing/external",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/billing/internal.handler",
+    routeKey: "GET /api/billing/internal",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
 ];
 
 export const allRoutes: RouteDef[] = [...authRoutes, ...appRoutes];
