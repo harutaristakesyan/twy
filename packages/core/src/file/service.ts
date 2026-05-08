@@ -6,6 +6,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { db, file as fileTable } from "@twy/db";
 import { Resource } from "sst";
 
 const s3Client = new S3Client({});
@@ -61,6 +62,8 @@ export const createUploadUrl = async ({
   });
 
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
+
+  await db.insert(fileTable).values({ id: fileId, fileName });
 
   return {
     fileId,

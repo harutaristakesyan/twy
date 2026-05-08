@@ -24,11 +24,14 @@ export type CreateInvoiceEvent = z.infer<typeof CreateInvoiceEventSchema>;
 
 export const ListInvoicesEventSchema = z.object({
   requestContext: AuthContext,
-  queryStringParameters: z.object({
-    loadId: uuidField.optional(),
-    page: z.coerce.number().int().min(0).default(0),
-    limit: z.coerce.number().int().min(1).default(20),
-  }),
+  queryStringParameters: z.preprocess(
+    (v) => v ?? {},
+    z.object({
+      loadId: uuidField.optional(),
+      page: z.coerce.number().int().min(0).default(0),
+      limit: z.coerce.number().int().min(1).default(20),
+    }),
+  ),
 });
 
 export type ListInvoicesEvent = z.infer<typeof ListInvoicesEventSchema>;
