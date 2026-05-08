@@ -24,6 +24,20 @@ const stopsArraySchema = z
   .min(1, "At least one stop is required")
   .max(MAX_STOPS_PER_LEG, `At most ${MAX_STOPS_PER_LEG} stops are allowed per leg`);
 
+const FilterRuleSchema = z.object({
+  field: z.string(),
+  operator: z.string(),
+  value: z.string(),
+});
+
+const AdvancedFilterSchema = z.object({
+  matchMode: z.enum(["all", "any"]).default("all"),
+  rules: z.array(FilterRuleSchema).default([]),
+  dateField: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+});
+
 const LoadBaseSchema = z.object({
   customer: z.string().trim().min(1, "Customer is required"),
   referenceNumber: z.string().trim().min(1, "Reference Number is required"),
@@ -96,6 +110,17 @@ export const ListLoadsEventSchema = z.object({
       .default("descend")
       .transform((val) => loadSortOrderMap[val as keyof typeof loadSortOrderMap]),
     query: z.string().optional(),
+    filters: z
+      .string()
+      .optional()
+      .transform((val) => {
+        if (!val) return undefined;
+        try {
+          return AdvancedFilterSchema.parse(JSON.parse(val));
+        } catch {
+          return undefined;
+        }
+      }),
   }),
 });
 

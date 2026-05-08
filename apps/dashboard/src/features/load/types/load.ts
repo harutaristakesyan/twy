@@ -83,6 +83,7 @@ export interface GetLoadsParams {
   sortField?: "referenceNumber" | "status" | "createdAt" | "customer";
   sortOrder?: "ascend" | "descend";
   query?: string;
+  filters?: string;
 }
 
 export interface PaginatedLoadsResponse {

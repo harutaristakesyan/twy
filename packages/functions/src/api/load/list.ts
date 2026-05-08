@@ -17,7 +17,7 @@ const listLoads = async (event: ListLoadsEvent): Promise<LoadListResponse> => {
   const scope = buildScope(ctx);
   if (scope.denyAll) return { loads: [], total: 0 };
 
-  const { page, limit, sortField, sortOrder, query } = event.queryStringParameters;
+  const { page, limit, sortField, sortOrder, query, filters } = event.queryStringParameters;
 
   const { loads, total } = await listLoadRecords({
     page,
@@ -27,6 +27,7 @@ const listLoads = async (event: ListLoadsEvent): Promise<LoadListResponse> => {
     query,
     branchId: scope.branchId,
     ownerId: scope.ownerId,
+    advancedFilter: filters,
   });
 
   return {
