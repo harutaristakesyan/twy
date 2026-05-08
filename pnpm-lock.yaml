@@ -210,10 +210,10 @@ importers:
         specifier: ^3.1045.0
         version: 3.1045.0
       '@react-email/components':
-        specifier: '*'
+        specifier: ^1.0.12
         version: 1.0.12(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@react-email/render':
-        specifier: '*'
+        specifier: ^2.0.8
         version: 2.0.8(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       react:
         specifier: ^19.0.0
