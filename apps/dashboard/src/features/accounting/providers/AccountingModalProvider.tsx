@@ -1,11 +1,11 @@
 import type React from "react";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
-import InvoiceUploadDrawer from "../components/InvoiceUploadDrawer.tsx";
+import InvoiceUploadModal from "../components/InvoiceUploadModal.tsx";
 import MarkPaidModal from "../components/MarkPaidModal.tsx";
 import type { BillingInvoiceSummary, InvoiceType } from "../types/index.ts";
 
 interface AccountingModalContextType {
-  openInvoiceDrawer: (loadId: string, defaultType: InvoiceType, onSuccess?: () => void) => void;
+  openInvoiceModal: (loadId: string, defaultType: InvoiceType, onSuccess?: () => void) => void;
   openPaymentModal: (invoice: BillingInvoiceSummary, onSuccess?: () => void) => void;
 }
 
@@ -20,7 +20,7 @@ export const useAccountingModal = (): AccountingModalContextType => {
 };
 
 export const AccountingModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [invoiceDrawer, setInvoiceDrawer] = useState<{
+  const [invoiceModal, setInvoiceModal] = useState<{
     open: boolean;
     loadId: string | null;
     defaultType: InvoiceType;
@@ -37,10 +37,10 @@ export const AccountingModalProvider: React.FC<{ children: React.ReactNode }> = 
   const invoiceSuccessRef = useRef<(() => void) | undefined>(undefined);
   const paymentSuccessRef = useRef<(() => void) | undefined>(undefined);
 
-  const openInvoiceDrawer = useCallback(
+  const openInvoiceModal = useCallback(
     (loadId: string, defaultType: InvoiceType, onSuccess?: () => void) => {
       invoiceSuccessRef.current = onSuccess;
-      setInvoiceDrawer({ open: true, loadId, defaultType });
+      setInvoiceModal({ open: true, loadId, defaultType });
     },
     [],
   );
@@ -51,21 +51,21 @@ export const AccountingModalProvider: React.FC<{ children: React.ReactNode }> = 
   }, []);
 
   const ctx = useMemo(
-    () => ({ openInvoiceDrawer, openPaymentModal }),
-    [openInvoiceDrawer, openPaymentModal],
+    () => ({ openInvoiceModal, openPaymentModal }),
+    [openInvoiceModal, openPaymentModal],
   );
 
   return (
     <AccountingModalContext.Provider value={ctx}>
       {children}
 
-      <InvoiceUploadDrawer
-        open={invoiceDrawer.open}
-        loadId={invoiceDrawer.loadId}
-        defaultType={invoiceDrawer.defaultType}
-        onClose={() => setInvoiceDrawer((prev) => ({ ...prev, open: false }))}
+      <InvoiceUploadModal
+        open={invoiceModal.open}
+        loadId={invoiceModal.loadId}
+        defaultType={invoiceModal.defaultType}
+        onClose={() => setInvoiceModal((prev) => ({ ...prev, open: false }))}
         onSuccess={() => {
-          setInvoiceDrawer((prev) => ({ ...prev, open: false }));
+          setInvoiceModal((prev) => ({ ...prev, open: false }));
           invoiceSuccessRef.current?.();
         }}
       />

@@ -1,7 +1,7 @@
 import { UploadOutlined } from "@ant-design/icons";
 import { useRequest } from "ahooks";
 import type { UploadFile } from "antd";
-import { App, Button, Drawer, Form, InputNumber, Select, Space, Upload } from "antd";
+import { App, Button, Form, InputNumber, Modal, Select, Space, Upload } from "antd";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { fileApi } from "@/libs/fileApi.ts";
@@ -9,7 +9,7 @@ import { getErrorMessage } from "@/utils/errorUtils.ts";
 import { invoiceApi } from "../api/invoiceApi.ts";
 import type { InvoiceType } from "../types/index.ts";
 
-interface InvoiceUploadDrawerProps {
+interface InvoiceUploadModalProps {
   open: boolean;
   loadId: string | null;
   defaultType?: InvoiceType;
@@ -30,7 +30,7 @@ const TYPE_OPTIONS = [
 
 const DEFAULT_TERM_DAYS: Record<InvoiceType, number> = { carrier: 7, broker: 40 };
 
-const InvoiceUploadDrawer: React.FC<InvoiceUploadDrawerProps> = ({
+const InvoiceUploadModal: React.FC<InvoiceUploadModalProps> = ({
   open,
   loadId,
   defaultType,
@@ -98,13 +98,14 @@ const InvoiceUploadDrawer: React.FC<InvoiceUploadDrawerProps> = ({
   );
 
   return (
-    <Drawer
+    <Modal
       title="Upload Invoice"
       open={open}
-      onClose={handleClose}
+      onCancel={handleClose}
       width={480}
+      destroyOnHidden
       footer={
-        <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+        <Space style={{ justifyContent: "flex-end", width: "100%" }}>
           <Button onClick={handleClose} disabled={loading}>
             Cancel
           </Button>
@@ -162,8 +163,8 @@ const InvoiceUploadDrawer: React.FC<InvoiceUploadDrawerProps> = ({
           </Upload>
         </Form.Item>
       </Form>
-    </Drawer>
+    </Modal>
   );
 };
 
-export default InvoiceUploadDrawer;
+export default InvoiceUploadModal;

@@ -15,7 +15,7 @@ const { Title } = Typography;
 const { RangePicker } = DatePicker;
 
 const TwyAccountingTab: React.FC = () => {
-  const { openInvoiceDrawer, openPaymentModal } = useAccountingModal();
+  const { openInvoiceModal, openPaymentModal } = useAccountingModal();
   const [branchId, setBranchId] = useState<string | undefined>(undefined);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
@@ -50,9 +50,9 @@ const TwyAccountingTab: React.FC = () => {
 
   const handleUploadInvoice = useCallback(
     (loadId: string, type: InvoiceType) => {
-      openInvoiceDrawer(loadId, type, () => refresh());
+      openInvoiceModal(loadId, type, () => refresh());
     },
-    [openInvoiceDrawer, refresh],
+    [openInvoiceModal, refresh],
   );
 
   const handleMarkPaid = useCallback(
