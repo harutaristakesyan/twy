@@ -1,4 +1,4 @@
-export type LoadStatus = "Pending" | "Approved" | "Denied";
+export type LoadStatus = "Pending" | "Approved" | "ApprovedPaid" | "Denied" | "Hold";
 
 export interface LoadFile {
   id: string;

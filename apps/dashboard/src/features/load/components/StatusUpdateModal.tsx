@@ -77,7 +77,9 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
     const colors: Record<LoadStatus, string> = {
       Pending: "gold",
       Approved: "green",
+      ApprovedPaid: "cyan",
       Denied: "red",
+      Hold: "orange",
     };
     return colors[status];
   };
@@ -132,6 +134,7 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
             options={[
               { value: "Pending", label: "Pending" },
               { value: "Approved", label: "Approved" },
+              { value: "Hold", label: "Hold" },
               { value: "Denied", label: "Denied" },
             ]}
           />

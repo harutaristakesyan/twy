@@ -27,7 +27,9 @@ const LOAD_FILTER_FIELDS: FieldConfig[] = [
     options: [
       { label: "Pending", value: "Pending" },
       { label: "Approved", value: "Approved" },
+      { label: "Approved Paid", value: "ApprovedPaid" },
       { label: "Denied", value: "Denied" },
+      { label: "Hold", value: "Hold" },
     ],
   },
   { key: "paymentMethod", label: "Payment Method", type: "text" },
