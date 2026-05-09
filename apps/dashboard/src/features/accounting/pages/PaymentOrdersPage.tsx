@@ -1,11 +1,14 @@
+import { MoreOutlined } from "@ant-design/icons";
 import { useAntdTable } from "ahooks";
-import { Button, Card, Flex, Table, Typography } from "antd";
+import { Button, Card, Dropdown, Flex, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useState } from "react";
 import { paymentOrderApi } from "../api/paymentOrderApi";
 import PaymentStatusTag from "../components/PaymentStatusTag";
 import UpdatePaymentStatusModal from "../components/UpdatePaymentStatusModal";
 import type { PaymentOrder } from "../types/paymentOrder";
+
+type ModalMode = "edit" | "view";
 
 const { Title } = Typography;
 
@@ -26,6 +29,7 @@ const formatDate = (value: string | null | undefined): string =>
 export default function PaymentOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<PaymentOrder | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<ModalMode>("edit");
 
   const { tableProps, refresh } = useAntdTable(
     async ({ current, pageSize }) => {
@@ -35,8 +39,9 @@ export default function PaymentOrdersPage() {
     { defaultPageSize: 20 },
   );
 
-  const openModal = useCallback((record: PaymentOrder) => {
+  const openModal = useCallback((record: PaymentOrder, mode: ModalMode) => {
     setSelectedOrder(record);
+    setModalMode(mode);
     setModalOpen(true);
   }, []);
 
@@ -161,14 +166,22 @@ export default function PaymentOrdersPage() {
       render: formatDate,
     },
     {
-      title: "Actions",
+      title: "",
       key: "actions",
       fixed: "right",
-      width: 80,
+      width: 48,
       render: (_: unknown, record: PaymentOrder) => (
-        <Button size="small" onClick={() => openModal(record)}>
-          Edit
-        </Button>
+        <Dropdown
+          trigger={["click"]}
+          menu={{
+            items: [
+              { key: "edit", label: "Edit", onClick: () => openModal(record, "edit") },
+              { key: "view", label: "View", onClick: () => openModal(record, "view") },
+            ],
+          }}
+        >
+          <Button type="text" size="small" icon={<MoreOutlined />} />
+        </Dropdown>
       ),
     },
   ];
@@ -193,6 +206,7 @@ export default function PaymentOrdersPage() {
       <UpdatePaymentStatusModal
         paymentOrder={selectedOrder}
         open={modalOpen}
+        mode={modalMode}
         onClose={closeModal}
         onSuccess={handleSuccess}
       />

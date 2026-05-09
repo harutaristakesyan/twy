@@ -39,6 +39,7 @@ interface FormValues {
 interface Props {
   paymentOrder: PaymentOrder | null;
   open: boolean;
+  mode?: "edit" | "view";
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -48,9 +49,11 @@ const getFileId = (file: UploadFile): string => (file.response as string | undef
 export default function UpdatePaymentStatusModal({
   paymentOrder,
   open,
+  mode = "edit",
   onClose,
   onSuccess,
 }: Props) {
+  const readOnly = mode === "view";
   const { message } = App.useApp();
   const [form] = Form.useForm<FormValues>();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
@@ -150,34 +153,44 @@ export default function UpdatePaymentStatusModal({
 
   return (
     <Modal
-      title={`Edit Payment Order — ${paymentOrder?.referenceNumber ?? ""}`}
+      title={`${readOnly ? "View" : "Edit"} Payment Order — ${paymentOrder?.referenceNumber ?? ""}`}
       open={open}
       onCancel={onClose}
       width={640}
       footer={
-        <Space>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="primary" loading={loading} onClick={() => form.submit()}>
-            Save
-          </Button>
-        </Space>
+        readOnly ? (
+          <Button onClick={onClose}>Close</Button>
+        ) : (
+          <Space>
+            <Button onClick={onClose}>Cancel</Button>
+            <Button type="primary" loading={loading} onClick={() => form.submit()}>
+              Save
+            </Button>
+          </Space>
+        )
       }
       destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={save} style={{ marginTop: 16 }}>
         <Form.Item name="paymentStatus" label="Payment Status" rules={[{ required: true }]}>
-          <Select options={STATUS_OPTIONS} />
+          <Select options={STATUS_OPTIONS} disabled={readOnly} />
         </Form.Item>
 
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="carrierPaidAmount" label="Carrier Paid">
-              <InputNumber style={{ width: "100%" }} min={0} precision={2} prefix="€" />
+              <InputNumber
+                style={{ width: "100%" }}
+                min={0}
+                precision={2}
+                prefix="€"
+                disabled={readOnly}
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item name="carrierPaidDate" label="Carrier Paid Date">
-              <DatePicker style={{ width: "100%" }} />
+              <DatePicker style={{ width: "100%" }} disabled={readOnly} />
             </Form.Item>
           </Col>
         </Row>
@@ -185,12 +198,18 @@ export default function UpdatePaymentStatusModal({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="brokerReceivedAmount" label="Broker Received">
-              <InputNumber style={{ width: "100%" }} min={0} precision={2} prefix="€" />
+              <InputNumber
+                style={{ width: "100%" }}
+                min={0}
+                precision={2}
+                prefix="€"
+                disabled={readOnly}
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item name="brokerReceivedDate" label="Broker Received Date">
-              <DatePicker style={{ width: "100%" }} />
+              <DatePicker style={{ width: "100%" }} disabled={readOnly} />
             </Form.Item>
           </Col>
         </Row>
@@ -201,14 +220,14 @@ export default function UpdatePaymentStatusModal({
             fileList={fileList}
             customRequest={handleUpload}
             onChange={handleChange}
-            onRemove={handleRemove}
+            onRemove={readOnly ? undefined : handleRemove}
             onDownload={handleDownload}
             showUploadList={{
               showDownloadIcon: true,
-              showRemoveIcon: true,
+              showRemoveIcon: !readOnly,
             }}
           >
-            <Button icon={<UploadOutlined />}>Upload Invoice</Button>
+            {!readOnly && <Button icon={<UploadOutlined />}>Upload Invoice</Button>}
           </Upload>
         </Form.Item>
       </Form>
