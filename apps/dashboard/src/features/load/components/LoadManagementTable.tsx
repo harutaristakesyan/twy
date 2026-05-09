@@ -2,12 +2,15 @@ import { FilterOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons"
 import { useAntdTable, useDebounce, useRequest } from "ahooks";
 import { App, Badge, Button, Card, Flex, Input, Space, Table, Tooltip, Typography } from "antd";
 import type React from "react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { AdvancedFilter } from "@/components/AdvancedFilter";
-import { AdvancedFilterDrawer } from "@/components/AdvancedFilter";
+import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { loadApi } from "@/features/load/api/loadApi";
-import { LOAD_FILTER_FIELDS } from "@/features/load/constants/loadAdvancedFilterFields";
+import {
+  LOAD_FILTER_FIELDS,
+  LOAD_QUICK_FILTER_FIELDS,
+} from "@/features/load/constants/loadAdvancedFilterFields";
 import type { GetLoadsParams } from "@/features/load/types/load";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -25,12 +28,14 @@ export const LoadManagementTable: React.FC = () => {
 
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 500 });
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
 
-  const isFilterActive = (activeFilter?.rules?.length ?? 0) > 0;
+  const isFilterActive =
+    (activeFilter?.rules?.length ?? 0) > 0 || activeFilter?.dateField !== undefined;
 
-  const activeRuleCount = activeFilter?.rules?.length ?? 0;
+  const activeFilterCount =
+    (activeFilter?.rules?.length ?? 0) + (activeFilter?.dateField !== undefined ? 1 : 0);
 
   const { tableProps, refresh } = useAntdTable(
     async ({ current, pageSize, sorter }) => {
@@ -64,10 +69,9 @@ export const LoadManagementTable: React.FC = () => {
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const handleFilterApply = (filter: AdvancedFilter) => {
-    setActiveFilter(filter.rules.length > 0 ? filter : undefined);
-    setDrawerOpen(false);
-  };
+  const handleFilterApply = useCallback((filter: AdvancedFilter | undefined) => {
+    setActiveFilter(filter);
+  }, []);
 
   const columns = useLoadColumns(refresh, runDelete);
 
@@ -79,9 +83,7 @@ export const LoadManagementTable: React.FC = () => {
             Loads ({tableProps.pagination.total ?? 0})
           </Title>
           <Flex align="middle" gap="middle">
-            <Tooltip
-              title={isFilterActive ? "Clear advanced filters to use simple search" : undefined}
-            >
+            <Tooltip title={isFilterActive ? "Clear filters to use simple search" : undefined}>
               <Search
                 placeholder="Search loads..."
                 value={searchInput}
@@ -92,15 +94,25 @@ export const LoadManagementTable: React.FC = () => {
                 style={{ opacity: isFilterActive ? 0.5 : 1 }}
               />
             </Tooltip>
-            <Badge count={isFilterActive ? activeRuleCount : 0} size="small">
+            <Badge count={isFilterActive ? activeFilterCount : 0} size="small">
               <Space.Compact>
-                <Button
-                  icon={<FilterOutlined />}
-                  type={isFilterActive ? "primary" : "default"}
-                  onClick={() => setDrawerOpen(true)}
+                <AdvancedFilterPopover
+                  open={popoverOpen}
+                  title="Filter — Loads"
+                  quickFields={LOAD_QUICK_FILTER_FIELDS}
+                  ruleFields={LOAD_FILTER_FIELDS}
+                  initialFilter={activeFilter}
+                  onApply={handleFilterApply}
+                  onClose={() => setPopoverOpen(false)}
                 >
-                  Advanced Search
-                </Button>
+                  <Button
+                    icon={<FilterOutlined />}
+                    type={isFilterActive ? "primary" : "default"}
+                    onClick={() => setPopoverOpen(true)}
+                  >
+                    Filter
+                  </Button>
+                </AdvancedFilterPopover>
                 {isFilterActive && (
                   <Button
                     type="primary"
@@ -134,17 +146,15 @@ export const LoadManagementTable: React.FC = () => {
           </Flex>
         </Flex>
 
+        <ActiveFilterChips
+          filter={activeFilter}
+          quickFields={LOAD_QUICK_FILTER_FIELDS}
+          ruleFields={LOAD_FILTER_FIELDS}
+          onChange={setActiveFilter}
+        />
+
         <Table columns={columns} rowKey="id" scroll={{ x: 2000 }} {...tableProps} />
       </Card>
-
-      <AdvancedFilterDrawer
-        open={drawerOpen}
-        title="Advanced Search — Loads"
-        fields={LOAD_FILTER_FIELDS}
-        initialFilter={activeFilter}
-        onApply={handleFilterApply}
-        onClose={() => setDrawerOpen(false)}
-      />
     </div>
   );
 };

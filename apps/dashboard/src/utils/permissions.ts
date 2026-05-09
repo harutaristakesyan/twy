@@ -8,9 +8,9 @@ export const RESOURCES = [
   "teams",
   "users",
   "loads",
-  "invoices",
-  "payments",
-  "billing",
+  "payment_orders",
+  "external_billing",
+  "internal_billing",
 ] as const;
 export const ACTIONS = ["add", "view", "edit"] as const;
 export type Resource = (typeof RESOURCES)[number];

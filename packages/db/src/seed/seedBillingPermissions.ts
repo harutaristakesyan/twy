@@ -1,6 +1,6 @@
 import { db, team, teamPermissions } from "../index.js";
 
-const NEW_RESOURCES = ["invoices", "payments", "billing"] as const;
+const NEW_RESOURCES = ["payment_orders", "external_billing", "internal_billing"] as const;
 const ACTIONS = ["add", "view", "edit"] as const;
 
 const run = async (): Promise<void> => {
@@ -21,7 +21,7 @@ const run = async (): Promise<void> => {
   }
 
   process.stdout.write(
-    `Seeded billing permissions: ${inserted} rows across ${teams.length} team(s)\n`,
+    `Seeded accounting permissions: ${inserted} rows across ${teams.length} team(s)\n`,
   );
 };
 

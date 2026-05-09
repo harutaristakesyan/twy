@@ -35,15 +35,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-const formatDueDate = (iso: string | null): string => {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-};
-
 /** Handles undefined arrays, stale cached list rows, or legacy single `pickup` / `dropoff` objects. */
 const resolveStops = (
   record: LoadListRow,
@@ -151,39 +142,12 @@ export function useLoadColumns(
           ),
       },
       {
-        title: "Service Fee",
-        dataIndex: "serviceFee",
-        key: "serviceFee",
-        width: 120,
-        render: (value: number | null) => formatCurrency(value),
-      },
-      {
-        title: "Income %",
-        dataIndex: "incomePercentage",
-        key: "incomePercentage",
-        width: 100,
-        render: (value: number | null) => (value !== null ? `${value.toFixed(2)}%` : "—"),
-      },
-      {
         title: "Charges",
-        dataIndex: "charges",
-        key: "charges",
+        dataIndex: "chargeAmount",
+        key: "chargeAmount",
         width: 110,
-        render: (value: number | null) => formatCurrency(value),
-      },
-      {
-        title: "Carrier Due",
-        dataIndex: "carrierDueAt",
-        key: "carrierDueAt",
-        width: 120,
-        render: (value: string | null) => formatDueDate(value),
-      },
-      {
-        title: "Broker Due",
-        dataIndex: "brokerDueAt",
-        key: "brokerDueAt",
-        width: 120,
-        render: (value: string | null) => formatDueDate(value),
+        render: (value: number | null, record: Load) =>
+          record.isChargable && value != null ? formatCurrency(value) : "—",
       },
       {
         title: "Payment Method",

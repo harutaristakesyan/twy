@@ -1,19 +1,6 @@
-export interface TemplateParams {
-  carrier_reminder: {
-    invoiceId: string;
-    loadId: string;
-    dueAt: string;
-    amount: string;
-    currency: string;
-  };
-  broker_overdue: {
-    invoiceId: string;
-    loadId: string;
-    dueAt: string;
-    amount: string;
-    currency: string;
-  };
-}
+// No active email templates — kept for future use
+// biome-ignore lint/suspicious/noEmptyInterface: intentionally empty, serves as extension point
+export interface TemplateParams {}
 
 export type TemplateId = keyof TemplateParams;
 

@@ -10,5 +10,9 @@ export const navigationLabelMap: Record<string, string> = {
   "/carriers/twy": "Carriers",
   "/carriers/outside": "Carriers",
   "/carriers/requests": "Carriers",
+  "/accounting": "Accounting",
+  "/accounting/payment-orders": "Payment Orders",
+  "/accounting/external-billing": "External Billing",
+  "/accounting/internal-billing": "Internal Billing",
   "/profile": "My Profile",
 };

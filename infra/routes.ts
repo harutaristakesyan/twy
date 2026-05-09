@@ -133,13 +133,13 @@ export const appRoutes: RouteDef[] = [
     handler: "packages/functions/src/api/file/upload.handler",
     routeKey: "POST /api/files",
     requiresAuth: true,
-    linkKeys: ["filesBucket"],
+    linkKeys: ["cluster", "filesBucket"],
   },
   {
     handler: "packages/functions/src/api/file/delete.handler",
     routeKey: "DELETE /api/files/{fileId}",
     requiresAuth: true,
-    linkKeys: ["filesBucket"],
+    linkKeys: ["cluster", "filesBucket"],
   },
   {
     handler: "packages/functions/src/api/file/download.handler",
@@ -333,60 +333,28 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
-  // invoices
+  // payment orders
   {
-    handler: "packages/functions/src/api/invoice/create.handler",
-    routeKey: "POST /api/invoices",
-    requiresAuth: true,
-    linkKeys: ["cluster", "authContext", "filesBucket"],
-  },
-  {
-    handler: "packages/functions/src/api/invoice/list.handler",
-    routeKey: "GET /api/invoices",
+    handler: "packages/functions/src/api/payment-order/list.handler",
+    routeKey: "GET /api/payment-orders",
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
   {
-    handler: "packages/functions/src/api/invoice/update-status.handler",
-    routeKey: "PATCH /api/invoices/{invoiceId}/status",
+    handler: "packages/functions/src/api/payment-order/update.handler",
+    routeKey: "PATCH /api/payment-orders/{paymentOrderId}",
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
   {
-    handler: "packages/functions/src/api/invoice/delete.handler",
-    routeKey: "DELETE /api/invoices/{invoiceId}",
-    requiresAuth: true,
-    linkKeys: ["cluster", "authContext"],
-  },
-  // payments
-  {
-    handler: "packages/functions/src/api/payment/create.handler",
-    routeKey: "POST /api/payments",
+    handler: "packages/functions/src/api/payment-order/add-file.handler",
+    routeKey: "POST /api/payment-orders/{paymentOrderId}/files",
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
   {
-    handler: "packages/functions/src/api/payment/list.handler",
-    routeKey: "GET /api/invoices/{invoiceId}/payments",
-    requiresAuth: true,
-    linkKeys: ["cluster", "authContext"],
-  },
-  // billing
-  {
-    handler: "packages/functions/src/api/billing/twy-accounting.handler",
-    routeKey: "GET /api/billing/twy",
-    requiresAuth: true,
-    linkKeys: ["cluster", "authContext"],
-  },
-  {
-    handler: "packages/functions/src/api/billing/external.handler",
-    routeKey: "GET /api/billing/external",
-    requiresAuth: true,
-    linkKeys: ["cluster", "authContext"],
-  },
-  {
-    handler: "packages/functions/src/api/billing/internal.handler",
-    routeKey: "GET /api/billing/internal",
+    handler: "packages/functions/src/api/payment-order/remove-file.handler",
+    routeKey: "DELETE /api/payment-orders/{paymentOrderId}/files/{fileId}",
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },

@@ -20,7 +20,7 @@ export const load = pgTable("load", {
   id: uuid().primaryKey(),
 
   customer: text(),
-  referenceNumber: text().notNull(),
+  referenceNumber: text().notNull().unique(),
   customerRate: numeric({ precision: 10, scale: 2 }),
   contactName: text().notNull(),
   paymentMethod: text(),
@@ -34,9 +34,7 @@ export const load = pgTable("load", {
   isChargable: boolean().notNull().default(false),
   chargeAmount: numeric({ precision: 10, scale: 2 }),
 
-  serviceFee: numeric({ precision: 10, scale: 2 }),
-  incomePercentage: numeric({ precision: 5, scale: 2 }),
-  charges: numeric({ precision: 10, scale: 2 }),
+  serviceFee: numeric({ precision: 10, scale: 2 }).default("30.00"),
   financialsLockedAt: timestamp(),
 
   loadType: text().notNull(),

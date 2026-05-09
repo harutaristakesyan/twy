@@ -4,7 +4,7 @@ import { Badge, Button, Card, Flex, Input, message, Space, Table, Tooltip, Typog
 import type React from "react";
 import { useState } from "react";
 import type { AdvancedFilter, FieldConfig } from "@/components/AdvancedFilter";
-import { AdvancedFilterDrawer } from "@/components/AdvancedFilter";
+import { AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { getUsers } from "@/features/user/api/userApi";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -32,7 +32,7 @@ const BranchManagementTable: React.FC = () => {
 
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 500 });
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
 
   const isFilterActive = (activeFilter?.rules?.length ?? 0) > 0;
@@ -72,9 +72,8 @@ const BranchManagementTable: React.FC = () => {
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const handleFilterApply = (filter: AdvancedFilter) => {
-    setActiveFilter(filter.rules.length > 0 ? filter : undefined);
-    setDrawerOpen(false);
+  const handleFilterApply = (filter: AdvancedFilter | undefined) => {
+    setActiveFilter(filter && filter.rules.length > 0 ? filter : undefined);
   };
 
   const columns = useBranchColumns(refresh, runDelete, owners, ownersLoading);
@@ -101,13 +100,23 @@ const BranchManagementTable: React.FC = () => {
           </Tooltip>
           <Badge count={isFilterActive ? activeRuleCount : 0} size="small">
             <Space.Compact>
-              <Button
-                icon={<FilterOutlined />}
-                type={isFilterActive ? "primary" : "default"}
-                onClick={() => setDrawerOpen(true)}
+              <AdvancedFilterPopover
+                open={popoverOpen}
+                title="Advanced Search — Branches"
+                quickFields={[]}
+                ruleFields={BRANCH_FILTER_FIELDS}
+                initialFilter={activeFilter}
+                onApply={handleFilterApply}
+                onClose={() => setPopoverOpen(false)}
               >
-                Advanced Search
-              </Button>
+                <Button
+                  icon={<FilterOutlined />}
+                  type={isFilterActive ? "primary" : "default"}
+                  onClick={() => setPopoverOpen(true)}
+                >
+                  Advanced Search
+                </Button>
+              </AdvancedFilterPopover>
               {isFilterActive && (
                 <Button
                   type="primary"
@@ -134,15 +143,6 @@ const BranchManagementTable: React.FC = () => {
       </Flex>
 
       <Table columns={columns} rowKey="id" scroll={{ x: 800 }} {...tableProps} />
-
-      <AdvancedFilterDrawer
-        open={drawerOpen}
-        title="Advanced Search — Branches"
-        fields={BRANCH_FILTER_FIELDS}
-        initialFilter={activeFilter}
-        onApply={handleFilterApply}
-        onClose={() => setDrawerOpen(false)}
-      />
     </Card>
   );
 };
