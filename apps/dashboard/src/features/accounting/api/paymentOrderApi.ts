@@ -1,23 +1,40 @@
 import ApiClient from "@/libs/ApiClient";
+import type { ApiResponse } from "@/libs/api-types";
 import { fileApi } from "@/libs/fileApi";
 import type { PaginatedPaymentOrdersResponse, UpdatePaymentOrderDto } from "../types/paymentOrder";
 
 export const paymentOrderApi = {
-  list: (params: { page?: number; limit?: number }) =>
-    ApiClient.get<PaginatedPaymentOrdersResponse>("/payment-orders", params),
+  list: async (params: {
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedPaymentOrdersResponse> => {
+    const res = await ApiClient.get<ApiResponse<PaginatedPaymentOrdersResponse>>(
+      "/payment-orders",
+      params,
+    );
+    return res.data;
+  },
 
-  update: (paymentOrderId: string, dto: UpdatePaymentOrderDto) =>
-    ApiClient.patch<{ message: string }>(`/payment-orders/${paymentOrderId}`, dto),
+  update: async (paymentOrderId: string, dto: UpdatePaymentOrderDto): Promise<void> => {
+    await ApiClient.patch<ApiResponse<{ message: string }>>(
+      `/payment-orders/${paymentOrderId}`,
+      dto,
+    );
+  },
 
   addInvoice: async (paymentOrderId: string, file: File): Promise<void> => {
     const fileId = await fileApi.uploadFile(file);
-    await ApiClient.post<{ message: string }>(`/payment-orders/${paymentOrderId}/files`, {
-      fileId,
-    });
+    await ApiClient.post<ApiResponse<{ message: string }>>(
+      `/payment-orders/${paymentOrderId}/files`,
+      { fileId },
+    );
   },
 
-  removeInvoice: (paymentOrderId: string, fileId: string) =>
-    ApiClient.delete<{ message: string }>(`/payment-orders/${paymentOrderId}/files/${fileId}`),
+  removeInvoice: async (paymentOrderId: string, fileId: string): Promise<void> => {
+    await ApiClient.delete<ApiResponse<{ message: string }>>(
+      `/payment-orders/${paymentOrderId}/files/${fileId}`,
+    );
+  },
 
   downloadInvoice: (fileId: string, fileName: string) => fileApi.downloadFile(fileId, fileName),
 };
