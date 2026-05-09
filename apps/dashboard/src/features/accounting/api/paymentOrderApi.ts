@@ -22,12 +22,13 @@ export const paymentOrderApi = {
     );
   },
 
-  addInvoice: async (paymentOrderId: string, file: File): Promise<void> => {
+  addInvoice: async (paymentOrderId: string, file: File): Promise<string> => {
     const fileId = await fileApi.uploadFile(file);
     await ApiClient.post<ApiResponse<{ message: string }>>(
       `/payment-orders/${paymentOrderId}/files`,
       { fileId },
     );
+    return fileId;
   },
 
   removeInvoice: async (paymentOrderId: string, fileId: string): Promise<void> => {

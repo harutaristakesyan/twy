@@ -16,7 +16,7 @@ import {
   Upload,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import type { UploadFile } from "antd/es/upload/interface";
+import type { RcFile } from "antd/es/upload";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -97,12 +97,12 @@ export default function UpdatePaymentStatusModal({
   );
 
   const handleUpload = useCallback(
-    async (file: UploadFile) => {
-      if (!paymentOrder || !file.originFileObj) return false;
+    async (file: RcFile) => {
+      if (!paymentOrder) return false;
       setUploading(true);
       try {
-        await paymentOrderApi.addInvoice(paymentOrder.id, file.originFileObj);
-        setInvoices((prev) => [...prev, { fileId: file.uid, fileName: file.name }]);
+        const fileId = await paymentOrderApi.addInvoice(paymentOrder.id, file);
+        setInvoices((prev) => [...prev, { fileId, fileName: file.name }]);
         message.success(`${file.name} uploaded`);
         onSuccess();
       } catch (err) {
