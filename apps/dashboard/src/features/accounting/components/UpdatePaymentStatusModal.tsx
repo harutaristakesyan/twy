@@ -1,5 +1,6 @@
 import { DeleteOutlined, DownloadOutlined, InboxOutlined } from "@ant-design/icons";
 import { useRequest } from "ahooks";
+import type { GetProp, UploadProps } from "antd";
 import {
   App,
   Button,
@@ -16,7 +17,9 @@ import {
   Upload,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import type { RcFile } from "antd/es/upload";
+
+type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
+
 import dayjs from "dayjs";
 import { useCallback, useEffect, useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -97,7 +100,7 @@ export default function UpdatePaymentStatusModal({
   );
 
   const handleUpload = useCallback(
-    async (file: RcFile) => {
+    async (file: FileType) => {
       if (!paymentOrder) return false;
       setUploading(true);
       try {
