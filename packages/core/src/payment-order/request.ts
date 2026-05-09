@@ -20,6 +20,7 @@ export const ListPaymentOrdersEventSchema = z.object({
       .transform((val) => Number.parseInt(val, 10))
       .default(20)
       .transform((val) => (Number.isNaN(val) ? 20 : val)),
+    branchId: z.string().uuid().optional(),
   }),
 });
 

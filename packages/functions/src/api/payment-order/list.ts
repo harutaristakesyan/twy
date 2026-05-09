@@ -19,9 +19,10 @@ const listPaymentOrdersHandler = async (
   const scope = buildScope(ctx);
   if (scope.denyAll) return { paymentOrders: [], total: 0 };
 
-  const { page, limit } = event.queryStringParameters;
+  const { page, limit, branchId } = event.queryStringParameters;
 
-  return listPaymentOrders({ page, limit, branchId: scope.branchId });
+  // scope.branchId restricts branch-scoped users; query param branchId lets admins filter
+  return listPaymentOrders({ page, limit, branchId: scope.branchId ?? branchId });
 };
 
 export const handler = middyfy<
