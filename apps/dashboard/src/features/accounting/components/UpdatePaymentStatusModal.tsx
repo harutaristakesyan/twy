@@ -1,6 +1,6 @@
-import { DeleteOutlined, DownloadOutlined, InboxOutlined } from "@ant-design/icons";
+import { UploadOutlined } from "@ant-design/icons";
 import { useRequest } from "ahooks";
-import type { GetProp, UploadProps } from "antd";
+import type { UploadFile, UploadProps } from "antd";
 import {
   App,
   Button,
@@ -12,21 +12,13 @@ import {
   Row,
   Select,
   Space,
-  Table,
-  Typography,
   Upload,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { paymentOrderApi } from "../api/paymentOrderApi";
-import type { PaymentOrder, PaymentOrderInvoice, PaymentStatus } from "../types/paymentOrder";
-
-type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
-
-const { Text } = Typography;
-const { Dragger } = Upload;
+import type { PaymentOrder, PaymentStatus } from "../types/paymentOrder";
 
 const STATUS_OPTIONS: { label: string; value: PaymentStatus }[] = [
   { label: "Pending", value: "Pending" },
@@ -51,6 +43,8 @@ interface Props {
   onSuccess: () => void;
 }
 
+const getFileId = (file: UploadFile): string => (file.response as string | undefined) ?? file.uid;
+
 export default function UpdatePaymentStatusModal({
   paymentOrder,
   open,
@@ -59,8 +53,7 @@ export default function UpdatePaymentStatusModal({
 }: Props) {
   const { message } = App.useApp();
   const [form] = Form.useForm<FormValues>();
-  const [uploading, setUploading] = useState(false);
-  const [invoices, setInvoices] = useState<PaymentOrderInvoice[]>([]);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   useEffect(() => {
     if (!paymentOrder || !open) return;
@@ -73,7 +66,13 @@ export default function UpdatePaymentStatusModal({
         ? dayjs(paymentOrder.brokerReceivedDate)
         : null,
     });
-    setInvoices(paymentOrder.invoices ?? []);
+    setFileList(
+      (paymentOrder.invoices ?? []).map((inv) => ({
+        uid: inv.fileId,
+        name: inv.fileName,
+        status: "done" as const,
+      })),
+    );
   }, [paymentOrder, open, form]);
 
   const { loading, run: save } = useRequest(
@@ -98,65 +97,56 @@ export default function UpdatePaymentStatusModal({
     },
   );
 
-  const handleUpload = useCallback(
-    async (file: FileType) => {
-      if (!paymentOrder) return false;
-      setUploading(true);
-      try {
-        const fileId = await paymentOrderApi.addInvoice(paymentOrder.id, file);
-        setInvoices((prev) => [...prev, { fileId, fileName: file.name }]);
-        message.success(`${file.name} uploaded`);
-        onSuccess();
-      } catch (err) {
-        message.error(getErrorMessage(err));
-      } finally {
-        setUploading(false);
-      }
-      return false;
-    },
-    [paymentOrder, message, onSuccess],
-  );
-
-  const handleRemoveInvoice = useCallback(
-    async (fileId: string, fileName: string) => {
+  const handleUpload: NonNullable<UploadProps["customRequest"]> = useCallback(
+    async ({ file, onSuccess: onUploadSuccess, onError }) => {
       if (!paymentOrder) return;
       try {
-        await paymentOrderApi.removeInvoice(paymentOrder.id, fileId);
-        setInvoices((prev) => prev.filter((i) => i.fileId !== fileId));
-        message.success(`${fileName} removed`);
+        const fileId = await paymentOrderApi.addInvoice(paymentOrder.id, file as File);
+        onUploadSuccess?.(fileId);
+      } catch (err) {
+        onError?.(err instanceof Error ? err : new Error(String(err)));
+      }
+    },
+    [paymentOrder],
+  );
+
+  const handleChange: UploadProps["onChange"] = useCallback(
+    ({ file, fileList: newList }) => {
+      setFileList(newList);
+      if (file.status === "done") {
+        message.success(`${file.name} uploaded`);
         onSuccess();
+      } else if (file.status === "error") {
+        message.error(`${file.name} failed to upload`);
+      }
+    },
+    [message, onSuccess],
+  );
+
+  const handleRemove = useCallback(
+    async (file: UploadFile): Promise<boolean> => {
+      if (!paymentOrder) return false;
+      try {
+        await paymentOrderApi.removeInvoice(paymentOrder.id, getFileId(file));
+        message.success(`${file.name} removed`);
+        onSuccess();
+        return true;
       } catch (err) {
         message.error(getErrorMessage(err));
+        return false;
       }
     },
     [paymentOrder, message, onSuccess],
   );
 
-  const invoiceColumns: ColumnsType<PaymentOrderInvoice> = [
-    { title: "File", dataIndex: "fileName", key: "fileName", ellipsis: true },
-    {
-      key: "actions",
-      width: 80,
-      align: "right",
-      render: (_: unknown, row: PaymentOrderInvoice) => (
-        <Space>
-          <Button
-            type="text"
-            size="small"
-            icon={<DownloadOutlined />}
-            onClick={() => paymentOrderApi.downloadInvoice(row.fileId, row.fileName)}
-          />
-          <Button
-            type="text"
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleRemoveInvoice(row.fileId, row.fileName)}
-          />
-        </Space>
-      ),
+  const handleDownload = useCallback(
+    (file: UploadFile) => {
+      paymentOrderApi.downloadInvoice(getFileId(file), file.name).catch((err) => {
+        message.error(getErrorMessage(err));
+      });
     },
-  ];
+    [message],
+  );
 
   return (
     <Modal
@@ -206,32 +196,20 @@ export default function UpdatePaymentStatusModal({
         </Row>
 
         <Form.Item label="Invoices">
-          <Dragger
+          <Upload
             multiple
-            showUploadList={false}
-            beforeUpload={handleUpload}
-            disabled={uploading}
-            style={{ marginBottom: 8 }}
+            fileList={fileList}
+            customRequest={handleUpload}
+            onChange={handleChange}
+            onRemove={handleRemove}
+            onDownload={handleDownload}
+            showUploadList={{
+              showDownloadIcon: true,
+              showRemoveIcon: true,
+            }}
           >
-            <p className="ant-upload-drag-icon">
-              <InboxOutlined />
-            </p>
-            <p className="ant-upload-text">Click or drag files to upload invoices</p>
-          </Dragger>
-          {invoices.length > 0 ? (
-            <Table<PaymentOrderInvoice>
-              size="small"
-              dataSource={invoices}
-              columns={invoiceColumns}
-              rowKey="fileId"
-              pagination={false}
-              style={{ marginTop: 8 }}
-            />
-          ) : (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              No invoices attached
-            </Text>
-          )}
+            <Button icon={<UploadOutlined />}>Upload Invoice</Button>
+          </Upload>
         </Form.Item>
       </Form>
     </Modal>
