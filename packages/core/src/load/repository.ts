@@ -117,7 +117,6 @@ export type UpdateLoad = Partial<Omit<CreateLoadInput, "files">> & {
 const numericToNumber = (value: string | null): number | null =>
   value === null ? null : Number(value);
 
-
 export interface ListLoadsInput {
   page: number;
   limit: number;
