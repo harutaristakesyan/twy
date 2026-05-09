@@ -27,9 +27,21 @@ export interface FieldConfig {
   options?: FieldOption[];
 }
 
-export interface DateFieldConfig {
+// ── Quick filter fields (declarative, one control per field) ──────────────────
+
+export type QuickFilterFieldType =
+  | "search"
+  | "select"
+  | "multiSelect"
+  | "dateRange"
+  | "numberRange";
+
+export interface QuickFilterField {
   key: string;
   label: string;
+  type: QuickFilterFieldType;
+  options?: FieldOption[];
+  placeholder?: string;
 }
 
 export const TEXT_OPERATORS = [
@@ -41,6 +53,7 @@ export const TEXT_OPERATORS = [
 export const ENUM_OPERATORS = [
   { label: "is", value: "is" },
   { label: "is not", value: "is_not" },
+  { label: "is one of", value: "in" },
 ] as const;
 
 export const NUMBER_OPERATORS = [

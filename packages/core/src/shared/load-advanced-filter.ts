@@ -1,7 +1,7 @@
 import type { LoadStatus } from "@twy/db";
 import { load } from "@twy/db";
 import type { SQL } from "drizzle-orm";
-import { eq, gt, gte, ilike, lt, lte, ne } from "drizzle-orm";
+import { eq, gt, gte, ilike, inArray, lt, lte, ne } from "drizzle-orm";
 import type { AdvancedFilter, AdvancedFilterRule } from "./advanced-filter-schema.js";
 import { buildAdvancedFilterSql } from "./advanced-filter-sql.js";
 
@@ -58,6 +58,13 @@ export function buildLoadRuleCondition(rule: AdvancedFilterRule): SQL<unknown> |
     case "status":
       if (operator === "is") return eq(load.status, value as LoadStatus);
       if (operator === "is_not") return ne(load.status, value as LoadStatus);
+      if (operator === "in") {
+        const values = value
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean) as LoadStatus[];
+        return values.length > 0 ? inArray(load.status, values) : undefined;
+      }
       return undefined;
     case "carrierRate":
       if (operator === "eq") return eq(load.carrierRate, value);

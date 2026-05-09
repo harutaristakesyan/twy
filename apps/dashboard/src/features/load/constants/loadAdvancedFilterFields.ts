@@ -1,4 +1,27 @@
-import type { FieldConfig } from "@/components/AdvancedFilter";
+import type { FieldConfig, QuickFilterField } from "@/components/AdvancedFilter";
+
+export const LOAD_QUICK_FILTER_FIELDS: QuickFilterField[] = [
+  {
+    key: "referenceNumber",
+    label: "Reference #",
+    type: "search",
+    placeholder: "Search reference…",
+  },
+  { key: "customer", label: "Customer", type: "search", placeholder: "Search customer…" },
+  {
+    key: "status",
+    label: "Status",
+    type: "select",
+    options: [
+      { label: "Pending", value: "Pending" },
+      { label: "Approved", value: "Approved" },
+      { label: "Approved Paid", value: "ApprovedPaid" },
+      { label: "Denied", value: "Denied" },
+      { label: "Hold", value: "Hold" },
+    ],
+  },
+  { key: "createdAt", label: "Created date", type: "dateRange" },
+];
 
 export const LOAD_FILTER_FIELDS: FieldConfig[] = [
   { key: "referenceNumber", label: "Reference #", type: "text" },
