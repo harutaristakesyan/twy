@@ -4,20 +4,20 @@ import type { PaginatedPaymentOrdersResponse, UpdatePaymentOrderDto } from "../t
 
 export const paymentOrderApi = {
   list: (params: { page?: number; limit?: number }) =>
-    ApiClient.get<PaginatedPaymentOrdersResponse>("/api/payment-orders", params),
+    ApiClient.get<PaginatedPaymentOrdersResponse>("/payment-orders", params),
 
   update: (paymentOrderId: string, dto: UpdatePaymentOrderDto) =>
-    ApiClient.patch<{ message: string }>(`/api/payment-orders/${paymentOrderId}`, dto),
+    ApiClient.patch<{ message: string }>(`/payment-orders/${paymentOrderId}`, dto),
 
   addInvoice: async (paymentOrderId: string, file: File): Promise<void> => {
     const fileId = await fileApi.uploadFile(file);
-    await ApiClient.post<{ message: string }>(`/api/payment-orders/${paymentOrderId}/files`, {
+    await ApiClient.post<{ message: string }>(`/payment-orders/${paymentOrderId}/files`, {
       fileId,
     });
   },
 
   removeInvoice: (paymentOrderId: string, fileId: string) =>
-    ApiClient.delete<{ message: string }>(`/api/payment-orders/${paymentOrderId}/files/${fileId}`),
+    ApiClient.delete<{ message: string }>(`/payment-orders/${paymentOrderId}/files/${fileId}`),
 
   downloadInvoice: (fileId: string, fileName: string) => fileApi.downloadFile(fileId, fileName),
 };
