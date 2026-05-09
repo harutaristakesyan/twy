@@ -1,5 +1,5 @@
 import { useAntdTable } from "ahooks";
-import { Button, Table, Typography } from "antd";
+import { Button, Card, Flex, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useState } from "react";
 import { paymentOrderApi } from "../api/paymentOrderApi";
@@ -49,7 +49,14 @@ export default function PaymentOrdersPage() {
   }, [refresh]);
 
   const columns: ColumnsType<PaymentOrder> = [
-    { title: "Reference", dataIndex: "referenceNumber", key: "referenceNumber", width: 140 },
+    {
+      title: "Reference",
+      dataIndex: "referenceNumber",
+      key: "referenceNumber",
+      width: 140,
+      fixed: "left",
+      render: (text: string) => <strong>{text}</strong>,
+    },
     { title: "Branch", dataIndex: "branchName", key: "branchName", width: 140 },
     {
       title: "Carrier",
@@ -156,7 +163,7 @@ export default function PaymentOrdersPage() {
     {
       title: "Actions",
       key: "actions",
-      fixed: "right" as const,
+      fixed: "right",
       width: 80,
       render: (_: unknown, record: PaymentOrder) => (
         <Button size="small" onClick={() => openModal(record)}>
@@ -167,23 +174,28 @@ export default function PaymentOrdersPage() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <Title level={4} style={{ marginBottom: 16 }}>
-        Payment Orders
-      </Title>
-      <Table<PaymentOrder>
-        {...tableProps}
-        columns={columns}
-        rowKey="id"
-        scroll={{ x: 2000 }}
-        size="middle"
-      />
+    <>
+      <Card>
+        <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
+          <Title level={4} style={{ margin: 0 }}>
+            Payment Orders ({tableProps.pagination.total ?? 0})
+          </Title>
+        </Flex>
+        <Table<PaymentOrder>
+          {...tableProps}
+          columns={columns}
+          rowKey="id"
+          scroll={{ x: 2000 }}
+          size="middle"
+        />
+      </Card>
+
       <UpdatePaymentStatusModal
         paymentOrder={selectedOrder}
         open={modalOpen}
         onClose={closeModal}
         onSuccess={handleSuccess}
       />
-    </div>
+    </>
   );
 }
