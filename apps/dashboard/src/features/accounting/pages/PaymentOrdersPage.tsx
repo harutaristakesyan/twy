@@ -1,6 +1,6 @@
-import { EditOutlined, EyeOutlined, FilterOutlined, MoreOutlined } from "@ant-design/icons";
+import { EditOutlined, EyeOutlined, FilterOutlined } from "@ant-design/icons";
 import { useAntdTable, useRequest } from "ahooks";
-import { Badge, Button, Card, Dropdown, Flex, Space, Table, Typography } from "antd";
+import { Badge, Button, Card, Flex, Space, Table, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useState } from "react";
 import type { AdvancedFilter, QuickFilterField } from "@/components/AdvancedFilter";
@@ -198,32 +198,19 @@ export default function PaymentOrdersPage() {
       render: formatDate,
     },
     {
-      title: "",
+      title: "Actions",
       key: "actions",
       fixed: "right",
-      width: 48,
+      width: 100,
       render: (_: unknown, record: PaymentOrder) => (
-        <Dropdown
-          trigger={["click"]}
-          menu={{
-            items: [
-              {
-                key: "edit",
-                label: "Edit",
-                icon: <EditOutlined />,
-                onClick: () => openModal(record, "edit"),
-              },
-              {
-                key: "view",
-                label: "View",
-                icon: <EyeOutlined />,
-                onClick: () => openModal(record, "view"),
-              },
-            ],
-          }}
-        >
-          <Button type="text" size="small" icon={<MoreOutlined />} />
-        </Dropdown>
+        <Space>
+          <Tooltip title="Edit">
+            <Button type="text" icon={<EditOutlined />} onClick={() => openModal(record, "edit")} />
+          </Tooltip>
+          <Tooltip title="View">
+            <Button type="text" icon={<EyeOutlined />} onClick={() => openModal(record, "view")} />
+          </Tooltip>
+        </Space>
       ),
     },
   ];
