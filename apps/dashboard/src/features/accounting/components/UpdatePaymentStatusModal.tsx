@@ -17,14 +17,13 @@ import {
   Upload,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-
-type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
-
 import dayjs from "dayjs";
 import { useCallback, useEffect, useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { paymentOrderApi } from "../api/paymentOrderApi";
 import type { PaymentOrder, PaymentOrderInvoice, PaymentStatus } from "../types/paymentOrder";
+
+type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
 
 const { Text } = Typography;
 const { Dragger } = Upload;
