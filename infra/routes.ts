@@ -133,13 +133,13 @@ export const appRoutes: RouteDef[] = [
     handler: "packages/functions/src/api/file/upload.handler",
     routeKey: "POST /api/files",
     requiresAuth: true,
-    linkKeys: ["filesBucket"],
+    linkKeys: ["cluster", "filesBucket"],
   },
   {
     handler: "packages/functions/src/api/file/delete.handler",
     routeKey: "DELETE /api/files/{fileId}",
     requiresAuth: true,
-    linkKeys: ["filesBucket"],
+    linkKeys: ["cluster", "filesBucket"],
   },
   {
     handler: "packages/functions/src/api/file/download.handler",
