@@ -41,10 +41,6 @@ export interface Load {
   branchId: string;
   branchName: string;
   serviceFee: number | null;
-  incomePercentage: number | null;
-  charges: number | null;
-  carrierDueAt: string | null;
-  brokerDueAt: string | null;
   status: LoadStatus;
   statusChangedBy: string | null;
   files: LoadFile[];

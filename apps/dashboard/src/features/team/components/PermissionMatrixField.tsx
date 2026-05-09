@@ -26,9 +26,9 @@ const RESOURCE_LABELS: Record<Resource, string> = {
   teams: "Teams",
   users: "Users",
   loads: "Loads",
-  invoices: "Invoices",
-  payments: "Payments",
-  billing: "Billing",
+  payment_orders: "Accounting — Payment Orders",
+  external_billing: "Accounting — External Billing",
+  internal_billing: "Accounting — Internal Billing",
 };
 
 interface MatrixRow {

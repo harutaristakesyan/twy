@@ -3,12 +3,10 @@ export * from "./brokerRequest.js";
 export * from "./carrier.js";
 export * from "./carrierRequest.js";
 export * from "./file.js";
-export * from "./invoice.js";
 export * from "./load.js";
-export * from "./loadAuditLog.js";
 export * from "./loadStop.js";
 export * from "./outsideBroker.js";
-export * from "./payment.js";
+export * from "./paymentOrder.js";
 export * from "./team.js";
 export * from "./users.js";
 

@@ -3,7 +3,6 @@ import {
   branch,
   db,
   file,
-  invoice,
   type LoadRow,
   type LoadStatus,
   type LoadStopKind,
@@ -14,9 +13,10 @@ import {
 } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import createError from "http-errors";
-import { assertValidTransition } from "../billing/status-machine.js";
+import { createPaymentOrderForLoad } from "../payment-order/repository.js";
 import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
 import { buildLoadAdvancedFilterClause } from "../shared/load-advanced-filter.js";
+import { assertValidTransition } from "./status-machine.js";
 
 const DEFAULT_LOAD_STATUS: LoadStatus = "Pending";
 
@@ -76,10 +76,6 @@ export interface LoadRecord {
   branchId: string;
   branchName: string;
   serviceFee: number | null;
-  incomePercentage: number | null;
-  charges: number | null;
-  carrierDueAt: string | null;
-  brokerDueAt: string | null;
   status: LoadStatus;
   statusChangedBy: string | null;
   files: LoadFileRecord[];
@@ -121,7 +117,6 @@ export type UpdateLoad = Partial<Omit<CreateLoadInput, "files">> & {
 const numericToNumber = (value: string | null): number | null =>
   value === null ? null : Number(value);
 
-export type { AdvancedFilter, AdvancedFilterRule } from "../shared/advanced-filter-schema.js";
 
 export interface ListLoadsInput {
   page: number;
@@ -240,26 +235,6 @@ const mapStopRowToLocation = (row: LoadStopSelectRow): LoadLocationRecord => ({
   address: row.address,
 });
 
-const fetchInvoiceDueDatesForLoads = async (
-  loadIds: string[],
-): Promise<Map<string, { carrierDueAt: string | null; brokerDueAt: string | null }>> => {
-  if (loadIds.length === 0) return new Map();
-
-  const rows = await db
-    .select({ loadId: invoice.loadId, type: invoice.type, dueAt: invoice.dueAt })
-    .from(invoice)
-    .where(inArray(invoice.loadId, loadIds));
-
-  const result = new Map<string, { carrierDueAt: string | null; brokerDueAt: string | null }>();
-  for (const row of rows) {
-    const entry = result.get(row.loadId) ?? { carrierDueAt: null, brokerDueAt: null };
-    if (row.type === "carrier") entry.carrierDueAt = row.dueAt.toISOString();
-    if (row.type === "broker") entry.brokerDueAt = row.dueAt.toISOString();
-    result.set(row.loadId, entry);
-  }
-  return result;
-};
-
 const fetchStopsForLoads = async (
   executor: Executor,
   loadIds: string[],
@@ -314,7 +289,6 @@ const mapLoadRow = (
   branchName: string,
   files: LoadFileRecord[],
   stops: { pickups: LoadLocationRecord[]; dropoffs: LoadLocationRecord[] },
-  dueDates: { carrierDueAt: string | null; brokerDueAt: string | null },
 ): LoadRecord => ({
   id: row.id,
   customer: row.customer ?? "",
@@ -342,10 +316,6 @@ const mapLoadRow = (
   branchId: row.branchId,
   branchName,
   serviceFee: numericToNumber(row.serviceFee),
-  incomePercentage: numericToNumber(row.incomePercentage),
-  charges: numericToNumber(row.charges),
-  carrierDueAt: dueDates.carrierDueAt,
-  brokerDueAt: dueDates.brokerDueAt,
   status: row.status,
   statusChangedBy: row.statusChangedBy,
   files,
@@ -402,10 +372,9 @@ export const listLoads = async (input: ListLoadsInput) => {
 
   const loadIds = rows.map((r) => r.load.id);
 
-  const [filesMap, stopsMap, dueDatesMap] = await Promise.all([
+  const [filesMap, stopsMap] = await Promise.all([
     fetchFilesForLoads(db, loadIds),
     fetchStopsForLoads(db, loadIds),
-    fetchInvoiceDueDatesForLoads(loadIds),
   ]);
 
   return {
@@ -415,7 +384,6 @@ export const listLoads = async (input: ListLoadsInput) => {
         branchName,
         filesMap.get(row.id) ?? [],
         stopsMap.get(row.id) ?? { pickups: [], dropoffs: [] },
-        dueDatesMap.get(row.id) ?? { carrierDueAt: null, brokerDueAt: null },
       ),
     ),
     total: Number(totalRows[0]?.value ?? 0),
@@ -593,35 +561,40 @@ export const changeLoadStatus = async (
   changedBy: string,
   isChargable: boolean,
   chargeAmount: number | null,
-): Promise<{ updated: boolean }> => {
-  const [existing] = await db
-    .select({ id: load.id, status: load.status })
-    .from(load)
-    .where(eq(load.id, loadId));
+): Promise<{ updated: boolean }> =>
+  db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ id: load.id, status: load.status })
+      .from(load)
+      .where(eq(load.id, loadId));
 
-  if (!existing) return { updated: false };
+    if (!existing) return { updated: false };
 
-  assertValidTransition(existing.status, status);
+    assertValidTransition(existing.status, status);
 
-  const result = await db
-    .update(load)
-    .set({
-      status,
-      statusChangedBy: changedBy,
-      isChargable,
-      chargeAmount: isChargable && chargeAmount != null ? chargeAmount.toString() : null,
-      ...(status === "Hold"
-        ? { financialsLockedAt: null }
-        : status === "Approved" || status === "ApprovedPaid"
-          ? { financialsLockedAt: new Date() }
-          : {}),
-      updatedAt: new Date(),
-    })
-    .where(eq(load.id, loadId))
-    .returning({ id: load.id });
+    const result = await tx
+      .update(load)
+      .set({
+        status,
+        statusChangedBy: changedBy,
+        isChargable,
+        chargeAmount: isChargable && chargeAmount != null ? chargeAmount.toString() : null,
+        ...(status === "Hold"
+          ? { financialsLockedAt: null }
+          : status === "Approved" || status === "ApprovedPaid"
+            ? { financialsLockedAt: new Date() }
+            : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(load.id, loadId))
+      .returning({ id: load.id });
 
-  return { updated: result.length > 0 };
-};
+    if (status === "Approved") {
+      await createPaymentOrderForLoad(tx, loadId, changedBy);
+    }
+
+    return { updated: result.length > 0 };
+  });
 
 export const getLoadBranchId = async (loadId: string): Promise<string | null> => {
   const [row] = await db.select({ branchId: load.branchId }).from(load).where(eq(load.id, loadId));

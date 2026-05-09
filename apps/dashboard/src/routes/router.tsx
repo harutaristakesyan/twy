@@ -1,8 +1,8 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import AccountingPage from "@/features/accounting/pages/AccountingPage";
-import ExternalBillingTab from "@/features/accounting/pages/ExternalBillingTab";
-import InternalBillingTab from "@/features/accounting/pages/InternalBillingTab";
-import TwyAccountingTab from "@/features/accounting/pages/TwyAccountingTab";
+import AccountingLayout from "@/features/accounting/pages/AccountingLayout";
+import ExternalBillingPage from "@/features/accounting/pages/ExternalBillingPage";
+import InternalBillingPage from "@/features/accounting/pages/InternalBillingPage";
+import PaymentOrdersPage from "@/features/accounting/pages/PaymentOrdersPage";
 import CreatePasswordPage from "@/features/auth/pages/CreatePasswordPage";
 import ForgotPasswordPage from "@/features/auth/pages/ForgotPasswordPage";
 import LoginPage from "@/features/auth/pages/LoginPage";
@@ -150,16 +150,33 @@ export const router = createBrowserRouter([
           },
           {
             path: "accounting",
-            element: (
-              <RequirePermission resource="billing" action="view">
-                <AccountingPage />
-              </RequirePermission>
-            ),
+            element: <AccountingLayout />,
             children: [
-              { index: true, element: <Navigate to="/accounting/twy" replace /> },
-              { path: "twy", element: <TwyAccountingTab /> },
-              { path: "external", element: <ExternalBillingTab /> },
-              { path: "internal", element: <InternalBillingTab /> },
+              { index: true, element: <Navigate to="/accounting/payment-orders" replace /> },
+              {
+                path: "payment-orders",
+                element: (
+                  <RequirePermission resource="payment_orders" action="view">
+                    <PaymentOrdersPage />
+                  </RequirePermission>
+                ),
+              },
+              {
+                path: "external-billing",
+                element: (
+                  <RequirePermission resource="external_billing" action="view">
+                    <ExternalBillingPage />
+                  </RequirePermission>
+                ),
+              },
+              {
+                path: "internal-billing",
+                element: (
+                  <RequirePermission resource="internal_billing" action="view">
+                    <InternalBillingPage />
+                  </RequirePermission>
+                ),
+              },
             ],
           },
           { path: "profile", element: <ProfilePage /> },

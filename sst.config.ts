@@ -55,9 +55,7 @@ export default $config({
       authContextTable: authContext.table,
     });
     const web = createWeb({ cfg, api });
-    if (email.identities[0]) {
-      createCron({ db, emailIdentity: email.identities[0] });
-    }
+    createCron();
 
     return {
       stage: $app.stage,
