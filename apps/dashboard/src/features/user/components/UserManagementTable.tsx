@@ -16,7 +16,7 @@ import {
 import type React from "react";
 import { useState } from "react";
 import type { AdvancedFilter, FieldConfig } from "@/components/AdvancedFilter";
-import { AdvancedFilterDrawer } from "@/components/AdvancedFilter";
+import { AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { deleteUser, getUsers } from "../api/userApi";
@@ -56,7 +56,7 @@ const UserManagementTable: React.FC = () => {
 
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 500 });
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
 
   const isFilterActive = (activeFilter?.rules?.length ?? 0) > 0;
@@ -88,9 +88,8 @@ const UserManagementTable: React.FC = () => {
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const handleFilterApply = (filter: AdvancedFilter) => {
-    setActiveFilter(filter.rules.length > 0 ? filter : undefined);
-    setDrawerOpen(false);
+  const handleFilterApply = (filter: AdvancedFilter | undefined) => {
+    setActiveFilter(filter && filter.rules.length > 0 ? filter : undefined);
   };
 
   const columns = useUserColumns(refresh, runDelete);
@@ -118,13 +117,23 @@ const UserManagementTable: React.FC = () => {
             </Tooltip>
             <Badge count={isFilterActive ? activeRuleCount : 0} size="small">
               <Space.Compact>
-                <Button
-                  icon={<FilterOutlined />}
-                  type={isFilterActive ? "primary" : "default"}
-                  onClick={() => setDrawerOpen(true)}
+                <AdvancedFilterPopover
+                  open={popoverOpen}
+                  title="Advanced Search — Users"
+                  quickFields={[]}
+                  ruleFields={USER_FILTER_FIELDS}
+                  initialFilter={activeFilter}
+                  onApply={handleFilterApply}
+                  onClose={() => setPopoverOpen(false)}
                 >
-                  Advanced Search
-                </Button>
+                  <Button
+                    icon={<FilterOutlined />}
+                    type={isFilterActive ? "primary" : "default"}
+                    onClick={() => setPopoverOpen(true)}
+                  >
+                    Advanced Search
+                  </Button>
+                </AdvancedFilterPopover>
                 {isFilterActive && (
                   <Button
                     type="primary"
@@ -169,15 +178,6 @@ const UserManagementTable: React.FC = () => {
           }}
         />
       </Card>
-
-      <AdvancedFilterDrawer
-        open={drawerOpen}
-        title="Advanced Search — Users"
-        fields={USER_FILTER_FIELDS}
-        initialFilter={activeFilter}
-        onApply={handleFilterApply}
-        onClose={() => setDrawerOpen(false)}
-      />
     </div>
   );
 };

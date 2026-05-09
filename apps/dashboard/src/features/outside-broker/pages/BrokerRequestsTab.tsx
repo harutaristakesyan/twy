@@ -27,7 +27,7 @@ import type { ColumnsType } from "antd/es/table";
 import type React from "react";
 import { useState } from "react";
 import type { AdvancedFilter, FieldConfig } from "@/components/AdvancedFilter";
-import { AdvancedFilterDrawer } from "@/components/AdvancedFilter";
+import { AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { canEditBrokerRequests, canViewBrokerRequests } from "@/utils/permissions";
@@ -88,7 +88,7 @@ const BrokerRequestsTab: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<BrokerRequestStatusFilter>("pending");
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 400 });
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
 
   const isAdvFilterActive = (activeFilter?.rules?.length ?? 0) > 0;
@@ -117,9 +117,8 @@ const BrokerRequestsTab: React.FC = () => {
     { refreshDeps: [statusFilter, searchText, activeFilter], defaultPageSize: 10 },
   );
 
-  const handleFilterApply = (filter: AdvancedFilter) => {
-    setActiveFilter(filter.rules.length > 0 ? filter : undefined);
-    setFilterDrawerOpen(false);
+  const handleFilterApply = (filter: AdvancedFilter | undefined) => {
+    setActiveFilter(filter && filter.rules.length > 0 ? filter : undefined);
   };
 
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -257,13 +256,23 @@ const BrokerRequestsTab: React.FC = () => {
             </Tooltip>
             <Badge count={isAdvFilterActive ? activeRuleCount : 0} size="small">
               <Space.Compact>
-                <Button
-                  icon={<FilterOutlined />}
-                  type={isAdvFilterActive ? "primary" : "default"}
-                  onClick={() => setFilterDrawerOpen(true)}
+                <AdvancedFilterPopover
+                  open={popoverOpen}
+                  title="Advanced Search — Broker Requests"
+                  quickFields={[]}
+                  ruleFields={BROKER_REQ_FILTER_FIELDS}
+                  initialFilter={activeFilter}
+                  onApply={handleFilterApply}
+                  onClose={() => setPopoverOpen(false)}
                 >
-                  Advanced Search
-                </Button>
+                  <Button
+                    icon={<FilterOutlined />}
+                    type={isAdvFilterActive ? "primary" : "default"}
+                    onClick={() => setPopoverOpen(true)}
+                  >
+                    Advanced Search
+                  </Button>
+                </AdvancedFilterPopover>
                 {isAdvFilterActive && (
                   <Button type="primary" onClick={() => setActiveFilter(undefined)} title="Clear">
                     ×
@@ -388,10 +397,10 @@ const BrokerRequestsTab: React.FC = () => {
                     </Text>
                     <Text type="secondary">{new Date(viewRecord.reviewedAt).toLocaleString()}</Text>
                     {viewRecord.status === "rejected" && viewRecord.rejectionReason && (
-                      <Space direction="vertical" size={4} style={{ marginTop: 8 }}>
+                      <Flex vertical gap={4} style={{ marginTop: 8 }}>
                         <Text type="secondary">Reason:</Text>
                         <Text>{viewRecord.rejectionReason}</Text>
-                      </Space>
+                      </Flex>
                     )}
                   </Flex>
                 </Card>
@@ -399,15 +408,6 @@ const BrokerRequestsTab: React.FC = () => {
           </Flex>
         )}
       </Drawer>
-
-      <AdvancedFilterDrawer
-        open={filterDrawerOpen}
-        title="Advanced Search — Broker Requests"
-        fields={BROKER_REQ_FILTER_FIELDS}
-        initialFilter={activeFilter}
-        onApply={handleFilterApply}
-        onClose={() => setFilterDrawerOpen(false)}
-      />
     </div>
   );
 };

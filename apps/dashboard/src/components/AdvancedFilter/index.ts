@@ -1,5 +1,4 @@
 export { ActiveFilterChips } from "./ActiveFilterChips.js";
-export { AdvancedFilterDrawer } from "./AdvancedFilterDrawer.js";
 export { AdvancedFilterModal } from "./AdvancedFilterModal.js";
 export { AdvancedFilterPopover } from "./AdvancedFilterPopover.js";
 export type {
