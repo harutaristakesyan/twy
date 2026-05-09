@@ -5,7 +5,7 @@ import type React from "react";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { AdvancedFilter } from "@/components/AdvancedFilter";
-import { ActiveFilterChips, AdvancedFilterModal } from "@/components/AdvancedFilter";
+import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { loadApi } from "@/features/load/api/loadApi";
 import {
   LOAD_FILTER_FIELDS,
@@ -28,7 +28,7 @@ export const LoadManagementTable: React.FC = () => {
 
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebounce(searchInput, { wait: 500 });
-  const [modalOpen, setModalOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
 
   const isFilterActive =
@@ -71,7 +71,6 @@ export const LoadManagementTable: React.FC = () => {
 
   const handleFilterApply = useCallback((filter: AdvancedFilter | undefined) => {
     setActiveFilter(filter);
-    setModalOpen(false);
   }, []);
 
   const columns = useLoadColumns(refresh, runDelete);
@@ -97,13 +96,23 @@ export const LoadManagementTable: React.FC = () => {
             </Tooltip>
             <Badge count={isFilterActive ? activeFilterCount : 0} size="small">
               <Space.Compact>
-                <Button
-                  icon={<FilterOutlined />}
-                  type={isFilterActive ? "primary" : "default"}
-                  onClick={() => setModalOpen(true)}
+                <AdvancedFilterPopover
+                  open={popoverOpen}
+                  title="Filter — Loads"
+                  quickFields={LOAD_QUICK_FILTER_FIELDS}
+                  ruleFields={LOAD_FILTER_FIELDS}
+                  initialFilter={activeFilter}
+                  onApply={handleFilterApply}
+                  onClose={() => setPopoverOpen(false)}
                 >
-                  Filter
-                </Button>
+                  <Button
+                    icon={<FilterOutlined />}
+                    type={isFilterActive ? "primary" : "default"}
+                    onClick={() => setPopoverOpen(true)}
+                  >
+                    Filter
+                  </Button>
+                </AdvancedFilterPopover>
                 {isFilterActive && (
                   <Button
                     type="primary"
@@ -146,16 +155,6 @@ export const LoadManagementTable: React.FC = () => {
 
         <Table columns={columns} rowKey="id" scroll={{ x: 2000 }} {...tableProps} />
       </Card>
-
-      <AdvancedFilterModal
-        open={modalOpen}
-        title="Filter — Loads"
-        quickFields={LOAD_QUICK_FILTER_FIELDS}
-        ruleFields={LOAD_FILTER_FIELDS}
-        initialFilter={activeFilter}
-        onApply={handleFilterApply}
-        onClose={() => setModalOpen(false)}
-      />
     </div>
   );
 };
