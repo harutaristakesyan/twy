@@ -1,5 +1,16 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { Button, message, Popconfirm, Select, Space, Spin, Table, Tag, Typography } from "antd";
+import {
+  Button,
+  Card,
+  message,
+  Popconfirm,
+  Select,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Typography,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -170,55 +181,33 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
   ];
 
   return (
-    <div
-      style={{
-        marginTop: 12,
-        background: "#0d1117",
-        border: "1px solid #30363d",
-        borderRadius: 8,
-        padding: "14px 16px",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 12,
-        }}
-      >
+    <Card
+      size="small"
+      style={{ marginTop: 12 }}
+      title={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span
+          <Text
+            type="secondary"
             style={{
               fontSize: 10,
-              color: "#8b949e",
               fontWeight: 700,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
             }}
           >
             Members
-          </span>
-          <span
-            style={{
-              fontSize: 10,
-              color: "#8b949e",
-              background: "#21262d",
-              border: "1px solid #30363d",
-              borderRadius: 10,
-              padding: "1px 7px",
-            }}
-          >
-            {total}
-          </span>
+          </Text>
+          <Tag style={{ fontSize: 10, padding: "0 6px", margin: 0 }}>{total}</Tag>
         </div>
-        {!showPicker && (
+      }
+      extra={
+        !showPicker && (
           <Button size="small" icon={<PlusOutlined />} onClick={handleOpenPicker}>
             Add member
           </Button>
-        )}
-      </div>
-
+        )
+      }
+    >
       {showPicker && (
         <Space style={{ marginBottom: 12, width: "100%" }}>
           <Select
@@ -287,7 +276,7 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
           showSizeChanger: false,
         }}
       />
-    </div>
+    </Card>
   );
 };
 

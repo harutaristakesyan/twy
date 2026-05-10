@@ -1,4 +1,4 @@
-import { Button, Drawer, Form, Input, message, Switch } from "antd";
+import { Button, Card, Divider, Drawer, Form, Input, message, Switch, Typography } from "antd";
 import type React from "react";
 import { useCallback, useEffect } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -8,34 +8,32 @@ import type { Team, TeamFormData } from "../types/team";
 import PermissionMatrixField from "./PermissionMatrixField";
 import TeamMembersSection from "./TeamMembersSection";
 
+const { Text } = Typography;
+
 interface SectionCardProps {
   title: string;
   children: React.ReactNode;
 }
 
 const SectionCard: React.FC<SectionCardProps> = ({ title, children }) => (
-  <div
-    style={{
-      background: "#0d1117",
-      border: "1px solid #30363d",
-      borderRadius: 8,
-      padding: "14px 16px",
-    }}
+  <Card
+    size="small"
+    title={
+      <Text
+        type="secondary"
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+        }}
+      >
+        {title}
+      </Text>
+    }
   >
-    <div
-      style={{
-        fontSize: 10,
-        color: "#8b949e",
-        fontWeight: 700,
-        textTransform: "uppercase",
-        letterSpacing: "0.08em",
-        marginBottom: 12,
-      }}
-    >
-      {title}
-    </div>
     {children}
-  </div>
+  </Card>
 );
 
 interface ScopeRowProps {
@@ -48,10 +46,12 @@ interface ScopeRowProps {
 const ScopeRow: React.FC<ScopeRowProps> = ({ label, description, value, onChange }) => (
   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
     <div>
-      <div style={{ fontSize: 13, color: "#e6edf3", fontWeight: 500, marginBottom: 2 }}>
+      <Text style={{ fontSize: 13, fontWeight: 500, display: "block", marginBottom: 2 }}>
         {label}
-      </div>
-      <div style={{ fontSize: 12, color: "#6b7280" }}>{description}</div>
+      </Text>
+      <Text type="secondary" style={{ fontSize: 12 }}>
+        {description}
+      </Text>
     </div>
     <Switch
       checked={value}
@@ -132,9 +132,9 @@ const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, o
             {isEdit ? "Edit Team" : "Create Team"}
           </div>
           {isEdit && (
-            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+            <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 2 }}>
               {team.name} · {team.memberCount} member{team.memberCount !== 1 ? "s" : ""}
-            </div>
+            </Text>
           )}
         </div>
       }
@@ -182,14 +182,13 @@ const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, o
               description="Members can only see loads from their assigned branch"
             />
           </Form.Item>
-          <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #21262d" }}>
-            <Form.Item name="onlyOwnData" noStyle>
-              <ScopeRow
-                label="Own data only"
-                description="Members only see records they created or are assigned to"
-              />
-            </Form.Item>
-          </div>
+          <Divider style={{ margin: "10px 0" }} />
+          <Form.Item name="onlyOwnData" noStyle>
+            <ScopeRow
+              label="Own data only"
+              description="Members only see records they created or are assigned to"
+            />
+          </Form.Item>
         </SectionCard>
 
         <SectionCard title="Permissions">
