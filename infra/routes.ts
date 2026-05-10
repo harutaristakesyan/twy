@@ -358,6 +358,31 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
+  // billing
+  {
+    handler: "packages/functions/src/api/billing/external-by-branch.handler",
+    routeKey: "GET /api/billing/external/branches",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/billing/external-loads.handler",
+    routeKey: "GET /api/billing/external/branches/{branchId}/loads",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/billing/internal-by-branch.handler",
+    routeKey: "GET /api/billing/internal/branches",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/billing/internal-loads.handler",
+    routeKey: "GET /api/billing/internal/branches/{branchId}/loads",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
 ];
 
 export const allRoutes: RouteDef[] = [...authRoutes, ...appRoutes];
