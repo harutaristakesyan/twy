@@ -9,7 +9,7 @@ const billingQSParams = z.object({
 
 export const ListExternalBillingByBranchEventSchema = z.object({
   requestContext: AuthContext,
-  queryStringParameters: billingQSParams,
+  queryStringParameters: billingQSParams.optional().default({}),
 });
 
 export type ListExternalBillingByBranchEvent = z.infer<
@@ -21,14 +21,14 @@ export const ListExternalBillingLoadsEventSchema = z.object({
   pathParameters: z.object({
     branchId: z.uuid("Value must be a valid UUID"),
   }),
-  queryStringParameters: billingQSParams,
+  queryStringParameters: billingQSParams.optional().default({}),
 });
 
 export type ListExternalBillingLoadsEvent = z.infer<typeof ListExternalBillingLoadsEventSchema>;
 
 export const ListInternalBillingByBranchEventSchema = z.object({
   requestContext: AuthContext,
-  queryStringParameters: billingQSParams,
+  queryStringParameters: billingQSParams.optional().default({}),
 });
 
 export type ListInternalBillingByBranchEvent = z.infer<
@@ -40,7 +40,7 @@ export const ListInternalBillingLoadsEventSchema = z.object({
   pathParameters: z.object({
     branchId: z.uuid("Value must be a valid UUID"),
   }),
-  queryStringParameters: billingQSParams,
+  queryStringParameters: billingQSParams.optional().default({}),
 });
 
 export type ListInternalBillingLoadsEvent = z.infer<typeof ListInternalBillingLoadsEventSchema>;
