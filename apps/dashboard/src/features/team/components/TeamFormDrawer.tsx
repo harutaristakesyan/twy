@@ -1,15 +1,4 @@
-import {
-  Button,
-  Card,
-  Divider,
-  Drawer,
-  Flex,
-  Form,
-  Input,
-  message,
-  Switch,
-  Typography,
-} from "antd";
+import { Button, Divider, Drawer, Flex, Form, Input, message, Switch, Typography } from "antd";
 import type React from "react";
 import { useCallback, useEffect } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -21,30 +10,28 @@ import TeamMembersSection from "./TeamMembersSection";
 
 const { Text } = Typography;
 
-interface SectionCardProps {
+interface SectionProps {
   title: string;
   children: React.ReactNode;
 }
 
-const SectionCard: React.FC<SectionCardProps> = ({ title, children }) => (
-  <Card
-    size="small"
-    title={
+const Section: React.FC<SectionProps> = ({ title, children }) => (
+  <>
+    <Divider style={{ marginTop: 0 }}>
       <Text
         type="secondary"
         style={{
-          fontSize: 10,
-          fontWeight: 700,
+          fontSize: 11,
+          fontWeight: 600,
           textTransform: "uppercase",
-          letterSpacing: "0.08em",
+          letterSpacing: "0.06em",
         }}
       >
         {title}
       </Text>
-    }
-  >
+    </Divider>
     {children}
-  </Card>
+  </>
 );
 
 interface ScopeRowProps {
@@ -161,46 +148,44 @@ const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, o
       }
     >
       <Form form={form} layout="vertical" initialValues={initialValues} onFinish={handleFinish}>
-        <Flex vertical gap={12}>
-          <SectionCard title="Team Info">
-            <Form.Item
-              name="name"
-              label="Name"
-              rules={[
-                { required: true, message: "Name is required" },
-                { max: 100, message: "Name must be at most 100 characters" },
-              ]}
-              style={{ marginBottom: 12 }}
-            >
-              <Input placeholder="Team name" />
-            </Form.Item>
-            <Form.Item name="description" label="Description" style={{ marginBottom: 0 }}>
-              <Input.TextArea placeholder="Description" rows={2} />
-            </Form.Item>
-          </SectionCard>
+        <Section title="Team Info">
+          <Form.Item
+            name="name"
+            label="Name"
+            rules={[
+              { required: true, message: "Name is required" },
+              { max: 100, message: "Name must be at most 100 characters" },
+            ]}
+            style={{ marginBottom: 12 }}
+          >
+            <Input placeholder="Team name" />
+          </Form.Item>
+          <Form.Item name="description" label="Description" style={{ marginBottom: 0 }}>
+            <Input.TextArea placeholder="Description" rows={2} />
+          </Form.Item>
+        </Section>
 
-          <SectionCard title="Scope">
-            <Form.Item name="branchRestricted" noStyle>
-              <ScopeRow
-                label="Branch-restricted"
-                description="Members can only see loads from their assigned branch"
-              />
-            </Form.Item>
-            <Divider style={{ margin: "10px 0" }} />
-            <Form.Item name="onlyOwnData" noStyle>
-              <ScopeRow
-                label="Own data only"
-                description="Members only see records they created or are assigned to"
-              />
-            </Form.Item>
-          </SectionCard>
+        <Section title="Scope">
+          <Form.Item name="branchRestricted" noStyle>
+            <ScopeRow
+              label="Branch-restricted"
+              description="Members can only see loads from their assigned branch"
+            />
+          </Form.Item>
+          <Divider style={{ margin: "10px 0" }} />
+          <Form.Item name="onlyOwnData" noStyle>
+            <ScopeRow
+              label="Own data only"
+              description="Members only see records they created or are assigned to"
+            />
+          </Form.Item>
+        </Section>
 
-          <SectionCard title="Permissions">
-            <Form.Item name="permissions" noStyle>
-              <PermissionMatrixField />
-            </Form.Item>
-          </SectionCard>
-        </Flex>
+        <Section title="Permissions">
+          <Form.Item name="permissions" noStyle>
+            <PermissionMatrixField />
+          </Form.Item>
+        </Section>
       </Form>
 
       {isEdit && team && <TeamMembersSection teamId={team.id} />}

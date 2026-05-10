@@ -1,7 +1,7 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   Button,
-  Card,
+  Divider,
   Flex,
   message,
   Popconfirm,
@@ -182,33 +182,28 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
   ];
 
   return (
-    <Card
-      size="small"
-      style={{ marginTop: 12 }}
-      title={
+    <>
+      <Divider style={{ marginTop: 0 }}>
         <Flex align="center" gap={8}>
           <Text
             type="secondary"
             style={{
-              fontSize: 10,
-              fontWeight: 700,
+              fontSize: 11,
+              fontWeight: 600,
               textTransform: "uppercase",
-              letterSpacing: "0.08em",
+              letterSpacing: "0.06em",
             }}
           >
             Members
           </Text>
-          <Tag style={{ fontSize: 10, padding: "0 6px", margin: 0 }}>{total}</Tag>
+          <Tag>{total}</Tag>
+          {!showPicker && (
+            <Button size="small" icon={<PlusOutlined />} onClick={handleOpenPicker}>
+              Add member
+            </Button>
+          )}
         </Flex>
-      }
-      extra={
-        !showPicker && (
-          <Button size="small" icon={<PlusOutlined />} onClick={handleOpenPicker}>
-            Add member
-          </Button>
-        )
-      }
-    >
+      </Divider>
       {showPicker && (
         <Space style={{ marginBottom: 12, width: "100%" }}>
           <Select
@@ -277,7 +272,7 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
           showSizeChanger: false,
         }}
       />
-    </Card>
+    </>
   );
 };
 
