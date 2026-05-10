@@ -23,7 +23,8 @@ const listInternalLoads = async (
   if (scope.branchId && scope.branchId !== branchId) throw new errors.Forbidden();
   if (scope.denyAll) return { loads: [] };
 
-  const loads = await listInternalBillingLoadsForBranch(branchId);
+  const { query, filters } = event.queryStringParameters;
+  const loads = await listInternalBillingLoadsForBranch(branchId, query, filters);
   return { loads };
 };
 

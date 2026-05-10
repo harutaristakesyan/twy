@@ -19,7 +19,8 @@ const listInternalByBranch = async (
   const scope = buildScope(ctx);
   if (scope.denyAll) return { branches: [] };
 
-  const branches = await listInternalBillingByBranch(scope.branchId);
+  const { query, filters } = event.queryStringParameters;
+  const branches = await listInternalBillingByBranch(scope.branchId, query, filters);
   return { branches };
 };
 

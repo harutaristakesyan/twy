@@ -23,7 +23,8 @@ const listExternalLoads = async (
   if (scope.branchId && scope.branchId !== branchId) throw new errors.Forbidden();
   if (scope.denyAll) return { loads: [] };
 
-  const loads = await listExternalBillingLoadsForBranch(branchId);
+  const { query, filters } = event.queryStringParameters;
+  const loads = await listExternalBillingLoadsForBranch(branchId, query, filters);
   return { loads };
 };
 

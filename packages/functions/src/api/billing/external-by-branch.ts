@@ -19,7 +19,8 @@ const listExternalByBranch = async (
   const scope = buildScope(ctx);
   if (scope.denyAll) return { branches: [] };
 
-  const branches = await listExternalBillingByBranch(scope.branchId);
+  const { query, filters } = event.queryStringParameters;
+  const branches = await listExternalBillingByBranch(scope.branchId, query, filters);
   return { branches };
 };
 

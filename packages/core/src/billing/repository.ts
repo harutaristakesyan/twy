@@ -1,6 +1,18 @@
-import { branch, carrier, db, file, load, paymentOrder, paymentOrderFiles } from "@twy/db";
-import { avg, count, eq, inArray, sql, sum } from "drizzle-orm";
+import {
+  branch,
+  carrier,
+  db,
+  file,
+  load,
+  type PaymentStatus,
+  paymentOrder,
+  paymentOrderFiles,
+} from "@twy/db";
+import type { SQL } from "drizzle-orm";
+import { and, avg, count, eq, ilike, inArray, sql, sum } from "drizzle-orm";
 import type { PaymentOrderInvoice } from "../payment-order/response.js";
+import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
+import { buildDateRangeCondition } from "../shared/advanced-filter-sql.js";
 import type {
   ExternalBillingBranch,
   ExternalBillingLoad,
@@ -13,6 +25,27 @@ const numericToNumber = (value: string | null | undefined): number | null =>
 
 const numericToNumberOrZero = (value: string | null | undefined): number =>
   value == null ? 0 : Number(value);
+
+function buildFilterConditions(filter: AdvancedFilter, scopeBranchId?: string): SQL<unknown>[] {
+  const conds: SQL<unknown>[] = [];
+
+  const branchId = filter.branchId ?? scopeBranchId;
+  if (branchId) conds.push(eq(paymentOrder.branchId, branchId));
+
+  if (filter.carrierId) conds.push(eq(paymentOrder.carrierId, filter.carrierId));
+
+  if (filter.status) {
+    const statuses = filter.status.split(",").filter(Boolean) as PaymentStatus[];
+    if (statuses.length > 0) conds.push(inArray(paymentOrder.paymentStatus, statuses));
+  }
+
+  const dateCond = buildDateRangeCondition(filter, "createdAt", paymentOrder.createdAt);
+  if (dateCond) conds.push(dateCond);
+
+  if (filter.broker) conds.push(ilike(load.customer, `%${filter.broker}%`));
+
+  return conds;
+}
 
 const fetchInvoicesForPaymentOrders = async (
   poIds: string[],
@@ -42,8 +75,17 @@ const fetchInvoicesForPaymentOrders = async (
 
 export const listExternalBillingByBranch = async (
   scopeBranchId?: string,
+  query?: string,
+  advancedFilter?: AdvancedFilter,
 ): Promise<ExternalBillingBranch[]> => {
-  const whereClause = scopeBranchId ? eq(paymentOrder.branchId, scopeBranchId) : undefined;
+  const filterConds = advancedFilter
+    ? buildFilterConditions(advancedFilter, scopeBranchId)
+    : scopeBranchId
+      ? [eq(paymentOrder.branchId, scopeBranchId)]
+      : [];
+
+  const queryCond = query ? ilike(load.referenceNumber, `%${query}%`) : undefined;
+  const whereClause = and(...filterConds, queryCond);
 
   const rows = await db
     .select({
@@ -56,7 +98,9 @@ export const listExternalBillingByBranch = async (
       totalCarrierPaid: sum(paymentOrder.carrierPaidAmount),
     })
     .from(paymentOrder)
+    .innerJoin(load, eq(load.id, paymentOrder.loadId))
     .innerJoin(branch, eq(branch.id, paymentOrder.branchId))
+    .leftJoin(carrier, eq(carrier.id, paymentOrder.carrierId))
     .where(whereClause)
     .groupBy(branch.id, branch.name)
     .orderBy(branch.name);
@@ -79,7 +123,13 @@ export const listExternalBillingByBranch = async (
 
 export const listExternalBillingLoadsForBranch = async (
   branchId: string,
+  query?: string,
+  advancedFilter?: AdvancedFilter,
 ): Promise<ExternalBillingLoad[]> => {
+  const filterConds = advancedFilter ? buildFilterConditions(advancedFilter) : [];
+  const queryCond = query ? ilike(load.referenceNumber, `%${query}%`) : undefined;
+  const whereClause = and(eq(paymentOrder.branchId, branchId), ...filterConds, queryCond);
+
   const rows = await db
     .select({
       loadId: paymentOrder.loadId,
@@ -96,7 +146,7 @@ export const listExternalBillingLoadsForBranch = async (
     .from(paymentOrder)
     .innerJoin(load, eq(load.id, paymentOrder.loadId))
     .leftJoin(carrier, eq(carrier.id, paymentOrder.carrierId))
-    .where(eq(paymentOrder.branchId, branchId))
+    .where(whereClause)
     .orderBy(load.referenceNumber);
 
   return rows.map((r) => ({
@@ -119,8 +169,17 @@ export const listExternalBillingLoadsForBranch = async (
 
 export const listInternalBillingByBranch = async (
   scopeBranchId?: string,
+  query?: string,
+  advancedFilter?: AdvancedFilter,
 ): Promise<InternalBillingBranch[]> => {
-  const whereClause = scopeBranchId ? eq(paymentOrder.branchId, scopeBranchId) : undefined;
+  const filterConds = advancedFilter
+    ? buildFilterConditions(advancedFilter, scopeBranchId)
+    : scopeBranchId
+      ? [eq(paymentOrder.branchId, scopeBranchId)]
+      : [];
+
+  const queryCond = query ? ilike(load.referenceNumber, `%${query}%`) : undefined;
+  const whereClause = and(...filterConds, queryCond);
 
   const rows = await db
     .select({
@@ -133,7 +192,9 @@ export const listInternalBillingByBranch = async (
       totalProfit: sum(sql`COALESCE(${paymentOrder.profit}, 0)`),
     })
     .from(paymentOrder)
+    .innerJoin(load, eq(load.id, paymentOrder.loadId))
     .innerJoin(branch, eq(branch.id, paymentOrder.branchId))
+    .leftJoin(carrier, eq(carrier.id, paymentOrder.carrierId))
     .where(whereClause)
     .groupBy(branch.id, branch.name)
     .orderBy(branch.name);
@@ -151,7 +212,13 @@ export const listInternalBillingByBranch = async (
 
 export const listInternalBillingLoadsForBranch = async (
   branchId: string,
+  query?: string,
+  advancedFilter?: AdvancedFilter,
 ): Promise<InternalBillingLoad[]> => {
+  const filterConds = advancedFilter ? buildFilterConditions(advancedFilter) : [];
+  const queryCond = query ? ilike(load.referenceNumber, `%${query}%`) : undefined;
+  const whereClause = and(eq(paymentOrder.branchId, branchId), ...filterConds, queryCond);
+
   const rows = await db
     .select({
       paymentOrderId: paymentOrder.id,
@@ -167,7 +234,7 @@ export const listInternalBillingLoadsForBranch = async (
     .from(paymentOrder)
     .innerJoin(load, eq(load.id, paymentOrder.loadId))
     .leftJoin(carrier, eq(carrier.id, paymentOrder.carrierId))
-    .where(eq(paymentOrder.branchId, branchId))
+    .where(whereClause)
     .orderBy(load.referenceNumber);
 
   const invoicesMap = await fetchInvoicesForPaymentOrders(rows.map((r) => r.paymentOrderId));
