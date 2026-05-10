@@ -170,15 +170,54 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
   ];
 
   return (
-    <div style={{ marginTop: 8 }}>
-      <Space style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-        <Text strong>Members ({total})</Text>
+    <div
+      style={{
+        marginTop: 12,
+        background: "#0d1117",
+        border: "1px solid #30363d",
+        borderRadius: 8,
+        padding: "14px 16px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span
+            style={{
+              fontSize: 10,
+              color: "#8b949e",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
+          >
+            Members
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              color: "#8b949e",
+              background: "#21262d",
+              border: "1px solid #30363d",
+              borderRadius: 10,
+              padding: "1px 7px",
+            }}
+          >
+            {total}
+          </span>
+        </div>
         {!showPicker && (
           <Button size="small" icon={<PlusOutlined />} onClick={handleOpenPicker}>
             Add member
           </Button>
         )}
-      </Space>
+      </div>
 
       {showPicker && (
         <Space style={{ marginBottom: 12, width: "100%" }}>
