@@ -13,6 +13,20 @@ export const RESOURCES = [
   "internal_billing",
 ] as const;
 export const ACTIONS = ["add", "view", "edit"] as const;
+export const RESOURCE_ACTIONS: Record<Resource, readonly Action[]> = {
+  branches: ["add", "view", "edit"],
+  brokers: ["add", "view", "edit"],
+  brokers_requests: ["view", "edit"],
+  carriers_twy: ["add", "view", "edit"],
+  carriers_outside: ["add", "view", "edit"],
+  carriers_requests: ["view", "edit"],
+  teams: ["add", "view", "edit"],
+  users: ["add", "view", "edit"],
+  loads: ["add", "view", "edit"],
+  payment_orders: ["view", "edit"],
+  external_billing: ["view"],
+  internal_billing: ["view"],
+};
 export type Resource = (typeof RESOURCES)[number];
 export type Action = (typeof ACTIONS)[number];
 export type PermissionsMap = Record<Resource, Record<Action, boolean>>;
