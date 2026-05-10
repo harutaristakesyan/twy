@@ -6,6 +6,7 @@ import {
   ACTIONS,
   type Action,
   type PermissionsMap,
+  RESOURCE_ACTIONS,
   RESOURCES,
   type Resource,
 } from "@/utils/permissions";
@@ -87,10 +88,12 @@ const PermissionMatrixField: React.FC<PermissionMatrixFieldProps> = ({ value, on
   const handleRowToggle = useCallback(
     (resource: Resource, checked: boolean) => {
       if (!value || !onChange) return;
-      onChange({
-        ...value,
-        [resource]: Object.fromEntries(ACTIONS.map((a) => [a, checked])) as Record<Action, boolean>,
-      });
+      const validActions = RESOURCE_ACTIONS[resource];
+      const current = value[resource] ?? { add: false, view: false, edit: false };
+      const updated = validActions.reduce((acc, a) => cascade(a, checked, acc), {
+        ...current,
+      } as Record<Action, boolean>);
+      onChange({ ...value, [resource]: updated });
     },
     [value, onChange],
   );
@@ -100,6 +103,7 @@ const PermissionMatrixField: React.FC<PermissionMatrixFieldProps> = ({ value, on
       if (!value || !onChange) return;
       const updated = { ...value };
       for (const resource of RESOURCES) {
+        if (!RESOURCE_ACTIONS[resource].includes(action)) continue;
         updated[resource] = cascade(
           action,
           checked,
@@ -118,8 +122,9 @@ const PermissionMatrixField: React.FC<PermissionMatrixFieldProps> = ({ value, on
       key: "resource",
       width: 140,
       render: (resource: Resource) => {
-        const allChecked = value ? ACTIONS.every((a) => value[resource]?.[a]) : false;
-        const someChecked = value ? ACTIONS.some((a) => value[resource]?.[a]) : false;
+        const validActions = RESOURCE_ACTIONS[resource];
+        const allChecked = value ? validActions.every((a) => value[resource]?.[a]) : false;
+        const someChecked = value ? validActions.some((a) => value[resource]?.[a]) : false;
         return (
           <Checkbox
             checked={allChecked}
@@ -135,8 +140,9 @@ const PermissionMatrixField: React.FC<PermissionMatrixFieldProps> = ({ value, on
     },
     ...ACTIONS.map((action) => ({
       title: () => {
-        const allChecked = value ? RESOURCES.every((r) => value[r]?.[action]) : false;
-        const someChecked = value ? RESOURCES.some((r) => value[r]?.[action]) : false;
+        const applicableResources = RESOURCES.filter((r) => RESOURCE_ACTIONS[r].includes(action));
+        const allChecked = value ? applicableResources.every((r) => value[r]?.[action]) : false;
+        const someChecked = value ? applicableResources.some((r) => value[r]?.[action]) : false;
         return (
           <Checkbox
             checked={allChecked}
@@ -150,12 +156,17 @@ const PermissionMatrixField: React.FC<PermissionMatrixFieldProps> = ({ value, on
       dataIndex: action,
       key: action,
       width: 90,
-      render: (_: unknown, row: MatrixRow) => (
-        <Checkbox
-          checked={value?.[row.resource]?.[action] ?? false}
-          onChange={(e) => handleChange(row.resource, action, e.target.checked)}
-        />
-      ),
+      render: (_: unknown, row: MatrixRow) => {
+        if (!RESOURCE_ACTIONS[row.resource].includes(action)) {
+          return <span style={{ color: "#bfbfbf", display: "block", textAlign: "center" }}>—</span>;
+        }
+        return (
+          <Checkbox
+            checked={value?.[row.resource]?.[action] ?? false}
+            onChange={(e) => handleChange(row.resource, action, e.target.checked)}
+          />
+        );
+      },
     })),
   ];
 
