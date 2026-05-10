@@ -1,28 +1,12 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import {
-  Button,
-  Divider,
-  Flex,
-  message,
-  Popconfirm,
-  Select,
-  Space,
-  Spin,
-  Table,
-  Tag,
-  Typography,
-} from "antd";
+import { Button, Flex, message, Popconfirm, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useOptimistic, useState, useTransition } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
-import {
-  addTeamMember,
-  getTeamMembers,
-  getUnassignedUsers,
-  removeTeamMember,
-} from "../api/teamApi";
+import { getTeamMembers, removeTeamMember } from "../api/teamApi";
 import type { TeamMember } from "../types/team";
+import AddMemberPicker from "./AddMemberPicker";
 
 const { Text } = Typography;
 
@@ -30,22 +14,24 @@ interface TeamMembersSectionProps {
   teamId: string;
 }
 
+type OptimisticAction = { type: "remove"; id: string };
+
 const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [total, setTotal] = useState(0);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [page, setPage] = useState(0);
+  const [showPicker, setShowPicker] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const pageSize = 10;
 
-  const [showPicker, setShowPicker] = useState(false);
-  const [unassigned, setUnassigned] = useState<TeamMember[]>([]);
-  const [loadingUnassigned, setLoadingUnassigned] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
-  const [adding, setAdding] = useState(false);
-  const [unassignedSearch, setUnassignedSearch] = useState("");
-  const [unassignedPage, setUnassignedPage] = useState(0);
-  const [hasMoreUnassigned, setHasMoreUnassigned] = useState(true);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const [optimisticMembers, applyOptimistic] = useOptimistic(
+    members,
+    (state: TeamMember[], action: OptimisticAction) => {
+      if (action.type === "remove") return state.filter((m) => m.id !== action.id);
+      return state;
+    },
+  );
 
   const fetchMembers = useCallback(
     async (p: number) => {
@@ -67,78 +53,29 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
     fetchMembers(0);
   }, [fetchMembers]);
 
-  const fetchUnassigned = async (p: number, q: string, append = false) => {
-    setLoadingUnassigned(true);
-    try {
-      const result = await getUnassignedUsers({ page: p, limit: 20, query: q || undefined });
-      if (append) {
-        setUnassigned((prev) => [...prev, ...result.items]);
-      } else {
-        setUnassigned(result.items);
-      }
-      setHasMoreUnassigned((p + 1) * 20 < result.total);
-    } catch (error) {
-      message.error(getErrorMessage(error));
-    } finally {
-      setLoadingUnassigned(false);
-    }
-  };
+  const handleRemove = useCallback(
+    (memberId: string) => {
+      startTransition(async () => {
+        applyOptimistic({ type: "remove", id: memberId });
+        try {
+          await removeTeamMember(teamId, memberId);
+          message.success("Member removed");
+          const newPage = members.length === 1 && page > 0 ? page - 1 : page;
+          setPage(newPage);
+          await fetchMembers(newPage);
+        } catch (error) {
+          message.error(getErrorMessage(error));
+        }
+      });
+    },
+    [applyOptimistic, fetchMembers, members.length, page, teamId],
+  );
 
-  const handleOpenPicker = () => {
-    setShowPicker(true);
-    setUnassignedSearch("");
-    setUnassignedPage(0);
-    setSelectedUserId(undefined);
-    fetchUnassigned(0, "");
-  };
-
-  const handleUnassignedSearch = (val: string) => {
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    searchTimeoutRef.current = setTimeout(() => {
-      setUnassignedSearch(val);
-      setUnassignedPage(0);
-      fetchUnassigned(0, val, false);
-    }, 300);
-  };
-
-  const handleUnassignedScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLDivElement;
-    const isBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 10;
-    if (isBottom && !loadingUnassigned && hasMoreUnassigned) {
-      const nextPage = unassignedPage + 1;
-      setUnassignedPage(nextPage);
-      fetchUnassigned(nextPage, unassignedSearch, true);
-    }
-  };
-
-  const handleAdd = async () => {
-    if (!selectedUserId) return;
-    setAdding(true);
-    try {
-      await addTeamMember(teamId, selectedUserId);
-      message.success("Member added");
-      setShowPicker(false);
-      setSelectedUserId(undefined);
-      setPage(0);
-      await fetchMembers(0);
-    } catch (error) {
-      message.error(getErrorMessage(error));
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  const handleRemove = async (memberId: string) => {
-    try {
-      await removeTeamMember(teamId, memberId);
-      message.success("Member removed");
-      const newPage = members.length === 1 && page > 0 ? page - 1 : page;
-      setPage(newPage);
-      await fetchMembers(newPage);
-    } catch (error) {
-      message.error(getErrorMessage(error));
-    }
-  };
+  const handleAdded = useCallback(async () => {
+    setShowPicker(false);
+    setPage(0);
+    await fetchMembers(0);
+  }, [fetchMembers]);
 
   const columns: ColumnsType<TeamMember> = [
     {
@@ -183,81 +120,39 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
 
   return (
     <>
-      <Divider titlePlacement="start" plain style={{ marginTop: 0 }}>
-        <Flex align="center" gap={8}>
-          Members
-          <Tag>{total}</Tag>
-          {!showPicker && (
-            <Button size="small" icon={<PlusOutlined />} onClick={handleOpenPicker}>
-              Add member
-            </Button>
-          )}
-        </Flex>
-      </Divider>
+      <Flex justify="space-between">
+        <Text>
+          Members <Tag>{total}</Tag>
+        </Text>
+        {!showPicker && (
+          <Button size="small" icon={<PlusOutlined />} onClick={() => setShowPicker(true)}>
+            Add member
+          </Button>
+        )}
+      </Flex>
       {showPicker && (
-        <Space style={{ marginBottom: 12, width: "100%" }}>
-          <Select
-            style={{ width: 300 }}
-            placeholder="Search unassigned users"
-            showSearch={{ filterOption: false, onSearch: handleUnassignedSearch }}
-            onPopupScroll={handleUnassignedScroll}
-            loading={loadingUnassigned}
-            notFoundContent={loadingUnassigned ? <Spin size="small" /> : "No unassigned users"}
-            value={selectedUserId}
-            onChange={setSelectedUserId}
-            options={unassigned.map((u) => ({
-              value: u.id,
-              label: `${u.firstName ?? ""} ${u.lastName ?? ""}`,
-              email: u.email,
-            }))}
-            optionRender={(option) => (
-              <>
-                {option.label}
-                <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                  {option.data.email}
-                </Text>
-              </>
-            )}
-            popupRender={(menu) => (
-              <>
-                {menu}
-                {loadingUnassigned && hasMoreUnassigned && (
-                  <Flex justify="center">
-                    <Spin size="small" />
-                  </Flex>
-                )}
-              </>
-            )}
-          />
-          <Button
-            type="primary"
-            size="small"
-            onClick={handleAdd}
-            loading={adding}
-            disabled={!selectedUserId}
-          >
-            Add
-          </Button>
-          <Button size="small" onClick={() => setShowPicker(false)}>
-            Cancel
-          </Button>
-        </Space>
+        <AddMemberPicker
+          teamId={teamId}
+          onAdded={handleAdded}
+          onCancel={() => setShowPicker(false)}
+        />
       )}
-
       <Table<TeamMember>
-        dataSource={members}
+        dataSource={optimisticMembers}
         columns={columns}
         rowKey="id"
         size="small"
-        loading={loadingMembers}
+        loading={loadingMembers || isPending}
         pagination={{
           current: page + 1,
           pageSize,
           total,
           onChange: (p) => {
-            const newPage = p - 1;
-            setPage(newPage);
-            fetchMembers(newPage);
+            startTransition(() => {
+              const newPage = p - 1;
+              setPage(newPage);
+              fetchMembers(newPage);
+            });
           },
           showSizeChanger: false,
         }}
