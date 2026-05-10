@@ -15,7 +15,7 @@ const listInternalByBranch = async (
 ): Promise<InternalBillingBranchListResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "payment_orders", "view");
+  assertPermission(ctx, "internal_billing", "view");
   const scope = buildScope(ctx);
   if (scope.denyAll) return { branches: [] };
 

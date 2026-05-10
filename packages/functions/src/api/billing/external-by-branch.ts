@@ -15,7 +15,7 @@ const listExternalByBranch = async (
 ): Promise<ExternalBillingBranchListResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "payment_orders", "view");
+  assertPermission(ctx, "external_billing", "view");
   const scope = buildScope(ctx);
   if (scope.denyAll) return { branches: [] };
 

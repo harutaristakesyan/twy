@@ -16,7 +16,7 @@ const listInternalLoads = async (
 ): Promise<InternalBillingLoadListResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "payment_orders", "view");
+  assertPermission(ctx, "internal_billing", "view");
   const scope = buildScope(ctx);
 
   const { branchId } = event.pathParameters;
