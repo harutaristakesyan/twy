@@ -1,11 +1,11 @@
 import { branch, db, type NewUser, type OrderDirection, team, users } from "@twy/db";
 import type { SQL } from "drizzle-orm";
-import { and, asc, count, desc, eq, ilike, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
 import { rebuildAuthContext } from "../auth-context/rebuild.js";
 import { deleteAuthContext } from "../auth-context/store.js";
-import type { AdvancedFilter, AdvancedFilterRule } from "../shared/advanced-filter-schema.js";
-import { buildAdvancedFilterSql } from "../shared/advanced-filter-sql.js";
+import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
+import { buildDateRangeCondition } from "../shared/advanced-filter-sql.js";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Tx;
@@ -110,55 +110,14 @@ export interface ListUsersInput {
   advancedFilter?: AdvancedFilter;
 }
 
-const buildUserRuleCondition = (rule: AdvancedFilterRule): SQL<unknown> | undefined => {
-  const { field, operator, value } = rule;
-  if (!field || !operator || value === "") return undefined;
-  const asBool = value === "true";
-
-  switch (field) {
-    case "firstName":
-      if (operator === "contains") return ilike(users.firstName, `%${value}%`);
-      if (operator === "equals") return eq(users.firstName, value);
-      if (operator === "starts_with") return ilike(users.firstName, `${value}%`);
-      return undefined;
-    case "lastName":
-      if (operator === "contains") return ilike(users.lastName, `%${value}%`);
-      if (operator === "equals") return eq(users.lastName, value);
-      if (operator === "starts_with") return ilike(users.lastName, `${value}%`);
-      return undefined;
-    case "email":
-      if (operator === "contains") return ilike(users.email, `%${value}%`);
-      if (operator === "equals") return eq(users.email, value);
-      if (operator === "starts_with") return ilike(users.email, `${value}%`);
-      return undefined;
-    case "isActive":
-      if (operator === "is") return eq(users.isActive, asBool);
-      if (operator === "is_not") return ne(users.isActive, asBool);
-      return undefined;
-    case "branchName":
-      if (operator === "contains") return ilike(branch.name, `%${value}%`);
-      if (operator === "equals") return eq(branch.name, value);
-      if (operator === "starts_with") return ilike(branch.name, `${value}%`);
-      return undefined;
-    case "teamName":
-      if (operator === "contains") return ilike(team.name, `%${value}%`);
-      if (operator === "equals") return eq(team.name, value);
-      if (operator === "starts_with") return ilike(team.name, `${value}%`);
-      return undefined;
-    default:
-      return undefined;
-  }
-};
-
-const userDateColumn = (key: string) => {
-  if (key === "updatedAt") return users.updatedAt;
-  if (key === "createdAt") return users.createdAt;
-  return undefined;
-};
-
 const buildUserAdvancedClause = (filter: AdvancedFilter | undefined): SQL<unknown> | undefined => {
   if (!filter) return undefined;
-  return buildAdvancedFilterSql(filter, buildUserRuleCondition, userDateColumn);
+  const conds: SQL<unknown>[] = [];
+  if (filter.isActive !== undefined) conds.push(eq(users.isActive, filter.isActive === "true"));
+  const dateCond = buildDateRangeCondition(filter, "createdAt", users.createdAt);
+  if (dateCond) conds.push(dateCond);
+  if (conds.length === 0) return undefined;
+  return and(...conds);
 };
 
 const userSortColumn = (field: ListUsersInput["sortField"]) => {

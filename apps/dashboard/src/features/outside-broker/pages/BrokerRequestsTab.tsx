@@ -1,13 +1,6 @@
+import { CheckOutlined, CloseOutlined, EyeOutlined } from "@ant-design/icons";
+import { useAntdTable } from "ahooks";
 import {
-  CheckOutlined,
-  CloseOutlined,
-  EyeOutlined,
-  FilterOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
-import { useAntdTable, useDebounce } from "ahooks";
-import {
-  Badge,
   Button,
   Card,
   Descriptions,
@@ -16,18 +9,15 @@ import {
   Flex,
   Input,
   message,
-  Select,
-  Space,
   Table,
   Tag,
-  Tooltip,
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type React from "react";
-import { useState } from "react";
-import type { AdvancedFilter, FieldConfig } from "@/components/AdvancedFilter";
-import { AdvancedFilterPopover } from "@/components/AdvancedFilter";
+import { useCallback, useState } from "react";
+import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
+import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { canEditBrokerRequests, canViewBrokerRequests } from "@/utils/permissions";
@@ -36,42 +26,28 @@ import {
   listBrokerRequests,
   rejectBrokerRequest,
 } from "../api/brokerRequestApi";
-import type { BrokerRequest, BrokerRequestStatusFilter } from "../types/brokerRequest";
+import type { BrokerRequest } from "../types/brokerRequest";
 
 const { Title, Text } = Typography;
-const { Search } = Input;
 
 const BOOL_OPTIONS = [
   { label: "Yes", value: "true" },
   { label: "No", value: "false" },
 ];
 
-const BROKER_REQ_FILTER_FIELDS: FieldConfig[] = [
-  { key: "brokerName", label: "Broker name", type: "text" },
-  { key: "mcNumber", label: "MC #", type: "text" },
-  { key: "contactName", label: "Contact name", type: "text" },
-  { key: "phone", label: "Phone", type: "text" },
-  { key: "email", label: "Email", type: "text" },
-  { key: "address", label: "Address", type: "text" },
-  { key: "notes", label: "Notes", type: "text" },
+const FILTER_FIELDS: FilterField[] = [
   {
     key: "status",
-    label: "Request status",
-    type: "enum",
+    label: "Status",
+    type: "select",
     options: [
       { label: "Pending", value: "pending" },
       { label: "Approved", value: "approved" },
       { label: "Rejected", value: "rejected" },
     ],
   },
-  {
-    key: "creditLimitUnlimited",
-    label: "Credit unlimited",
-    type: "enum",
-    options: BOOL_OPTIONS,
-  },
-  { key: "creditLimit", label: "Credit limit", type: "number" },
-  { key: "rejectionReason", label: "Rejection reason", type: "text" },
+  { key: "creditLimitUnlimited", label: "Credit unlimited", type: "select", options: BOOL_OPTIONS },
+  { key: "creditLimit", label: "Credit limit", type: "numberRange" },
 ];
 
 const statusColors: Record<string, string> = {
@@ -85,15 +61,8 @@ const BrokerRequestsTab: React.FC = () => {
   const canView = canViewBrokerRequests(permissions);
   const canReview = canEditBrokerRequests(permissions);
 
-  const [statusFilter, setStatusFilter] = useState<BrokerRequestStatusFilter>("pending");
-  const [searchInput, setSearchInput] = useState("");
-  const searchText = useDebounce(searchInput, { wait: 400 });
-  const [popoverOpen, setPopoverOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
-
-  const isAdvFilterActive = (activeFilter?.rules?.length ?? 0) > 0;
-
-  const activeRuleCount = activeFilter?.rules?.length ?? 0;
+  const [activeQuery, setActiveQuery] = useState("");
 
   const [viewRecord, setViewRecord] = useState<BrokerRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -108,18 +77,21 @@ const BrokerRequestsTab: React.FC = () => {
         limit: pageSize,
         sortField: (s?.field ?? "createdAt") as "createdAt" | "brokerName" | "mcNumber" | "status",
         sortOrder: (s?.order ?? undefined) as "ascend" | "descend" | undefined,
-        status: statusFilter,
-        query: isAdvFilterActive ? undefined : searchText || undefined,
-        filters: isAdvFilterActive ? JSON.stringify(activeFilter) : undefined,
+        query: activeQuery || undefined,
+        filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
       });
       return { total: result.total, list: result.requests };
     },
-    { refreshDeps: [statusFilter, searchText, activeFilter], defaultPageSize: 10 },
+    { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 10 },
   );
 
-  const handleFilterApply = (filter: AdvancedFilter | undefined) => {
-    setActiveFilter(filter && filter.rules.length > 0 ? filter : undefined);
-  };
+  const handleFilterApply = useCallback(
+    (filter: AdvancedFilter | undefined, query: string | undefined) => {
+      setActiveFilter(filter);
+      setActiveQuery(query ?? "");
+    },
+    [],
+  );
 
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
@@ -168,12 +140,7 @@ const BrokerRequestsTab: React.FC = () => {
   };
 
   const columns: ColumnsType<BrokerRequest> = [
-    {
-      title: "Broker name",
-      dataIndex: "brokerName",
-      key: "brokerName",
-      sorter: true,
-    },
+    { title: "Broker name", dataIndex: "brokerName", key: "brokerName", sorter: true },
     {
       title: "MC number",
       dataIndex: "mcNumber",
@@ -229,76 +196,28 @@ const BrokerRequestsTab: React.FC = () => {
           <Title level={4} style={{ margin: 0 }}>
             Broker requests ({tableProps.pagination?.total ?? 0})
           </Title>
-          <Flex align="middle" gap="middle" wrap>
-            <Select<BrokerRequestStatusFilter>
-              style={{ width: 160 }}
-              value={statusFilter}
-              onChange={(v) => setStatusFilter(v)}
-              options={[
-                { value: "pending", label: "Pending" },
-                { value: "approved", label: "Approved" },
-                { value: "rejected", label: "Rejected" },
-                { value: "all", label: "All" },
-              ]}
-            />
-            <Tooltip
-              title={isAdvFilterActive ? "Clear advanced filters to use simple search" : undefined}
-            >
-              <Search
-                placeholder="Search by name or MC number…"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                prefix={<SearchOutlined />}
-                allowClear
-                disabled={isAdvFilterActive}
-                style={{ width: 260, opacity: isAdvFilterActive ? 0.5 : 1 }}
-              />
-            </Tooltip>
-            <Badge count={isAdvFilterActive ? activeRuleCount : 0} size="small">
-              <Space.Compact>
-                <AdvancedFilterPopover
-                  open={popoverOpen}
-                  title="Advanced Search — Broker Requests"
-                  quickFields={[]}
-                  ruleFields={BROKER_REQ_FILTER_FIELDS}
-                  initialFilter={activeFilter}
-                  onApply={handleFilterApply}
-                  onClose={() => setPopoverOpen(false)}
-                >
-                  <Button
-                    icon={<FilterOutlined />}
-                    type={isAdvFilterActive ? "primary" : "default"}
-                    onClick={() => setPopoverOpen(true)}
-                  >
-                    Advanced Search
-                  </Button>
-                </AdvancedFilterPopover>
-                {isAdvFilterActive && (
-                  <Button type="primary" onClick={() => setActiveFilter(undefined)} title="Clear">
-                    ×
-                  </Button>
-                )}
-              </Space.Compact>
-            </Badge>
-          </Flex>
+          <AdvancedFilterPopover
+            fields={FILTER_FIELDS}
+            initialFilter={activeFilter}
+            initialQuery={activeQuery}
+            onApply={handleFilterApply}
+          />
         </Flex>
+
+        <ActiveFilterChips
+          filter={activeFilter}
+          fields={FILTER_FIELDS}
+          query={activeQuery}
+          onChange={setActiveFilter}
+          onClearQuery={() => setActiveQuery("")}
+        />
 
         <Table<BrokerRequest>
           rowKey="id"
           columns={columns}
           scroll={{ x: 900 }}
           {...tableProps}
-          locale={{
-            emptyText: (
-              <Empty
-                description={
-                  searchText && !isAdvFilterActive
-                    ? `No requests match "${searchText}"`
-                    : "No broker requests yet"
-                }
-              />
-            ),
-          }}
+          locale={{ emptyText: <Empty description="No broker requests yet" /> }}
         />
       </Card>
 

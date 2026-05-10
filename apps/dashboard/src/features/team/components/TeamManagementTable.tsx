@@ -1,41 +1,26 @@
-import { FilterOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import { useAntdTable, useDebounce, useRequest } from "ahooks";
-import {
-  Badge,
-  Button,
-  Card,
-  Empty,
-  Flex,
-  Input,
-  message,
-  Space,
-  Table,
-  Tooltip,
-  Typography,
-} from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import { useAntdTable, useRequest } from "ahooks";
+import { Button, Card, Empty, Flex, message, Table, Typography } from "antd";
 import type React from "react";
-import { useState } from "react";
-import type { AdvancedFilter, FieldConfig } from "@/components/AdvancedFilter";
-import { AdvancedFilterPopover } from "@/components/AdvancedFilter";
+import { useCallback, useState } from "react";
+import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
+import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { deleteTeam, getTeams } from "../api/teamApi";
 import { useTeamModal } from "../providers/TeamModalProvider";
 import { useTeamColumns } from "./useTeamColumns";
 
-const { Title, Text } = Typography;
-const { Search } = Input;
+const { Title } = Typography;
 
 const BOOL_OPTIONS = [
   { label: "Yes", value: "true" },
   { label: "No", value: "false" },
 ];
 
-const TEAM_FILTER_FIELDS: FieldConfig[] = [
-  { key: "name", label: "Name", type: "text" },
-  { key: "description", label: "Description", type: "text" },
-  { key: "branchRestricted", label: "Branch restricted", type: "enum", options: BOOL_OPTIONS },
-  { key: "onlyOwnData", label: "Only own data", type: "enum", options: BOOL_OPTIONS },
+const FILTER_FIELDS: FilterField[] = [
+  { key: "branchRestricted", label: "Branch restricted", type: "select", options: BOOL_OPTIONS },
+  { key: "onlyOwnData", label: "Only own data", type: "select", options: BOOL_OPTIONS },
 ];
 
 const TeamManagementTable: React.FC = () => {
@@ -43,14 +28,8 @@ const TeamManagementTable: React.FC = () => {
   const { openTeamCreate } = useTeamModal();
   const canAdd = permissions.teams.add;
 
-  const [searchInput, setSearchInput] = useState("");
-  const searchText = useDebounce(searchInput, { wait: 500 });
-  const [popoverOpen, setPopoverOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
-
-  const isFilterActive = (activeFilter?.rules?.length ?? 0) > 0;
-
-  const activeRuleCount = activeFilter?.rules?.length ?? 0;
+  const [activeQuery, setActiveQuery] = useState("");
 
   const { tableProps, refresh } = useAntdTable(
     async ({ current, pageSize, sorter }) => {
@@ -59,12 +38,12 @@ const TeamManagementTable: React.FC = () => {
         page: current - 1,
         limit: pageSize,
         sortOrder: (s?.order ?? undefined) as "ascend" | "descend" | undefined,
-        query: isFilterActive ? undefined : searchText || undefined,
-        filters: isFilterActive ? JSON.stringify(activeFilter) : undefined,
+        query: activeQuery || undefined,
+        filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
       });
       return { total: result.total, list: result.teams };
     },
-    { refreshDeps: [searchText, activeFilter], defaultPageSize: 10 },
+    { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 10 },
   );
 
   const { run: runDelete } = useRequest(deleteTeam, {
@@ -76,9 +55,13 @@ const TeamManagementTable: React.FC = () => {
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const handleFilterApply = (filter: AdvancedFilter | undefined) => {
-    setActiveFilter(filter && filter.rules.length > 0 ? filter : undefined);
-  };
+  const handleFilterApply = useCallback(
+    (filter: AdvancedFilter | undefined, query: string | undefined) => {
+      setActiveFilter(filter);
+      setActiveQuery(query ?? "");
+    },
+    [],
+  );
 
   const columns = useTeamColumns(refresh, runDelete);
 
@@ -90,49 +73,12 @@ const TeamManagementTable: React.FC = () => {
             Teams ({tableProps.pagination.total ?? 0})
           </Title>
           <Flex align="middle" gap="middle">
-            <Tooltip
-              title={isFilterActive ? "Clear advanced filters to use simple search" : undefined}
-            >
-              <Search
-                placeholder="Search teams..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                prefix={<SearchOutlined />}
-                allowClear
-                disabled={isFilterActive}
-                style={{ opacity: isFilterActive ? 0.5 : 1 }}
-              />
-            </Tooltip>
-            <Badge count={isFilterActive ? activeRuleCount : 0} size="small">
-              <Space.Compact>
-                <AdvancedFilterPopover
-                  open={popoverOpen}
-                  title="Advanced Search — Teams"
-                  quickFields={[]}
-                  ruleFields={TEAM_FILTER_FIELDS}
-                  initialFilter={activeFilter}
-                  onApply={handleFilterApply}
-                  onClose={() => setPopoverOpen(false)}
-                >
-                  <Button
-                    icon={<FilterOutlined />}
-                    type={isFilterActive ? "primary" : "default"}
-                    onClick={() => setPopoverOpen(true)}
-                  >
-                    Advanced Search
-                  </Button>
-                </AdvancedFilterPopover>
-                {isFilterActive && (
-                  <Button
-                    type="primary"
-                    onClick={() => setActiveFilter(undefined)}
-                    title="Clear filters"
-                  >
-                    ×
-                  </Button>
-                )}
-              </Space.Compact>
-            </Badge>
+            <AdvancedFilterPopover
+              fields={FILTER_FIELDS}
+              initialFilter={activeFilter}
+              initialQuery={activeQuery}
+              onApply={handleFilterApply}
+            />
             {canAdd && (
               <Button
                 type="primary"
@@ -145,25 +91,20 @@ const TeamManagementTable: React.FC = () => {
           </Flex>
         </Flex>
 
+        <ActiveFilterChips
+          filter={activeFilter}
+          fields={FILTER_FIELDS}
+          query={activeQuery}
+          onChange={setActiveFilter}
+          onClearQuery={() => setActiveQuery("")}
+        />
+
         <Table
           columns={columns}
           rowKey="id"
           scroll={{ x: 900 }}
           {...tableProps}
-          locale={{
-            emptyText:
-              searchText && !isFilterActive ? (
-                <Empty
-                  description={
-                    <span>
-                      No teams found matching <Text strong>"{searchText}"</Text>
-                    </span>
-                  }
-                />
-              ) : (
-                <Empty description="No teams found" />
-              ),
-          }}
+          locale={{ emptyText: <Empty description="No teams found" /> }}
         />
       </Card>
     </div>

@@ -3,8 +3,7 @@ import type { SQL } from "drizzle-orm";
 import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import createError from "http-errors";
 import { putAuthContext } from "../auth-context/store.js";
-import type { AdvancedFilter, AdvancedFilterRule } from "../shared/advanced-filter-schema.js";
-import { buildAdvancedFilterSql } from "../shared/advanced-filter-sql.js";
+import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
 import {
   ACTIONS,
   type Action,
@@ -211,44 +210,15 @@ export const getTeamWithPermissions = async (teamId: string): Promise<TeamRespon
   return formatTeamRow(teamRow, permRows, Number(memberRows[0]?.value ?? 0));
 };
 
-const buildTeamRuleCondition = (rule: AdvancedFilterRule): SQL<unknown> | undefined => {
-  const { field, operator, value } = rule;
-  if (!field || !operator || value === "") return undefined;
-  const asBool = value === "true";
-
-  switch (field) {
-    case "name":
-      if (operator === "contains") return ilike(team.name, `%${value}%`);
-      if (operator === "equals") return eq(team.name, value);
-      if (operator === "starts_with") return ilike(team.name, `${value}%`);
-      return undefined;
-    case "description":
-      if (operator === "contains") return ilike(team.description, `%${value}%`);
-      if (operator === "equals") return eq(team.description, value);
-      if (operator === "starts_with") return ilike(team.description, `${value}%`);
-      return undefined;
-    case "branchRestricted":
-      if (operator === "is") return eq(team.branchRestricted, asBool);
-      if (operator === "is_not") return eq(team.branchRestricted, !asBool);
-      return undefined;
-    case "onlyOwnData":
-      if (operator === "is") return eq(team.onlyOwnData, asBool);
-      if (operator === "is_not") return eq(team.onlyOwnData, !asBool);
-      return undefined;
-    default:
-      return undefined;
-  }
-};
-
-const teamDateColumn = (key: string) => {
-  if (key === "updatedAt") return team.updatedAt;
-  if (key === "createdAt") return team.createdAt;
-  return undefined;
-};
-
 const buildTeamAdvancedClause = (filter: AdvancedFilter | undefined): SQL<unknown> | undefined => {
   if (!filter) return undefined;
-  return buildAdvancedFilterSql(filter, buildTeamRuleCondition, teamDateColumn);
+  const conds: SQL<unknown>[] = [];
+  if (filter.branchRestricted !== undefined)
+    conds.push(eq(team.branchRestricted, filter.branchRestricted === "true"));
+  if (filter.onlyOwnData !== undefined)
+    conds.push(eq(team.onlyOwnData, filter.onlyOwnData === "true"));
+  if (conds.length === 0) return undefined;
+  return and(...conds);
 };
 
 export const listTeams = async (

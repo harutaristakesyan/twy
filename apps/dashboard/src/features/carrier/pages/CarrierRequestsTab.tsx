@@ -1,13 +1,6 @@
+import { CheckOutlined, CloseOutlined, EyeOutlined } from "@ant-design/icons";
+import { useAntdTable } from "ahooks";
 import {
-  CheckOutlined,
-  CloseOutlined,
-  EyeOutlined,
-  FilterOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
-import { useAntdTable, useDebounce } from "ahooks";
-import {
-  Badge,
   Button,
   Card,
   Descriptions,
@@ -16,18 +9,15 @@ import {
   Flex,
   Input,
   message,
-  Select,
-  Space,
   Table,
   Tag,
-  Tooltip,
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type React from "react";
-import { useState } from "react";
-import type { AdvancedFilter, FieldConfig } from "@/components/AdvancedFilter";
-import { AdvancedFilterPopover } from "@/components/AdvancedFilter";
+import { useCallback, useState } from "react";
+import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
+import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
 import {
@@ -36,29 +26,25 @@ import {
   rejectCarrierRequest,
 } from "../api/carrierRequestApi";
 import { InsuranceStatus } from "../types/carrier";
-import type { CarrierRequest, CarrierRequestStatusFilter } from "../types/carrierRequest";
+import type { CarrierRequest } from "../types/carrierRequest";
 import { deriveInsuranceStatus } from "../utils/insuranceStatus";
 
 const { Title, Text } = Typography;
-const { Search } = Input;
 
-const CARRIER_REQ_FILTER_FIELDS: FieldConfig[] = [
+const FILTER_FIELDS: FilterField[] = [
   {
     key: "kind",
     label: "Kind",
-    type: "enum",
+    type: "select",
     options: [
       { label: "Twy", value: "twy" },
       { label: "Outside", value: "outside" },
     ],
   },
-  { key: "carrierName", label: "Carrier name", type: "text" },
-  { key: "mcDotNumber", label: "MC/DOT #", type: "text" },
-  { key: "equipmentType", label: "Equipment type", type: "text" },
   {
     key: "status",
-    label: "Request status",
-    type: "enum",
+    label: "Status",
+    type: "select",
     options: [
       { label: "Pending", value: "pending" },
       { label: "Approved", value: "approved" },
@@ -68,17 +54,13 @@ const CARRIER_REQ_FILTER_FIELDS: FieldConfig[] = [
   {
     key: "insuranceStatus",
     label: "Insurance status",
-    type: "enum",
+    type: "select",
     options: [
       { label: "Valid", value: InsuranceStatus.VALID },
       { label: "Expired", value: InsuranceStatus.EXPIRED },
       { label: "Pending", value: InsuranceStatus.PENDING },
     ],
   },
-  { key: "phone", label: "Phone", type: "text" },
-  { key: "email", label: "Email", type: "text" },
-  { key: "notes", label: "Notes", type: "text" },
-  { key: "rejectionReason", label: "Rejection reason", type: "text" },
 ];
 
 const statusColors: Record<string, string> = {
@@ -91,15 +73,8 @@ const CarrierRequestsTab: React.FC = () => {
   const { permissions } = useCurrentUser();
   const canReview = permissions.carriers_requests?.edit;
 
-  const [statusFilter, setStatusFilter] = useState<CarrierRequestStatusFilter>("pending");
-  const [searchInput, setSearchInput] = useState("");
-  const searchText = useDebounce(searchInput, { wait: 400 });
-  const [popoverOpen, setPopoverOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
-
-  const isAdvFilterActive = (activeFilter?.rules?.length ?? 0) > 0;
-
-  const activeRuleCount = activeFilter?.rules?.length ?? 0;
+  const [activeQuery, setActiveQuery] = useState("");
 
   const [viewRecord, setViewRecord] = useState<CarrierRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -118,18 +93,21 @@ const CarrierRequestsTab: React.FC = () => {
           | "mcDotNumber"
           | "status",
         sortOrder: (s?.order ?? undefined) as "ascend" | "descend" | undefined,
-        status: statusFilter,
-        query: isAdvFilterActive ? undefined : searchText || undefined,
-        filters: isAdvFilterActive ? JSON.stringify(activeFilter) : undefined,
+        query: activeQuery || undefined,
+        filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
       });
       return { total: result.total, list: result.requests };
     },
-    { refreshDeps: [statusFilter, searchText, activeFilter], defaultPageSize: 10 },
+    { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 10 },
   );
 
-  const handleFilterApply = (filter: AdvancedFilter | undefined) => {
-    setActiveFilter(filter && filter.rules.length > 0 ? filter : undefined);
-  };
+  const handleFilterApply = useCallback(
+    (filter: AdvancedFilter | undefined, query: string | undefined) => {
+      setActiveFilter(filter);
+      setActiveQuery(query ?? "");
+    },
+    [],
+  );
 
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
@@ -185,12 +163,7 @@ const CarrierRequestsTab: React.FC = () => {
       width: 90,
       render: (k: string) => <Tag>{k === "twy" ? "Twy" : "Outside"}</Tag>,
     },
-    {
-      title: "Carrier name",
-      dataIndex: "carrierName",
-      key: "carrierName",
-      sorter: true,
-    },
+    { title: "Carrier name", dataIndex: "carrierName", key: "carrierName", sorter: true },
     {
       title: "MC / DOT",
       dataIndex: "mcDotNumber",
@@ -245,76 +218,28 @@ const CarrierRequestsTab: React.FC = () => {
           <Title level={4} style={{ margin: 0 }}>
             Carrier requests ({tableProps.pagination?.total ?? 0})
           </Title>
-          <Flex align="middle" gap="middle" wrap>
-            <Select<CarrierRequestStatusFilter>
-              style={{ width: 160 }}
-              value={statusFilter}
-              onChange={(v) => setStatusFilter(v)}
-              options={[
-                { value: "pending", label: "Pending" },
-                { value: "approved", label: "Approved" },
-                { value: "rejected", label: "Rejected" },
-                { value: "all", label: "All" },
-              ]}
-            />
-            <Tooltip
-              title={isAdvFilterActive ? "Clear advanced filters to use simple search" : undefined}
-            >
-              <Search
-                placeholder="Search by name or MC/DOT…"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                prefix={<SearchOutlined />}
-                allowClear
-                disabled={isAdvFilterActive}
-                style={{ width: 260, opacity: isAdvFilterActive ? 0.5 : 1 }}
-              />
-            </Tooltip>
-            <Badge count={isAdvFilterActive ? activeRuleCount : 0} size="small">
-              <Space.Compact>
-                <AdvancedFilterPopover
-                  open={popoverOpen}
-                  title="Advanced Search — Carrier Requests"
-                  quickFields={[]}
-                  ruleFields={CARRIER_REQ_FILTER_FIELDS}
-                  initialFilter={activeFilter}
-                  onApply={handleFilterApply}
-                  onClose={() => setPopoverOpen(false)}
-                >
-                  <Button
-                    icon={<FilterOutlined />}
-                    type={isAdvFilterActive ? "primary" : "default"}
-                    onClick={() => setPopoverOpen(true)}
-                  >
-                    Advanced Search
-                  </Button>
-                </AdvancedFilterPopover>
-                {isAdvFilterActive && (
-                  <Button type="primary" onClick={() => setActiveFilter(undefined)} title="Clear">
-                    ×
-                  </Button>
-                )}
-              </Space.Compact>
-            </Badge>
-          </Flex>
+          <AdvancedFilterPopover
+            fields={FILTER_FIELDS}
+            initialFilter={activeFilter}
+            initialQuery={activeQuery}
+            onApply={handleFilterApply}
+          />
         </Flex>
+
+        <ActiveFilterChips
+          filter={activeFilter}
+          fields={FILTER_FIELDS}
+          query={activeQuery}
+          onChange={setActiveFilter}
+          onClearQuery={() => setActiveQuery("")}
+        />
 
         <Table<CarrierRequest>
           rowKey="id"
           columns={columns}
           scroll={{ x: 900 }}
           {...tableProps}
-          locale={{
-            emptyText: (
-              <Empty
-                description={
-                  searchText && !isAdvFilterActive
-                    ? `No requests match "${searchText}"`
-                    : "No carrier requests yet"
-                }
-              />
-            ),
-          }}
+          locale={{ emptyText: <Empty description="No carrier requests yet" /> }}
         />
       </Card>
 

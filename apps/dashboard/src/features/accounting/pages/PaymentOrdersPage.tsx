@@ -1,9 +1,9 @@
-import { EditOutlined, EyeOutlined, FilterOutlined } from "@ant-design/icons";
+import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import { useAntdTable, useRequest } from "ahooks";
-import { Badge, Button, Card, Flex, Space, Table, Tooltip, Typography } from "antd";
+import { Button, Card, Flex, Space, Table, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useState } from "react";
-import type { AdvancedFilter, QuickFilterField } from "@/components/AdvancedFilter";
+import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { getBranches } from "@/features/branch/api/branchApi";
 import { paymentOrderApi } from "../api/paymentOrderApi";
@@ -33,8 +33,8 @@ export default function PaymentOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<PaymentOrder | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>("edit");
-  const [popoverOpen, setPopoverOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
+  const [activeQuery, setActiveQuery] = useState("");
 
   const { data: branchesData } = useRequest(() => getBranches({ limit: 200 }), {
     cacheKey: "branches-for-filter",
@@ -42,7 +42,7 @@ export default function PaymentOrdersPage() {
 
   const branchOptions = branchesData?.branches.map((b) => ({ label: b.name, value: b.id })) ?? [];
 
-  const quickFields: QuickFilterField[] = [
+  const fields: FilterField[] = [
     {
       key: "branchId",
       label: "Branch",
@@ -52,19 +52,17 @@ export default function PaymentOrdersPage() {
     },
   ];
 
-  const activeBranchId = activeFilter?.rules.find((r) => r.field === "branchId")?.value;
-  const isFilterActive = !!activeBranchId;
-
   const { tableProps, refresh } = useAntdTable(
     async ({ current, pageSize }) => {
       const res = await paymentOrderApi.list({
         page: (current ?? 1) - 1,
         limit: pageSize ?? 20,
-        branchId: activeBranchId,
+        query: activeQuery || undefined,
+        filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
       });
       return { list: res.paymentOrders, total: res.total };
     },
-    { refreshDeps: [activeBranchId], defaultPageSize: 20 },
+    { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 20 },
   );
 
   const openModal = useCallback((record: PaymentOrder, mode: ModalMode) => {
@@ -81,9 +79,13 @@ export default function PaymentOrdersPage() {
     refresh();
   }, [refresh]);
 
-  const handleFilterApply = useCallback((filter: AdvancedFilter | undefined) => {
-    setActiveFilter(filter);
-  }, []);
+  const handleFilterApply = useCallback(
+    (filter: AdvancedFilter | undefined, query: string | undefined) => {
+      setActiveFilter(filter);
+      setActiveQuery(query ?? "");
+    },
+    [],
+  );
 
   const columns: ColumnsType<PaymentOrder> = [
     {
@@ -222,43 +224,20 @@ export default function PaymentOrdersPage() {
           <Title level={4} style={{ margin: 0 }}>
             Payment Orders ({tableProps.pagination.total ?? 0})
           </Title>
-          <Badge count={isFilterActive ? 1 : 0} size="small">
-            <Space.Compact>
-              <AdvancedFilterPopover
-                open={popoverOpen}
-                title="Filter — Payment Orders"
-                quickFields={quickFields}
-                ruleFields={[]}
-                initialFilter={activeFilter}
-                onApply={handleFilterApply}
-                onClose={() => setPopoverOpen(false)}
-              >
-                <Button
-                  icon={<FilterOutlined />}
-                  type={isFilterActive ? "primary" : "default"}
-                  onClick={() => setPopoverOpen(true)}
-                >
-                  Filter
-                </Button>
-              </AdvancedFilterPopover>
-              {isFilterActive && (
-                <Button
-                  type="primary"
-                  onClick={() => setActiveFilter(undefined)}
-                  title="Clear filters"
-                >
-                  ×
-                </Button>
-              )}
-            </Space.Compact>
-          </Badge>
+          <AdvancedFilterPopover
+            fields={fields}
+            initialFilter={activeFilter}
+            initialQuery={activeQuery}
+            onApply={handleFilterApply}
+          />
         </Flex>
 
         <ActiveFilterChips
           filter={activeFilter}
-          quickFields={quickFields}
-          ruleFields={[]}
+          fields={fields}
+          query={activeQuery}
           onChange={setActiveFilter}
+          onClearQuery={() => setActiveQuery("")}
         />
 
         <Table<PaymentOrder>

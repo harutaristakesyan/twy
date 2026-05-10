@@ -8,11 +8,11 @@ import {
   users,
 } from "@twy/db";
 import type { SQL } from "drizzle-orm";
-import { and, asc, count, desc, eq, gt, gte, ilike, lt, lte, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, lte, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import createError from "http-errors";
-import type { AdvancedFilter, AdvancedFilterRule } from "../shared/advanced-filter-schema.js";
-import { buildAdvancedFilterSql } from "../shared/advanced-filter-sql.js";
+import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
+import { buildDateRangeCondition } from "../shared/advanced-filter-sql.js";
 import type { BrokerRequestResponse } from "./response.js";
 
 export interface ListBrokerRequestsInput {
@@ -111,84 +111,22 @@ const mapRow = (row: {
   updatedAt: row.updatedAt.toISOString(),
 });
 
-const buildBrokerRequestRuleCondition = (rule: AdvancedFilterRule): SQL<unknown> | undefined => {
-  const { field, operator, value } = rule;
-  if (!field || !operator || value === "") return undefined;
-  const asBool = value === "true";
-
-  switch (field) {
-    case "brokerName":
-      if (operator === "contains") return ilike(brokerRequest.brokerName, `%${value}%`);
-      if (operator === "equals") return eq(brokerRequest.brokerName, value);
-      if (operator === "starts_with") return ilike(brokerRequest.brokerName, `${value}%`);
-      return undefined;
-    case "mcNumber":
-      if (operator === "contains") return ilike(brokerRequest.mcNumber, `%${value}%`);
-      if (operator === "equals") return eq(brokerRequest.mcNumber, value);
-      if (operator === "starts_with") return ilike(brokerRequest.mcNumber, `${value}%`);
-      return undefined;
-    case "contactName":
-      if (operator === "contains") return ilike(brokerRequest.contactName, `%${value}%`);
-      if (operator === "equals") return eq(brokerRequest.contactName, value);
-      if (operator === "starts_with") return ilike(brokerRequest.contactName, `${value}%`);
-      return undefined;
-    case "phone":
-      if (operator === "contains") return ilike(brokerRequest.phone, `%${value}%`);
-      if (operator === "equals") return eq(brokerRequest.phone, value);
-      if (operator === "starts_with") return ilike(brokerRequest.phone, `${value}%`);
-      return undefined;
-    case "email":
-      if (operator === "contains") return ilike(brokerRequest.email, `%${value}%`);
-      if (operator === "equals") return eq(brokerRequest.email, value);
-      if (operator === "starts_with") return ilike(brokerRequest.email, `${value}%`);
-      return undefined;
-    case "address":
-      if (operator === "contains") return ilike(brokerRequest.address, `%${value}%`);
-      if (operator === "equals") return eq(brokerRequest.address, value);
-      if (operator === "starts_with") return ilike(brokerRequest.address, `${value}%`);
-      return undefined;
-    case "notes":
-      if (operator === "contains") return ilike(brokerRequest.notes, `%${value}%`);
-      if (operator === "equals") return eq(brokerRequest.notes, value);
-      if (operator === "starts_with") return ilike(brokerRequest.notes, `${value}%`);
-      return undefined;
-    case "rejectionReason":
-      if (operator === "contains") return ilike(brokerRequest.rejectionReason, `%${value}%`);
-      if (operator === "equals") return eq(brokerRequest.rejectionReason, value);
-      if (operator === "starts_with") return ilike(brokerRequest.rejectionReason, `${value}%`);
-      return undefined;
-    case "status":
-      if (operator === "is") return eq(brokerRequest.status, value as BrokerRequestStatus);
-      if (operator === "is_not") return ne(brokerRequest.status, value as BrokerRequestStatus);
-      return undefined;
-    case "creditLimitUnlimited":
-      if (operator === "is") return eq(brokerRequest.creditLimitUnlimited, asBool);
-      if (operator === "is_not") return eq(brokerRequest.creditLimitUnlimited, !asBool);
-      return undefined;
-    case "creditLimit":
-      if (operator === "eq") return eq(brokerRequest.creditLimit, value);
-      if (operator === "gt") return gt(brokerRequest.creditLimit, value);
-      if (operator === "lt") return lt(brokerRequest.creditLimit, value);
-      if (operator === "gte") return gte(brokerRequest.creditLimit, value);
-      if (operator === "lte") return lte(brokerRequest.creditLimit, value);
-      return undefined;
-    default:
-      return undefined;
-  }
-};
-
-const brokerRequestDateColumn = (key: string) => {
-  if (key === "updatedAt") return brokerRequest.updatedAt;
-  if (key === "createdAt") return brokerRequest.createdAt;
-  if (key === "reviewedAt") return brokerRequest.reviewedAt;
-  return undefined;
-};
-
 const buildBrokerRequestAdvancedClause = (
   filter: AdvancedFilter | undefined,
 ): SQL<unknown> | undefined => {
   if (!filter) return undefined;
-  return buildAdvancedFilterSql(filter, buildBrokerRequestRuleCondition, brokerRequestDateColumn);
+  const conds: SQL<unknown>[] = [];
+  if (filter.status) conds.push(eq(brokerRequest.status, filter.status as BrokerRequestStatus));
+  if (filter.creditLimitUnlimited !== undefined)
+    conds.push(eq(brokerRequest.creditLimitUnlimited, filter.creditLimitUnlimited === "true"));
+  if (filter.creditLimit__gte !== undefined)
+    conds.push(gte(brokerRequest.creditLimit, filter.creditLimit__gte));
+  if (filter.creditLimit__lte !== undefined)
+    conds.push(lte(brokerRequest.creditLimit, filter.creditLimit__lte));
+  const dateCond = buildDateRangeCondition(filter, "createdAt", brokerRequest.createdAt);
+  if (dateCond) conds.push(dateCond);
+  if (conds.length === 0) return undefined;
+  return and(...conds);
 };
 
 export const listBrokerRequests = async (input: ListBrokerRequestsInput) => {

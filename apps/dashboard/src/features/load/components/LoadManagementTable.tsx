@@ -1,23 +1,34 @@
-import { FilterOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import { useAntdTable, useDebounce, useRequest } from "ahooks";
-import { App, Badge, Button, Card, Flex, Input, Space, Table, Tooltip, Typography } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import { useAntdTable, useRequest } from "ahooks";
+import { App, Button, Card, Flex, Table, Tooltip, Typography } from "antd";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { AdvancedFilter } from "@/components/AdvancedFilter";
+import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { loadApi } from "@/features/load/api/loadApi";
-import {
-  LOAD_FILTER_FIELDS,
-  LOAD_QUICK_FILTER_FIELDS,
-} from "@/features/load/constants/loadAdvancedFilterFields";
 import type { GetLoadsParams } from "@/features/load/types/load";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { useLoadColumns } from "./useLoadColumns";
 
-const { Search } = Input;
 const { Title } = Typography;
+
+const FILTER_FIELDS: FilterField[] = [
+  {
+    key: "status",
+    label: "Status",
+    type: "select",
+    options: [
+      { label: "Pending", value: "Pending" },
+      { label: "Approved", value: "Approved" },
+      { label: "Approved Paid", value: "ApprovedPaid" },
+      { label: "Denied", value: "Denied" },
+      { label: "Hold", value: "Hold" },
+    ],
+  },
+  { key: "createdAt", label: "Created date", type: "dateRange" },
+];
 
 export const LoadManagementTable: React.FC = () => {
   const { message } = App.useApp();
@@ -26,16 +37,8 @@ export const LoadManagementTable: React.FC = () => {
   const isBranchAssigned = user?.branch?.id !== undefined && user?.branch?.id !== null;
   const canAdd = permissions.loads.add;
 
-  const [searchInput, setSearchInput] = useState("");
-  const searchText = useDebounce(searchInput, { wait: 500 });
-  const [popoverOpen, setPopoverOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
-
-  const isFilterActive =
-    (activeFilter?.rules?.length ?? 0) > 0 || activeFilter?.dateField !== undefined;
-
-  const activeFilterCount =
-    (activeFilter?.rules?.length ?? 0) + (activeFilter?.dateField !== undefined ? 1 : 0);
+  const [activeQuery, setActiveQuery] = useState("");
 
   const { tableProps, refresh } = useAntdTable(
     async ({ current, pageSize, sorter }) => {
@@ -50,14 +53,14 @@ export const LoadManagementTable: React.FC = () => {
       const result = await loadApi.getAll({
         page: current - 1,
         limit: pageSize,
-        query: isFilterActive ? undefined : searchText || undefined,
-        filters: isFilterActive ? JSON.stringify(activeFilter) : undefined,
+        query: activeQuery || undefined,
+        filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
         sortField: s?.order && validFields.includes(field) ? field : undefined,
         sortOrder: s?.order ?? undefined,
       });
       return { total: result.total, list: result.loads };
     },
-    { refreshDeps: [searchText, activeFilter], defaultPageSize: 10 },
+    { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 10 },
   );
 
   const { run: runDelete } = useRequest((id: string) => loadApi.delete(id), {
@@ -69,9 +72,13 @@ export const LoadManagementTable: React.FC = () => {
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const handleFilterApply = useCallback((filter: AdvancedFilter | undefined) => {
-    setActiveFilter(filter);
-  }, []);
+  const handleFilterApply = useCallback(
+    (filter: AdvancedFilter | undefined, query: string | undefined) => {
+      setActiveFilter(filter);
+      setActiveQuery(query ?? "");
+    },
+    [],
+  );
 
   const columns = useLoadColumns(refresh, runDelete);
 
@@ -83,47 +90,12 @@ export const LoadManagementTable: React.FC = () => {
             Loads ({tableProps.pagination.total ?? 0})
           </Title>
           <Flex align="middle" gap="middle">
-            <Tooltip title={isFilterActive ? "Clear filters to use simple search" : undefined}>
-              <Search
-                placeholder="Search loads..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                prefix={<SearchOutlined />}
-                allowClear
-                disabled={isFilterActive}
-                style={{ opacity: isFilterActive ? 0.5 : 1 }}
-              />
-            </Tooltip>
-            <Badge count={isFilterActive ? activeFilterCount : 0} size="small">
-              <Space.Compact>
-                <AdvancedFilterPopover
-                  open={popoverOpen}
-                  title="Filter — Loads"
-                  quickFields={LOAD_QUICK_FILTER_FIELDS}
-                  ruleFields={LOAD_FILTER_FIELDS}
-                  initialFilter={activeFilter}
-                  onApply={handleFilterApply}
-                  onClose={() => setPopoverOpen(false)}
-                >
-                  <Button
-                    icon={<FilterOutlined />}
-                    type={isFilterActive ? "primary" : "default"}
-                    onClick={() => setPopoverOpen(true)}
-                  >
-                    Filter
-                  </Button>
-                </AdvancedFilterPopover>
-                {isFilterActive && (
-                  <Button
-                    type="primary"
-                    onClick={() => setActiveFilter(undefined)}
-                    title="Clear filters"
-                  >
-                    ×
-                  </Button>
-                )}
-              </Space.Compact>
-            </Badge>
+            <AdvancedFilterPopover
+              fields={FILTER_FIELDS}
+              initialFilter={activeFilter}
+              initialQuery={activeQuery}
+              onApply={handleFilterApply}
+            />
             {canAdd && (
               <Tooltip
                 title={
@@ -148,9 +120,10 @@ export const LoadManagementTable: React.FC = () => {
 
         <ActiveFilterChips
           filter={activeFilter}
-          quickFields={LOAD_QUICK_FILTER_FIELDS}
-          ruleFields={LOAD_FILTER_FIELDS}
+          fields={FILTER_FIELDS}
+          query={activeQuery}
           onChange={setActiveFilter}
+          onClearQuery={() => setActiveQuery("")}
         />
 
         <Table columns={columns} rowKey="id" scroll={{ x: 2000 }} {...tableProps} />

@@ -1,5 +1,6 @@
 import { paymentStatusValues } from "@twy/db";
 import z from "zod";
+import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
 
 export const paymentStatusSchema = z.enum([...paymentStatusValues] as [
@@ -20,7 +21,8 @@ export const ListPaymentOrdersEventSchema = z.object({
       .transform((val) => Number.parseInt(val, 10))
       .default(20)
       .transform((val) => (Number.isNaN(val) ? 20 : val)),
-    branchId: z.string().uuid().optional(),
+    query: z.string().optional(),
+    filters: filtersQueryParamSchema,
   }),
 });
 

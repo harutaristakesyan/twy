@@ -1,14 +1,17 @@
 import { Flex, Tag, Typography } from "antd";
-import { useCallback } from "react";
-import type { AdvancedFilter, FieldConfig, QuickFilterField } from "./types.js";
+import { useMemo } from "react";
+import type { AdvancedFilter, FilterField } from "./types.js";
 
 const { Text } = Typography;
 
-interface ActiveFilterChipsProps {
+const containerStyle = { marginBottom: 12 };
+
+interface Props {
   filter: AdvancedFilter | undefined;
-  quickFields: QuickFilterField[];
-  ruleFields: FieldConfig[];
+  fields?: FilterField[];
+  query: string | undefined;
   onChange: (next: AdvancedFilter | undefined) => void;
+  onClearQuery: () => void;
 }
 
 interface Chip {
@@ -17,120 +20,79 @@ interface Chip {
   onRemove: () => void;
 }
 
-function buildChips(
-  filter: AdvancedFilter,
-  quickFields: QuickFilterField[],
-  ruleFields: FieldConfig[],
-  removeQuickField: (key: string) => void,
-  removeRule: (id: string) => void,
-): Chip[] {
-  const chips: Chip[] = [];
-
-  // Date range chip (top-level, not in rules[])
-  if (filter.dateField) {
-    const qf = quickFields.find((f) => f.key === filter.dateField);
-    const label = qf?.label ?? filter.dateField;
-    const from = filter.dateFrom ?? "…";
-    const to = filter.dateTo ?? "…";
-    chips.push({
-      id: `__date__${filter.dateField}`,
-      label: `${label}: ${from} – ${to}`,
-      onRemove: () => removeQuickField(filter.dateField as string),
-    });
+function removeKeys(filter: AdvancedFilter, keys: string[]): AdvancedFilter | undefined {
+  const next = { ...filter };
+  for (const k of keys) {
+    delete next[k];
   }
-
-  // Group rules by fieldKey so we can render one chip per field for multi-value types
-  const seen = new Set<string>();
-  for (const rule of filter.rules) {
-    if (seen.has(rule.field)) continue;
-    const qf = quickFields.find((f) => f.key === rule.field);
-
-    if (qf) {
-      seen.add(rule.field);
-      const rulesForField = filter.rules.filter((r) => r.field === rule.field);
-      let valueStr = "";
-
-      if (qf.type === "search") {
-        valueStr = rulesForField[0]?.value ?? "";
-      } else if (qf.type === "select") {
-        const v = rulesForField[0]?.value ?? "";
-        valueStr = qf.options?.find((o) => o.value === v)?.label ?? v;
-      } else if (qf.type === "multiSelect") {
-        const values = (rulesForField[0]?.value ?? "")
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
-        valueStr = values.map((v) => qf.options?.find((o) => o.value === v)?.label ?? v).join(", ");
-      } else if (qf.type === "numberRange") {
-        const gte = rulesForField.find((r) => r.operator === "gte")?.value;
-        const lte = rulesForField.find((r) => r.operator === "lte")?.value;
-        if (gte && lte) valueStr = `${gte} – ${lte}`;
-        else if (gte) valueStr = `≥ ${gte}`;
-        else valueStr = `≤ ${lte ?? ""}`;
-      }
-
-      chips.push({
-        id: `__quick__${rule.field}`,
-        label: `${qf.label}: ${valueStr}`,
-        onRemove: () => removeQuickField(rule.field),
-      });
-    } else {
-      // Advanced rule — one chip per rule
-      const rf = ruleFields.find((f) => f.key === rule.field);
-      const fieldLabel = rf?.label ?? rule.field;
-      chips.push({
-        id: rule.id,
-        label: `${fieldLabel} ${rule.operator} ${rule.value}`,
-        onRemove: () => removeRule(rule.id),
-      });
-    }
-  }
-
-  return chips;
+  return Object.keys(next).length > 0 ? next : undefined;
 }
 
-export function ActiveFilterChips({
-  filter,
-  quickFields,
-  ruleFields,
-  onChange,
-}: ActiveFilterChipsProps) {
-  const removeQuickField = useCallback(
-    (fieldKey: string) => {
-      if (!filter) return;
-      const newRules = filter.rules.filter((r) => r.field !== fieldKey);
-      const isDateField = filter.dateField === fieldKey;
-      const next: AdvancedFilter = {
-        ...filter,
-        rules: newRules,
-        dateField: isDateField ? undefined : filter.dateField,
-        dateFrom: isDateField ? undefined : filter.dateFrom,
-        dateTo: isDateField ? undefined : filter.dateTo,
-      };
-      onChange(newRules.length === 0 && !next.dateField ? undefined : next);
-    },
-    [filter, onChange],
-  );
+export function ActiveFilterChips({ filter, fields = [], query, onChange, onClearQuery }: Props) {
+  const chips = useMemo((): Chip[] => {
+    const result: Chip[] = [];
 
-  const removeRule = useCallback(
-    (ruleId: string) => {
-      if (!filter) return;
-      const newRules = filter.rules.filter((r) => r.id !== ruleId);
-      onChange(
-        newRules.length === 0 && !filter.dateField ? undefined : { ...filter, rules: newRules },
-      );
-    },
-    [filter, onChange],
-  );
+    if (query?.trim()) {
+      result.push({
+        id: "__query__",
+        label: `Keyword: ${query.trim()}`,
+        onRemove: onClearQuery,
+      });
+    }
 
-  if (!filter) return null;
-  if (filter.rules.length === 0 && !filter.dateField) return null;
+    if (!filter) return result;
 
-  const chips = buildChips(filter, quickFields, ruleFields, removeQuickField, removeRule);
-  if (chips.length === 0) return null;
+    for (const field of fields) {
+      if (field.type === "select") {
+        const v = filter[field.key];
+        if (v === undefined) continue;
+        const label = field.options?.find((o) => o.value === v)?.label ?? v;
+        result.push({
+          id: `__field__${field.key}`,
+          label: `${field.label}: ${label}`,
+          onRemove: () => onChange(removeKeys(filter, [field.key])),
+        });
+      } else if (field.type === "multiSelect") {
+        const raw = filter[field.key];
+        if (raw === undefined) continue;
+        const values = raw.split(",").filter(Boolean);
+        const labelStr = values
+          .map((v) => field.options?.find((o) => o.value === v)?.label ?? v)
+          .join(", ");
+        result.push({
+          id: `__field__${field.key}`,
+          label: `${field.label}: ${labelStr}`,
+          onRemove: () => onChange(removeKeys(filter, [field.key])),
+        });
+      } else if (field.type === "numberRange") {
+        const gte = filter[`${field.key}__gte`];
+        const lte = filter[`${field.key}__lte`];
+        if (gte === undefined && lte === undefined) continue;
+        const valueStr = gte && lte ? `${gte} – ${lte}` : gte ? `≥ ${gte}` : `≤ ${lte ?? ""}`;
+        result.push({
+          id: `__field__${field.key}`,
+          label: `${field.label}: ${valueStr}`,
+          onRemove: () => onChange(removeKeys(filter, [`${field.key}__gte`, `${field.key}__lte`])),
+        });
+      } else if (field.type === "dateRange") {
+        const from = filter[`${field.key}__from`];
+        const to = filter[`${field.key}__to`];
+        if (from === undefined && to === undefined) continue;
+        result.push({
+          id: `__field__${field.key}`,
+          label: `${field.label}: ${from ?? "…"} – ${to ?? "…"}`,
+          onRemove: () => onChange(removeKeys(filter, [`${field.key}__from`, `${field.key}__to`])),
+        });
+      }
+    }
+
+    return result;
+  }, [filter, fields, query, onChange, onClearQuery]);
+
+  if (!chips.length) return null;
 
   return (
-    <Flex align="center" gap={6} wrap style={{ marginBottom: 12 }}>
+    <Flex align="center" gap={6} wrap style={containerStyle}>
       <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
         Active filters:
       </Text>
@@ -139,7 +101,13 @@ export function ActiveFilterChips({
           {chip.label}
         </Tag>
       ))}
-      <Typography.Link style={{ fontSize: 12 }} onClick={() => onChange(undefined)}>
+      <Typography.Link
+        style={{ fontSize: 12 }}
+        onClick={() => {
+          onChange(undefined);
+          onClearQuery();
+        }}
+      >
         Clear all
       </Typography.Link>
     </Flex>

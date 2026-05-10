@@ -7,7 +7,8 @@ export const paymentOrderApi = {
   list: async (params: {
     page?: number;
     limit?: number;
-    branchId?: string;
+    query?: string;
+    filters?: string;
   }): Promise<PaginatedPaymentOrdersResponse> => {
     const res = await ApiClient.get<ApiResponse<PaginatedPaymentOrdersResponse>>(
       "/payment-orders",

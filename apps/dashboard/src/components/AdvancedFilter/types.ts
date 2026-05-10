@@ -1,65 +1,32 @@
-export interface FilterRule {
-  id: string;
-  field: string;
-  operator: string;
-  value: string;
-}
-
-export interface AdvancedFilter {
-  matchMode: "all" | "any";
-  rules: FilterRule[];
-  dateField?: string;
-  dateFrom?: string;
-  dateTo?: string;
-}
+export type AdvancedFilter = Record<string, string>;
 
 export interface FieldOption {
   label: string;
   value: string;
 }
 
-export type FieldType = "text" | "enum" | "number";
+// ── Filter fields (declarative, one control per field) ────────────────────────
 
-export interface FieldConfig {
+export type FilterFieldType = "select" | "multiSelect" | "dateRange" | "numberRange";
+
+export interface FilterField {
   key: string;
   label: string;
-  type: FieldType;
-  options?: FieldOption[];
-}
-
-// ── Quick filter fields (declarative, one control per field) ──────────────────
-
-export type QuickFilterFieldType =
-  | "search"
-  | "select"
-  | "multiSelect"
-  | "dateRange"
-  | "numberRange";
-
-export interface QuickFilterField {
-  key: string;
-  label: string;
-  type: QuickFilterFieldType;
+  type: FilterFieldType;
   options?: FieldOption[];
   placeholder?: string;
 }
 
-export const TEXT_OPERATORS = [
-  { label: "contains", value: "contains" },
-  { label: "equals", value: "equals" },
-  { label: "starts with", value: "starts_with" },
-] as const;
-
-export const ENUM_OPERATORS = [
-  { label: "is", value: "is" },
-  { label: "is not", value: "is_not" },
-  { label: "is one of", value: "in" },
-] as const;
-
-export const NUMBER_OPERATORS = [
-  { label: "=", value: "eq" },
-  { label: ">", value: "gt" },
-  { label: "<", value: "lt" },
-  { label: "≥", value: "gte" },
-  { label: "≤", value: "lte" },
-] as const;
+export function fieldHasValue(val: unknown, type: FilterFieldType): boolean {
+  if (val === undefined || val === null) return false;
+  if (type === "multiSelect") return (val as string[]).length > 0;
+  if (type === "dateRange") {
+    const v = val as Array<unknown>;
+    return v[0] !== null || v[1] !== null;
+  }
+  if (type === "numberRange") {
+    const v = val as { min: unknown; max: unknown };
+    return v.min !== null || v.max !== null;
+  }
+  return (val as string).length > 0;
+}

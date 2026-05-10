@@ -2,10 +2,9 @@ import { randomUUID } from "node:crypto";
 import type { CarrierKind, CarrierStatus, InsuranceStatus } from "@twy/db";
 import { carrier, db, type OrderDirection } from "@twy/db";
 import type { SQL } from "drizzle-orm";
-import { and, asc, count, desc, eq, ilike, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
-import type { AdvancedFilter, AdvancedFilterRule } from "../shared/advanced-filter-schema.js";
-import { buildAdvancedFilterSql } from "../shared/advanced-filter-sql.js";
+import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
 
 export interface CarrierRecord {
   id: string;
@@ -59,66 +58,16 @@ export interface UpdateCarrierInput {
   status?: string;
 }
 
-const buildCarrierRuleCondition = (rule: AdvancedFilterRule): SQL<unknown> | undefined => {
-  const { field, operator, value } = rule;
-  if (!field || !operator || value === "") return undefined;
-
-  switch (field) {
-    case "carrierName":
-      if (operator === "contains") return ilike(carrier.carrierName, `%${value}%`);
-      if (operator === "equals") return eq(carrier.carrierName, value);
-      if (operator === "starts_with") return ilike(carrier.carrierName, `${value}%`);
-      return undefined;
-    case "mcDotNumber":
-      if (operator === "contains") return ilike(carrier.mcDotNumber, `%${value}%`);
-      if (operator === "equals") return eq(carrier.mcDotNumber, value);
-      if (operator === "starts_with") return ilike(carrier.mcDotNumber, `${value}%`);
-      return undefined;
-    case "equipmentType":
-      if (operator === "contains") return ilike(carrier.equipmentType, `%${value}%`);
-      if (operator === "equals") return eq(carrier.equipmentType, value);
-      if (operator === "starts_with") return ilike(carrier.equipmentType, `${value}%`);
-      return undefined;
-    case "phone":
-      if (operator === "contains") return ilike(carrier.phone, `%${value}%`);
-      if (operator === "equals") return eq(carrier.phone, value);
-      if (operator === "starts_with") return ilike(carrier.phone, `${value}%`);
-      return undefined;
-    case "email":
-      if (operator === "contains") return ilike(carrier.email, `%${value}%`);
-      if (operator === "equals") return eq(carrier.email, value);
-      if (operator === "starts_with") return ilike(carrier.email, `${value}%`);
-      return undefined;
-    case "notes":
-      if (operator === "contains") return ilike(carrier.notes, `%${value}%`);
-      if (operator === "equals") return eq(carrier.notes, value);
-      if (operator === "starts_with") return ilike(carrier.notes, `${value}%`);
-      return undefined;
-    case "status":
-      if (operator === "is") return eq(carrier.status, value as CarrierStatus);
-      if (operator === "is_not") return ne(carrier.status, value as CarrierStatus);
-      return undefined;
-    case "insuranceStatus":
-      if (operator === "is") return eq(carrier.insuranceStatus, value as InsuranceStatus);
-      if (operator === "is_not") return ne(carrier.insuranceStatus, value as InsuranceStatus);
-      return undefined;
-    default:
-      return undefined;
-  }
-};
-
-const carrierDateColumn = (key: string) => {
-  if (key === "updatedAt") return carrier.updatedAt;
-  if (key === "createdAt") return carrier.createdAt;
-  if (key === "insuranceExpiry") return carrier.insuranceExpiry;
-  return undefined;
-};
-
 const buildCarrierAdvancedClause = (
   filter: AdvancedFilter | undefined,
 ): SQL<unknown> | undefined => {
   if (!filter) return undefined;
-  return buildAdvancedFilterSql(filter, buildCarrierRuleCondition, carrierDateColumn);
+  const conds: SQL<unknown>[] = [];
+  if (filter.status) conds.push(eq(carrier.status, filter.status as CarrierStatus));
+  if (filter.insuranceStatus)
+    conds.push(eq(carrier.insuranceStatus, filter.insuranceStatus as InsuranceStatus));
+  if (conds.length === 0) return undefined;
+  return and(...conds);
 };
 
 const sortColumn = (field: ListCarriersInput["sortField"]) => {

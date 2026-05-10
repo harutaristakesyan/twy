@@ -1,99 +1,36 @@
 import type { LoadStatus } from "@twy/db";
 import { load } from "@twy/db";
 import type { SQL } from "drizzle-orm";
-import { eq, gt, gte, ilike, inArray, lt, lte, ne } from "drizzle-orm";
-import type { AdvancedFilter, AdvancedFilterRule } from "./advanced-filter-schema.js";
-import { buildAdvancedFilterSql } from "./advanced-filter-sql.js";
+import { and, eq, inArray } from "drizzle-orm";
+import type { AdvancedFilter } from "./advanced-filter-schema.js";
+import { buildDateRangeCondition } from "./advanced-filter-sql.js";
 
-export function buildLoadRuleCondition(rule: AdvancedFilterRule): SQL<unknown> | undefined {
-  const { field, operator, value } = rule;
-  if (!field || !operator || value === "") return undefined;
+function buildLoadFilterConditions(filter: AdvancedFilter): SQL<unknown>[] {
+  const conds: SQL<unknown>[] = [];
 
-  switch (field) {
-    case "referenceNumber":
-      if (operator === "contains") return ilike(load.referenceNumber, `%${value}%`);
-      if (operator === "equals") return eq(load.referenceNumber, value);
-      if (operator === "starts_with") return ilike(load.referenceNumber, `${value}%`);
-      return undefined;
-    case "customer":
-      if (operator === "contains") return ilike(load.customer, `%${value}%`);
-      if (operator === "equals") return eq(load.customer, value);
-      if (operator === "starts_with") return ilike(load.customer, `${value}%`);
-      return undefined;
-    case "contactName":
-      if (operator === "contains") return ilike(load.contactName, `%${value}%`);
-      if (operator === "equals") return eq(load.contactName, value);
-      if (operator === "starts_with") return ilike(load.contactName, `${value}%`);
-      return undefined;
-    case "carrier":
-      if (operator === "contains") return ilike(load.carrier, `%${value}%`);
-      if (operator === "equals") return eq(load.carrier, value);
-      if (operator === "starts_with") return ilike(load.carrier, `${value}%`);
-      return undefined;
-    case "paymentMethod":
-      if (operator === "contains") return ilike(load.paymentMethod, `%${value}%`);
-      if (operator === "equals") return eq(load.paymentMethod, value);
-      if (operator === "starts_with") return ilike(load.paymentMethod, `${value}%`);
-      return undefined;
-    case "paymentTerms":
-      if (operator === "contains") return ilike(load.paymentTerms, `%${value}%`);
-      if (operator === "equals") return eq(load.paymentTerms, value);
-      if (operator === "starts_with") return ilike(load.paymentTerms, `${value}%`);
-      return undefined;
-    case "loadType":
-      if (operator === "contains") return ilike(load.loadType, `%${value}%`);
-      if (operator === "equals") return eq(load.loadType, value);
-      if (operator === "starts_with") return ilike(load.loadType, `${value}%`);
-      return undefined;
-    case "serviceType":
-      if (operator === "contains") return ilike(load.serviceType, `%${value}%`);
-      if (operator === "equals") return eq(load.serviceType, value);
-      if (operator === "starts_with") return ilike(load.serviceType, `${value}%`);
-      return undefined;
-    case "commodity":
-      if (operator === "contains") return ilike(load.commodity, `%${value}%`);
-      if (operator === "equals") return eq(load.commodity, value);
-      if (operator === "starts_with") return ilike(load.commodity, `${value}%`);
-      return undefined;
-    case "status":
-      if (operator === "is") return eq(load.status, value as LoadStatus);
-      if (operator === "is_not") return ne(load.status, value as LoadStatus);
-      if (operator === "in") {
-        const values = value
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean) as LoadStatus[];
-        return values.length > 0 ? inArray(load.status, values) : undefined;
-      }
-      return undefined;
-    case "carrierRate":
-      if (operator === "eq") return eq(load.carrierRate, value);
-      if (operator === "gt") return gt(load.carrierRate, value);
-      if (operator === "lt") return lt(load.carrierRate, value);
-      if (operator === "gte") return gte(load.carrierRate, value);
-      if (operator === "lte") return lte(load.carrierRate, value);
-      return undefined;
-    case "customerRate":
-      if (operator === "eq") return eq(load.customerRate, value);
-      if (operator === "gt") return gt(load.customerRate, value);
-      if (operator === "lt") return lt(load.customerRate, value);
-      if (operator === "gte") return gte(load.customerRate, value);
-      if (operator === "lte") return lte(load.customerRate, value);
-      return undefined;
-    default:
-      return undefined;
+  if (filter.status) {
+    const values = filter.status
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean) as LoadStatus[];
+    if (values.length === 1) {
+      conds.push(eq(load.status, values[0]));
+    } else if (values.length > 1) {
+      conds.push(inArray(load.status, values));
+    }
   }
-}
 
-export function loadAdvancedDateColumn(dateFieldKey: string) {
-  if (dateFieldKey === "updatedAt") return load.updatedAt;
-  if (dateFieldKey === "createdAt") return load.createdAt;
-  return undefined;
+  const dateCond = buildDateRangeCondition(filter, "createdAt", load.createdAt);
+  if (dateCond) conds.push(dateCond);
+
+  return conds;
 }
 
 export function buildLoadAdvancedFilterClause(
   filter: AdvancedFilter | undefined,
 ): SQL<unknown> | undefined {
   if (!filter) return undefined;
-  return buildAdvancedFilterSql(filter, buildLoadRuleCondition, loadAdvancedDateColumn);
+  const conds = buildLoadFilterConditions(filter);
+  if (conds.length === 0) return undefined;
+  return and(...conds);
 }

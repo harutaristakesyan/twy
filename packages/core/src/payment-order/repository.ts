@@ -9,7 +9,9 @@ import {
   paymentOrder,
   paymentOrderFiles,
 } from "@twy/db";
-import { and, count, eq, inArray } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import { and, count, eq, ilike, inArray } from "drizzle-orm";
+import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
 import type { PaymentOrderInvoice, PaymentOrderResponse } from "./response.js";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -64,7 +66,7 @@ const fetchInvoicesForPaymentOrders = async (
   const map = new Map<string, PaymentOrderInvoice[]>();
   for (const row of rows) {
     if (!map.has(row.paymentOrderId)) map.set(row.paymentOrderId, []);
-    map.get(row.paymentOrderId)!.push({ fileId: row.fileId, fileName: row.fileName });
+    map.get(row.paymentOrderId)?.push({ fileId: row.fileId, fileName: row.fileName });
   }
   return map;
 };
@@ -116,10 +118,18 @@ export const createPaymentOrderForLoad = async (
     .onConflictDoNothing({ target: paymentOrder.loadId });
 };
 
+function buildPaymentOrderFilterConditions(filter: AdvancedFilter): SQL<unknown>[] {
+  const conds: SQL<unknown>[] = [];
+  if (filter.branchId) conds.push(eq(paymentOrder.branchId, filter.branchId));
+  return conds;
+}
+
 export interface ListPaymentOrdersInput {
   page: number;
   limit: number;
   branchId?: string;
+  query?: string;
+  advancedFilter?: AdvancedFilter;
 }
 
 export const listPaymentOrders = async (
@@ -127,7 +137,15 @@ export const listPaymentOrders = async (
 ): Promise<{ paymentOrders: PaymentOrderResponse[]; total: number }> => {
   const offset = input.page * input.limit;
 
-  const whereClause = and(input.branchId ? eq(paymentOrder.branchId, input.branchId) : undefined);
+  const filterConds = input.advancedFilter
+    ? buildPaymentOrderFilterConditions(input.advancedFilter)
+    : [];
+
+  const queryCond = input.query ? ilike(load.referenceNumber, `%${input.query}%`) : undefined;
+
+  const scopeBranchCond = input.branchId ? eq(paymentOrder.branchId, input.branchId) : undefined;
+
+  const whereClause = and(scopeBranchCond, queryCond, ...filterConds);
 
   const [rows, totalRows] = await Promise.all([
     db
