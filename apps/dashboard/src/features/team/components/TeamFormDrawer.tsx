@@ -17,7 +17,7 @@ interface SectionProps {
 
 const Section: React.FC<SectionProps> = ({ title, children }) => (
   <>
-    <Divider style={{ marginTop: 0 }}>
+    <Divider titlePlacement="start" plain style={{ marginTop: 0 }}>
       <Text
         type="secondary"
         style={{

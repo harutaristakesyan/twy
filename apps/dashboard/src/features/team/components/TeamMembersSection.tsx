@@ -183,7 +183,7 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
 
   return (
     <>
-      <Divider style={{ marginTop: 0 }}>
+      <Divider titlePlacement="start" plain style={{ marginTop: 0 }}>
         <Flex align="center" gap={8}>
           <Text
             type="secondary"
