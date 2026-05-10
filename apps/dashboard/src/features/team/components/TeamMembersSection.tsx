@@ -185,17 +185,7 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
     <>
       <Divider titlePlacement="start" plain style={{ marginTop: 0 }}>
         <Flex align="center" gap={8}>
-          <Text
-            type="secondary"
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-            }}
-          >
-            Members
-          </Text>
+          Members
           <Tag>{total}</Tag>
           {!showPicker && (
             <Button size="small" icon={<PlusOutlined />} onClick={handleOpenPicker}>
