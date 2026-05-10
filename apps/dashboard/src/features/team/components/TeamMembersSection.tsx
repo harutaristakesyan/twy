@@ -2,6 +2,7 @@ import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
+  Flex,
   message,
   Popconfirm,
   Select,
@@ -185,7 +186,7 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
       size="small"
       style={{ marginTop: 12 }}
       title={
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Flex align="center" gap={8}>
           <Text
             type="secondary"
             style={{
@@ -198,7 +199,7 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
             Members
           </Text>
           <Tag style={{ fontSize: 10, padding: "0 6px", margin: 0 }}>{total}</Tag>
-        </div>
+        </Flex>
       }
       extra={
         !showPicker && (
@@ -236,9 +237,9 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
               <>
                 {menu}
                 {loadingUnassigned && hasMoreUnassigned && (
-                  <div style={{ textAlign: "center" }}>
-                    <Spin size="small" /> Loading...
-                  </div>
+                  <Flex justify="center">
+                    <Spin size="small" />
+                  </Flex>
                 )}
               </>
             )}

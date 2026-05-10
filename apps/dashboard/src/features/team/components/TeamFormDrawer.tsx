@@ -1,4 +1,15 @@
-import { Button, Card, Divider, Drawer, Form, Input, message, Switch, Typography } from "antd";
+import {
+  Button,
+  Card,
+  Divider,
+  Drawer,
+  Flex,
+  Form,
+  Input,
+  message,
+  Switch,
+  Typography,
+} from "antd";
 import type React from "react";
 import { useCallback, useEffect } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -44,21 +55,19 @@ interface ScopeRowProps {
 }
 
 const ScopeRow: React.FC<ScopeRowProps> = ({ label, description, value, onChange }) => (
-  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-    <div>
-      <Text style={{ fontSize: 13, fontWeight: 500, display: "block", marginBottom: 2 }}>
-        {label}
-      </Text>
+  <Flex justify="space-between" align="flex-start">
+    <Flex vertical gap={2}>
+      <Text style={{ fontSize: 13, fontWeight: 500 }}>{label}</Text>
       <Text type="secondary" style={{ fontSize: 12 }}>
         {description}
       </Text>
-    </div>
+    </Flex>
     <Switch
       checked={value}
       onChange={(checked) => onChange?.(checked)}
-      style={{ flexShrink: 0, marginLeft: 16, marginTop: 2 }}
+      style={{ marginLeft: 16, marginTop: 2 }}
     />
-  </div>
+  </Flex>
 );
 
 interface TeamFormDrawerProps {
@@ -127,75 +136,71 @@ const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, o
   return (
     <Drawer
       title={
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 600 }}>
+        <Flex vertical gap={2}>
+          <Text strong style={{ fontSize: 16 }}>
             {isEdit ? "Edit Team" : "Create Team"}
-          </div>
+          </Text>
           {isEdit && (
-            <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 2 }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
               {team.name} · {team.memberCount} member{team.memberCount !== 1 ? "s" : ""}
             </Text>
           )}
-        </div>
+        </Flex>
       }
       open={open}
       onClose={handleClose}
       size="large"
       destroyOnHidden
       footer={
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <Flex justify="flex-end" gap="small">
           <Button onClick={handleClose}>Cancel</Button>
           <Button type="primary" onClick={() => form.submit()}>
             {isEdit ? "Save Changes" : "Create"}
           </Button>
-        </div>
+        </Flex>
       }
     >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={initialValues}
-        onFinish={handleFinish}
-        style={{ display: "flex", flexDirection: "column", gap: 12 }}
-      >
-        <SectionCard title="Team Info">
-          <Form.Item
-            name="name"
-            label="Name"
-            rules={[
-              { required: true, message: "Name is required" },
-              { max: 100, message: "Name must be at most 100 characters" },
-            ]}
-            style={{ marginBottom: 12 }}
-          >
-            <Input placeholder="Team name" />
-          </Form.Item>
-          <Form.Item name="description" label="Description" style={{ marginBottom: 0 }}>
-            <Input.TextArea placeholder="Description" rows={2} />
-          </Form.Item>
-        </SectionCard>
+      <Form form={form} layout="vertical" initialValues={initialValues} onFinish={handleFinish}>
+        <Flex vertical gap={12}>
+          <SectionCard title="Team Info">
+            <Form.Item
+              name="name"
+              label="Name"
+              rules={[
+                { required: true, message: "Name is required" },
+                { max: 100, message: "Name must be at most 100 characters" },
+              ]}
+              style={{ marginBottom: 12 }}
+            >
+              <Input placeholder="Team name" />
+            </Form.Item>
+            <Form.Item name="description" label="Description" style={{ marginBottom: 0 }}>
+              <Input.TextArea placeholder="Description" rows={2} />
+            </Form.Item>
+          </SectionCard>
 
-        <SectionCard title="Scope">
-          <Form.Item name="branchRestricted" noStyle>
-            <ScopeRow
-              label="Branch-restricted"
-              description="Members can only see loads from their assigned branch"
-            />
-          </Form.Item>
-          <Divider style={{ margin: "10px 0" }} />
-          <Form.Item name="onlyOwnData" noStyle>
-            <ScopeRow
-              label="Own data only"
-              description="Members only see records they created or are assigned to"
-            />
-          </Form.Item>
-        </SectionCard>
+          <SectionCard title="Scope">
+            <Form.Item name="branchRestricted" noStyle>
+              <ScopeRow
+                label="Branch-restricted"
+                description="Members can only see loads from their assigned branch"
+              />
+            </Form.Item>
+            <Divider style={{ margin: "10px 0" }} />
+            <Form.Item name="onlyOwnData" noStyle>
+              <ScopeRow
+                label="Own data only"
+                description="Members only see records they created or are assigned to"
+              />
+            </Form.Item>
+          </SectionCard>
 
-        <SectionCard title="Permissions">
-          <Form.Item name="permissions" noStyle>
-            <PermissionMatrixField />
-          </Form.Item>
-        </SectionCard>
+          <SectionCard title="Permissions">
+            <Form.Item name="permissions" noStyle>
+              <PermissionMatrixField />
+            </Form.Item>
+          </SectionCard>
+        </Flex>
       </Form>
 
       {isEdit && team && <TeamMembersSection teamId={team.id} />}
