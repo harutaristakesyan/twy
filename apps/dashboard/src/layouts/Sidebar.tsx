@@ -11,7 +11,6 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { EventType, useEvent } from "@/libs/EventBus.ts";
 import type { Resource } from "@/utils/permissions";
 
 const { Sider } = Layout;
@@ -143,11 +142,8 @@ const getParentKeys = (pathname: string): string[] => {
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
   const [openKeys, setOpenKeys] = useState<string[]>(() => getParentKeys(location.pathname));
   const { permissions } = useCurrentUser();
-
-  useEvent(EventType.SidebarCollapsed, (payload) => setCollapsed(payload));
 
   useEffect(() => {
     const parents = getParentKeys(location.pathname);
@@ -203,20 +199,10 @@ const Sidebar: React.FC = () => {
   const selectedKey = getSelectedKey();
 
   return (
-    <Sider
-      style={siderStyle}
-      trigger={null}
-      collapsible
-      collapsed={collapsed}
-      theme="light"
-      width={240}
-      breakpoint="md"
-    >
-      {!collapsed && (
-        <Flex justify="center" align="center" style={{ padding: 15 }}>
-          <Title style={{ margin: 0 }}>TWY</Title>
-        </Flex>
-      )}
+    <Sider style={siderStyle} theme="light" width={240}>
+      <Flex justify="center" align="center" style={{ padding: 15 }}>
+        <Title style={{ margin: 0 }}>TWY</Title>
+      </Flex>
 
       <Menu
         mode="inline"

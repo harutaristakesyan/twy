@@ -16,22 +16,12 @@ interface SectionProps {
 }
 
 const Section: React.FC<SectionProps> = ({ title, children }) => (
-  <>
+  <div>
     <Divider titlePlacement="start" plain style={{ marginTop: 0 }}>
-      <Text
-        type="secondary"
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-        }}
-      >
-        {title}
-      </Text>
+      {title}
     </Divider>
     {children}
-  </>
+  </div>
 );
 
 interface ScopeRowProps {
@@ -124,14 +114,11 @@ const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, o
     <Drawer
       title={
         <Flex vertical gap={2}>
-          <Text strong style={{ fontSize: 16 }}>
-            {isEdit ? "Edit Team" : "Create Team"}
+          <Text>
+            {isEdit
+              ? `Edit ${team.name} Team · ${team.memberCount} member${team.memberCount !== 1 ? "s" : ""}`
+              : "Create Team"}
           </Text>
-          {isEdit && (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {team.name} · {team.memberCount} member{team.memberCount !== 1 ? "s" : ""}
-            </Text>
-          )}
         </Flex>
       }
       open={open}
@@ -147,48 +134,52 @@ const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, o
         </Flex>
       }
     >
-      <Form form={form} layout="vertical" initialValues={initialValues} onFinish={handleFinish}>
-        <Section title="Team Info">
-          <Form.Item
-            name="name"
-            label="Name"
-            rules={[
-              { required: true, message: "Name is required" },
-              { max: 100, message: "Name must be at most 100 characters" },
-            ]}
-            style={{ marginBottom: 12 }}
-          >
-            <Input placeholder="Team name" />
-          </Form.Item>
-          <Form.Item name="description" label="Description" style={{ marginBottom: 0 }}>
-            <Input.TextArea placeholder="Description" rows={2} />
-          </Form.Item>
-        </Section>
+      <Flex vertical gap={24}>
+        <Form form={form} layout="vertical" initialValues={initialValues} onFinish={handleFinish}>
+          <Flex vertical gap={24}>
+            <Section title="Team Info">
+              <Form.Item
+                name="name"
+                label="Name"
+                rules={[
+                  { required: true, message: "Name is required" },
+                  { max: 100, message: "Name must be at most 100 characters" },
+                ]}
+                style={{ marginBottom: 12 }}
+              >
+                <Input placeholder="Team name" />
+              </Form.Item>
+              <Form.Item name="description" label="Description" style={{ marginBottom: 0 }}>
+                <Input.TextArea placeholder="Description" rows={2} />
+              </Form.Item>
+            </Section>
 
-        <Section title="Scope">
-          <Form.Item name="branchRestricted" noStyle>
-            <ScopeRow
-              label="Branch-restricted"
-              description="Members can only see loads from their assigned branch"
-            />
-          </Form.Item>
-          <Divider style={{ margin: "10px 0" }} />
-          <Form.Item name="onlyOwnData" noStyle>
-            <ScopeRow
-              label="Own data only"
-              description="Members only see records they created or are assigned to"
-            />
-          </Form.Item>
-        </Section>
+            <Section title="Scope">
+              <Form.Item name="branchRestricted" noStyle>
+                <ScopeRow
+                  label="Branch-restricted"
+                  description="Members can only see loads from their assigned branch"
+                />
+              </Form.Item>
+              <Divider style={{ margin: "10px 0" }} />
+              <Form.Item name="onlyOwnData" noStyle>
+                <ScopeRow
+                  label="Own data only"
+                  description="Members only see records they created or are assigned to"
+                />
+              </Form.Item>
+            </Section>
 
-        <Section title="Permissions">
-          <Form.Item name="permissions" noStyle>
-            <PermissionMatrixField />
-          </Form.Item>
-        </Section>
-      </Form>
+            <Section title="Permissions">
+              <Form.Item name="permissions" noStyle>
+                <PermissionMatrixField />
+              </Form.Item>
+            </Section>
+          </Flex>
+        </Form>
 
-      {isEdit && team && <TeamMembersSection teamId={team.id} />}
+        {isEdit && <TeamMembersSection teamId={team.id} />}
+      </Flex>
     </Drawer>
   );
 };

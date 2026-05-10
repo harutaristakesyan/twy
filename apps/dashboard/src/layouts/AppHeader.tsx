@@ -1,24 +1,15 @@
-import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
-import { Button, Flex, Layout, Typography } from "antd";
+import { Flex, Layout, Typography } from "antd";
 import type React from "react";
-import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import UserDropdown from "@/components/UserDropdown.tsx";
 import { navigationLabelMap } from "@/config/navigationMap.ts";
-import { EventType, emitEvent } from "@/libs/EventBus.ts";
 
 const { Header } = Layout;
 const { Title } = Typography;
 
 const AppHeader: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const label = navigationLabelMap[location.pathname];
-
-  const toggleCollapse = (collapsed: boolean) => {
-    setCollapsed(collapsed);
-    emitEvent(EventType.SidebarCollapsed, collapsed);
-  };
 
   return (
     <Header
@@ -34,11 +25,6 @@ const AppHeader: React.FC = () => {
       }}
     >
       <Flex align="center" gap={20}>
-        <Button
-          type="text"
-          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          onClick={() => toggleCollapse(!collapsed)}
-        />
         <Title level={4} style={{ margin: 0 }}>
           {label}
         </Title>

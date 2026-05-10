@@ -1,5 +1,5 @@
+import type { ApiResponse } from "@/libs/api-types.ts";
 import ApiClient from "./ApiClient.ts";
-import type { ApiResponse } from "./types.ts";
 
 const toProxiedS3Url = (url: string): string => {
   if (!import.meta.env.DEV) {
