@@ -253,23 +253,6 @@ export default function ExternalBillingPage() {
     [expandingBranchId, loadsByBranch],
   );
 
-  const totals = (branches ?? []).reduce(
-    (acc, b) => ({
-      totalBrokerReceivable: acc.totalBrokerReceivable + b.totalBrokerReceivable,
-      totalBrokerReceived: acc.totalBrokerReceived + b.totalBrokerReceived,
-      totalCarrierPayable: acc.totalCarrierPayable + b.totalCarrierPayable,
-      totalCarrierPaid: acc.totalCarrierPaid + b.totalCarrierPaid,
-      owedToBranch: acc.owedToBranch + b.owedToBranch,
-    }),
-    {
-      totalBrokerReceivable: 0,
-      totalBrokerReceived: 0,
-      totalCarrierPayable: 0,
-      totalCarrierPaid: 0,
-      owedToBranch: 0,
-    },
-  );
-
   return (
     <Card>
       <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
@@ -299,30 +282,6 @@ export default function ExternalBillingPage() {
         rowKey="branchId"
         expandable={{ expandedRowRender, onExpand }}
         pagination={false}
-        summary={() => (
-          <Table.Summary.Row>
-            <Table.Summary.Cell index={0} colSpan={2}>
-              <Text strong>Total</Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={2}>
-              <Text strong>{formatCurrency(totals.totalBrokerReceivable)}</Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={3}>
-              <Text strong>{formatCurrency(totals.totalBrokerReceived)}</Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={4}>
-              <Text strong>{formatCurrency(totals.totalCarrierPayable)}</Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={5}>
-              <Text strong>{formatCurrency(totals.totalCarrierPaid)}</Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={6}>
-              <Text strong style={{ color: totals.owedToBranch > 0 ? "#cf1322" : "#389e0d" }}>
-                {formatCurrency(totals.owedToBranch)}
-              </Text>
-            </Table.Summary.Cell>
-          </Table.Summary.Row>
-        )}
       />
     </Card>
   );

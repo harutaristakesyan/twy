@@ -266,15 +266,6 @@ export default function InternalBillingPage() {
     [expandingBranchId, loadsByBranch],
   );
 
-  const totals = (branches ?? []).reduce(
-    (acc, b) => ({
-      totalServiceFee: acc.totalServiceFee + b.totalServiceFee,
-      totalCharges: acc.totalCharges + b.totalCharges,
-      totalProfit: acc.totalProfit + b.totalProfit,
-    }),
-    { totalServiceFee: 0, totalCharges: 0, totalProfit: 0 },
-  );
-
   return (
     <Card>
       <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
@@ -304,25 +295,6 @@ export default function InternalBillingPage() {
         rowKey="branchId"
         expandable={{ expandedRowRender, onExpand }}
         pagination={false}
-        summary={() => (
-          <Table.Summary.Row>
-            <Table.Summary.Cell index={0} colSpan={2}>
-              <Text strong>Total</Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={2}>
-              <Text strong>{formatCurrency(totals.totalServiceFee)}</Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={3}>
-              <Text strong>{formatCurrency(totals.totalCharges)}</Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={4} />
-            <Table.Summary.Cell index={5}>
-              <Text strong style={{ color: totals.totalProfit >= 0 ? "#389e0d" : "#cf1322" }}>
-                {formatCurrency(totals.totalProfit)}
-              </Text>
-            </Table.Summary.Cell>
-          </Table.Summary.Row>
-        )}
       />
     </Card>
   );
