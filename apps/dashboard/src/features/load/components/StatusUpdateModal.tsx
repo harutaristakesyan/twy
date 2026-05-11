@@ -198,9 +198,17 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
               name="comment"
               label={commentFieldLabel}
               preserve={false}
-              rules={[{ required: true, message: `${commentFieldLabel} is required` }]}
+              rules={[
+                { required: true, message: `${commentFieldLabel} is required` },
+                { max: 500, message: "Comment cannot exceed 500 characters" },
+              ]}
             >
-              <Input.TextArea rows={3} placeholder={`Enter ${commentFieldLabel.toLowerCase()}…`} />
+              <Input.TextArea
+                rows={3}
+                placeholder={`Enter ${commentFieldLabel.toLowerCase()}…`}
+                showCount
+                maxLength={500}
+              />
             </Form.Item>
           )}
         </Form>

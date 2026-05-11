@@ -126,7 +126,7 @@ export const ChangeLoadStatusEventSchema = z.object({
     status: loadStatusEnum,
     isChargable: z.boolean().optional().default(false),
     chargeAmount: z.number().nonnegative().nullable().optional(),
-    comment: z.string().trim().min(1).optional(),
+    comment: z.string().trim().min(1).max(500).optional(),
   }),
 });
 
@@ -147,7 +147,11 @@ export const AddLoadCommentEventSchema = z.object({
     loadId: uuidField,
   }),
   body: z.object({
-    body: z.string().trim().min(1, "Comment is required"),
+    body: z
+      .string()
+      .trim()
+      .min(1, "Comment is required")
+      .max(500, "Comment cannot exceed 500 characters"),
   }),
 });
 
