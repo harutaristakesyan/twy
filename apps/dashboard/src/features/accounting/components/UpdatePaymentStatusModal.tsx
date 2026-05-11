@@ -119,6 +119,31 @@ export default function UpdatePaymentStatusModal({
         initialValues={initialValues}
         style={{ marginTop: 16 }}
       >
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item label="Broker Receivable">
+              <InputNumber
+                style={{ width: "100%" }}
+                value={paymentOrder?.brokerReceivable ?? undefined}
+                precision={2}
+                prefix="€"
+                disabled
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="Carrier Payable">
+              <InputNumber
+                style={{ width: "100%" }}
+                value={paymentOrder?.carrierPayable}
+                precision={2}
+                prefix="€"
+                disabled
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
         <Form.Item name="paymentStatus" label="Payment Status" rules={[{ required: true }]}>
           <Select options={STATUS_OPTIONS} disabled={readOnly} />
         </Form.Item>
