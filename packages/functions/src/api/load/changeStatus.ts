@@ -5,6 +5,7 @@ import {
   type ChangeLoadStatusEvent,
   ChangeLoadStatusEventSchema,
   changeLoadStatus as changeLoadStatusRecord,
+  InvalidTransitionError,
   loadAuthContext,
 } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
@@ -20,16 +21,28 @@ const changeLoadStatus = async (
   const { loadId } = event.pathParameters;
   const { status, isChargable = false, chargeAmount = null } = event.body;
 
-  const { updated } = await changeLoadStatusRecord(
-    loadId,
-    status,
-    changedBy,
-    isChargable,
-    chargeAmount ?? null,
-  );
+  try {
+    const { updated } = await changeLoadStatusRecord(
+      loadId,
+      status,
+      changedBy,
+      isChargable,
+      chargeAmount ?? null,
+    );
 
-  if (!updated) {
-    throw new createError.NotFound("Load not found");
+    if (!updated) {
+      throw new createError.NotFound("Load not found");
+    }
+  } catch (err) {
+    if (err instanceof InvalidTransitionError) {
+      throw Object.assign(createError(400, err.message), {
+        code: err.code,
+        from: err.from,
+        to: err.to,
+        allowed: err.allowed,
+      });
+    }
+    throw err;
   }
 
   return {
