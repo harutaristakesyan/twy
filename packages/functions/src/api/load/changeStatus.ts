@@ -7,6 +7,7 @@ import {
   changeLoadStatus as changeLoadStatusRecord,
   InvalidTransitionError,
   loadAuthContext,
+  PaymentOrderRequiredError,
 } from "@twy/core";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
@@ -49,6 +50,9 @@ const changeLoadStatus = async (
         to: err.to,
         allowed: err.allowed,
       });
+    }
+    if (err instanceof PaymentOrderRequiredError) {
+      throw Object.assign(createError(400, err.message), { code: err.code });
     }
     throw err;
   }
