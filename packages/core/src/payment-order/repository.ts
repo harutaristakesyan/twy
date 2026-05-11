@@ -15,6 +15,42 @@ import { and, count, eq, ilike, inArray } from "drizzle-orm";
 import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
 import type { PaymentOrderInvoice, PaymentOrderResponse } from "./response.js";
 
+export class PaymentOrderRequiredError extends Error {
+  readonly code = "payment_order_required";
+  constructor() {
+    super("A payment order is required before delivering a load");
+    this.name = "PaymentOrderRequiredError";
+  }
+}
+
+export const computePaymentOrderFinancials = (financials: {
+  customerRate: string | null;
+  carrierRate: string;
+  serviceFee: string | null;
+}): {
+  brokerReceivable: string | null;
+  carrierPayable: string;
+  incomePercentage: string | null;
+  profit: string | null;
+} => {
+  const customerRate = financials.customerRate != null ? Number(financials.customerRate) : null;
+  const carrierRate = Number(financials.carrierRate);
+  const serviceFee = financials.serviceFee != null ? Number(financials.serviceFee) : 30;
+  const income = customerRate != null ? customerRate - carrierRate : null;
+  const incomePercentage =
+    income != null && customerRate != null && customerRate !== 0
+      ? (income / customerRate) * 100
+      : null;
+  const profit = income != null ? income + serviceFee : null;
+
+  return {
+    brokerReceivable: customerRate != null ? customerRate.toString() : null,
+    carrierPayable: carrierRate.toString(),
+    incomePercentage: incomePercentage != null ? incomePercentage.toFixed(2) : null,
+    profit: profit != null ? profit.toString() : null,
+  };
+};
+
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const numericToNumber = (value: string | null | undefined): number | null =>

@@ -1,6 +1,10 @@
 import type { LoadStatus } from "@twy/db";
 import { describe, expect, it, vi } from "vitest";
-import { getPaymentStatusForLoadStatus, syncPaymentOrderFromLoad } from "./repository.js";
+import {
+  computePaymentOrderFinancials,
+  getPaymentStatusForLoadStatus,
+  syncPaymentOrderFromLoad,
+} from "./repository.js";
 
 // ---------------------------------------------------------------------------
 // Pure mapping tests
@@ -100,5 +104,57 @@ describe("syncPaymentOrderFromLoad — overwrites any existing PO status", () =>
     const { tx, mocks } = makeTx("po-99");
     await syncPaymentOrderFromLoad(tx, "load-1", "Hold");
     expect(mocks.setMock).toHaveBeenCalledWith(expect.objectContaining({ paymentStatus: "Hold" }));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computePaymentOrderFinancials — pure formula tests
+// ---------------------------------------------------------------------------
+
+describe("computePaymentOrderFinancials", () => {
+  it("computes all fields when customerRate is set", () => {
+    const result = computePaymentOrderFinancials({
+      customerRate: "1000",
+      carrierRate: "800",
+      serviceFee: "30",
+    });
+    expect(result).toEqual({
+      brokerReceivable: "1000",
+      carrierPayable: "800",
+      incomePercentage: "20.00",
+      profit: "230",
+    });
+  });
+
+  it("returns null brokerReceivable and derived fields when customerRate is null", () => {
+    const result = computePaymentOrderFinancials({
+      customerRate: null,
+      carrierRate: "800",
+      serviceFee: "30",
+    });
+    expect(result).toEqual({
+      brokerReceivable: null,
+      carrierPayable: "800",
+      incomePercentage: null,
+      profit: null,
+    });
+  });
+
+  it("defaults serviceFee to 30 when null", () => {
+    const result = computePaymentOrderFinancials({
+      customerRate: "1000",
+      carrierRate: "800",
+      serviceFee: null,
+    });
+    expect(result.profit).toBe("230");
+  });
+
+  it("returns null incomePercentage when customerRate is 0", () => {
+    const result = computePaymentOrderFinancials({
+      customerRate: "0",
+      carrierRate: "800",
+      serviceFee: "30",
+    });
+    expect(result.incomePercentage).toBeNull();
   });
 });
