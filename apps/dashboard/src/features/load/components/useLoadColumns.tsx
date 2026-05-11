@@ -1,5 +1,6 @@
 import {
   CheckCircleOutlined,
+  CommentOutlined,
   DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
@@ -56,7 +57,7 @@ export function useLoadColumns(
   runDelete: (id: string) => void,
 ): ColumnsType<Load> {
   const { message, modal } = App.useApp();
-  const { openLoadEdit, openStatusUpdate } = useLoadModal();
+  const { openLoadEdit, openStatusUpdate, openComments } = useLoadModal();
   const { permissions } = useCurrentUser();
   const canEdit = permissions.loads.edit;
 
@@ -227,16 +228,23 @@ export function useLoadColumns(
         );
       },
     },
-    ...(canEdit
-      ? [
+    {
+      title: "Actions",
+      key: "actions",
+      fixed: "end" as const,
+      width: 100,
+      align: "center" as const,
+      render: (_: unknown, record: Load) => {
+        const items: MenuProps["items"] = [
           {
-            title: "Actions",
-            key: "actions",
-            fixed: "end" as const,
-            width: 100,
-            align: "center" as const,
-            render: (_: unknown, record: Load) => {
-              const items: MenuProps["items"] = [
+            key: "comments",
+            icon: <CommentOutlined />,
+            label: "View Comments",
+            onClick: () => openComments({ load: record }),
+          },
+          ...(canEdit
+            ? [
+                { type: "divider" as const },
                 {
                   key: "approve",
                   icon: <CheckCircleOutlined />,
@@ -249,7 +257,7 @@ export function useLoadColumns(
                   label: "Edit",
                   onClick: () => openLoadEdit({ load: record }, () => refresh()),
                 },
-                { type: "divider" },
+                { type: "divider" as const },
                 {
                   key: "delete",
                   icon: <DeleteOutlined />,
@@ -265,15 +273,15 @@ export function useLoadColumns(
                       onOk: () => runDelete(record.id),
                     }),
                 },
-              ];
-              return (
-                <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
-                  <Button type="text" icon={<MoreOutlined />} />
-                </Dropdown>
-              );
-            },
-          },
-        ]
-      : []),
+              ]
+            : []),
+        ];
+        return (
+          <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
+            <Button type="text" icon={<MoreOutlined />} />
+          </Dropdown>
+        );
+      },
+    },
   ];
 }

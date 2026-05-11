@@ -5,6 +5,7 @@ import {
   Checkbox,
   Descriptions,
   Form,
+  Input,
   InputNumber,
   Modal,
   Select,
@@ -23,6 +24,13 @@ interface StatusUpdateModalProps {
   onSuccess: () => void;
 }
 
+interface StatusFormValues {
+  status: LoadStatus;
+  isChargable: boolean;
+  chargeAmount: number | null;
+  comment: string | undefined;
+}
+
 const statusColors: Record<LoadStatus, string> = {
   Pending: "gold",
   Approved: "green",
@@ -31,18 +39,31 @@ const statusColors: Record<LoadStatus, string> = {
   Hold: "orange",
 };
 
+const commentLabel = (status: LoadStatus | undefined, chargable: boolean): string | null => {
+  if (status === "Hold") return "Hold Reason";
+  if (status === "Declined") return "Decline Reason";
+  if (status === "Approved" && chargable) return "Charge Reason";
+  return null;
+};
+
 const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModalProps) => {
   const { message: antMessage } = App.useApp();
-  const [form] = Form.useForm();
-  const selectedStatus = Form.useWatch("status", form) as LoadStatus | undefined;
-  const isChargable = Form.useWatch("isChargable", form) as boolean | undefined;
+  const [form] = Form.useForm<StatusFormValues>();
+  const selectedStatus = Form.useWatch("status", form);
+  const isChargable = Form.useWatch("isChargable", form);
 
   const { loading, run: submit } = useRequest(
-    async (status: LoadStatus, chargable: boolean, chargeAmount: number | null) => {
+    async (
+      status: LoadStatus,
+      chargable: boolean,
+      chargeAmount: number | null,
+      comment: string | undefined,
+    ) => {
       await loadApi.changeStatus(load?.id ?? "", {
         status,
         isChargable: chargable,
         chargeAmount: chargable ? chargeAmount : null,
+        comment,
       });
     },
     {
@@ -55,9 +76,16 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
     },
   );
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!load) return;
-    const { status, isChargable: chargable, chargeAmount } = form.getFieldsValue();
+    let values: StatusFormValues;
+    try {
+      values = await form.validateFields();
+    } catch (e) {
+      if ((e as { errorFields?: unknown }).errorFields) return;
+      throw e;
+    }
+    const { status, isChargable: chargable, chargeAmount, comment } = values;
     if (
       status === load.status &&
       (chargable ?? false) === (load.isChargable ?? false) &&
@@ -66,11 +94,7 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
       onCancel();
       return;
     }
-    if (chargable && (chargeAmount === null || chargeAmount <= 0)) {
-      antMessage.error("Please enter a valid charge amount");
-      return;
-    }
-    submit(status, chargable ?? false, chargeAmount ?? null);
+    submit(status, chargable ?? false, chargeAmount ?? null, comment?.trim() || undefined);
   };
 
   if (!load) return null;
@@ -78,6 +102,7 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
   const allowedStatuses = getAllowedTransitions(load.status);
   const statusOptions = allowedStatuses.map((s) => ({ value: s, label: s }));
   const isTerminal = allowedStatuses.length === 0;
+  const commentFieldLabel = commentLabel(selectedStatus, isChargable ?? false);
 
   return (
     <Modal
@@ -125,6 +150,7 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
                 if (v !== "Approved") {
                   form.setFieldsValue({ isChargable: false, chargeAmount: null });
                 }
+                form.resetFields(["comment"]);
               }}
             />
           </Form.Item>
@@ -134,7 +160,8 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
               <Form.Item name="isChargable" valuePropName="checked">
                 <Checkbox
                   onChange={(e) => {
-                    if (!e.target.checked) form.setFieldValue("chargeAmount", null);
+                    if (!e.target.checked) form.resetFields(["chargeAmount"]);
+                    form.resetFields(["comment"]);
                   }}
                 >
                   Is Chargable
@@ -142,9 +169,20 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
               </Form.Item>
 
               {isChargable && (
-                <Form.Item name="chargeAmount" label="Charge Amount">
+                <Form.Item
+                  name="chargeAmount"
+                  label="Charge Amount"
+                  rules={[
+                    {
+                      validator: (_, v) =>
+                        typeof v === "number" && v > 0
+                          ? Promise.resolve()
+                          : Promise.reject(new Error("Charge Amount must be greater than 0")),
+                    },
+                  ]}
+                >
                   <InputNumber
-                    min={0}
+                    min={0.01}
                     precision={2}
                     prefix="€"
                     style={{ width: "100%" }}
@@ -153,6 +191,17 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
                 </Form.Item>
               )}
             </>
+          )}
+
+          {commentFieldLabel !== null && (
+            <Form.Item
+              name="comment"
+              label={commentFieldLabel}
+              preserve={false}
+              rules={[{ required: true, message: `${commentFieldLabel} is required` }]}
+            >
+              <Input.TextArea rows={3} placeholder={`Enter ${commentFieldLabel.toLowerCase()}…`} />
+            </Form.Item>
           )}
         </Form>
       )}

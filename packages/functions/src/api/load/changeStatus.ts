@@ -11,6 +11,9 @@ import {
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
 
+const requiresComment = (status: string, isChargable: boolean): boolean =>
+  status === "Hold" || status === "Declined" || (status === "Approved" && isChargable);
+
 const changeLoadStatus = async (
   event: ChangeLoadStatusEvent,
 ): Promise<ChangeLoadStatusResponse> => {
@@ -19,7 +22,11 @@ const changeLoadStatus = async (
   assertPermission(ctx, "loads", "edit");
 
   const { loadId } = event.pathParameters;
-  const { status, isChargable = false, chargeAmount = null } = event.body;
+  const { status, isChargable = false, chargeAmount = null, comment } = event.body;
+
+  if (requiresComment(status, isChargable) && !comment) {
+    throw new createError.BadRequest("A comment is required for this status change");
+  }
 
   try {
     const { updated } = await changeLoadStatusRecord(
@@ -28,6 +35,7 @@ const changeLoadStatus = async (
       changedBy,
       isChargable,
       chargeAmount ?? null,
+      comment,
     );
 
     if (!updated) {

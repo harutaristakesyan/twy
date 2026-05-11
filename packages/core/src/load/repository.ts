@@ -3,19 +3,23 @@ import {
   branch,
   db,
   file,
+  type LoadCommentType,
   type LoadRow,
   type LoadStatus,
   type LoadStopKind,
   load,
+  loadComment,
   loadFiles,
   loadStop,
   type OrderDirection,
+  users,
 } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import createError from "http-errors";
 import { createPaymentOrderForLoad } from "../payment-order/repository.js";
 import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
 import { buildLoadAdvancedFilterClause } from "../shared/load-advanced-filter.js";
+import type { LoadCommentResponse } from "./response.js";
 import { assertValidTransition } from "./status-machine.js";
 
 const DEFAULT_LOAD_STATUS: LoadStatus = "Pending";
@@ -554,12 +558,20 @@ export const updateLoad = async (loadId: string, input: UpdateLoad): Promise<boo
     return true;
   });
 
+const commentTypeForStatus = (status: LoadStatus, isChargable: boolean): LoadCommentType => {
+  if (status === "Hold") return "hold_reason";
+  if (status === "Declined") return "decline_reason";
+  if (status === "Approved" && isChargable) return "charge_reason";
+  return "general";
+};
+
 export const changeLoadStatus = async (
   loadId: string,
   status: LoadStatus,
   changedBy: string,
   isChargable: boolean,
   chargeAmount: number | null,
+  comment?: string,
 ): Promise<{ updated: boolean }> =>
   db.transaction(async (tx) => {
     const [existing] = await tx
@@ -592,6 +604,16 @@ export const changeLoadStatus = async (
       await createPaymentOrderForLoad(tx, loadId, changedBy);
     }
 
+    if (comment) {
+      await tx.insert(loadComment).values({
+        id: randomUUID(),
+        loadId,
+        userId: changedBy,
+        commentType: commentTypeForStatus(status, isChargable),
+        body: comment,
+      });
+    }
+
     return { updated: result.length > 0 };
   });
 
@@ -612,3 +634,47 @@ export const deleteLoad = async (loadId: string): Promise<boolean> =>
 
     return true;
   });
+
+export const listLoadComments = async (loadId: string): Promise<LoadCommentResponse[]> => {
+  const rows = await db
+    .select({
+      id: loadComment.id,
+      loadId: loadComment.loadId,
+      userId: loadComment.userId,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      commentType: loadComment.commentType,
+      body: loadComment.body,
+      createdAt: loadComment.createdAt,
+    })
+    .from(loadComment)
+    .leftJoin(users, eq(users.id, loadComment.userId))
+    .where(eq(loadComment.loadId, loadId))
+    .orderBy(asc(loadComment.createdAt))
+    .limit(200);
+
+  return rows.map((row) => {
+    const first = row.firstName ?? null;
+    const last = row.lastName ?? null;
+    const authorName = first && last ? `${first} ${last}` : (first ?? last ?? null);
+    return {
+      id: row.id,
+      loadId: row.loadId,
+      userId: row.userId,
+      authorName,
+      commentType: row.commentType as LoadCommentType,
+      body: row.body,
+      createdAt: row.createdAt.toISOString(),
+    };
+  });
+};
+
+export const addLoadComment = async (
+  loadId: string,
+  userId: string,
+  body: string,
+): Promise<string> => {
+  const id = randomUUID();
+  await db.insert(loadComment).values({ id, loadId, userId, commentType: "general", body });
+  return id;
+};

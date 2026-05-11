@@ -75,6 +75,13 @@
     {
       "idx": 10,
       "version": "7",
+      "when": 1778508899601,
+      "tag": "0010_perfect_mentor",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
       "when": 1747052400000,
       "tag": "0010_rename_load_statuses",
       "breakpoints": true
