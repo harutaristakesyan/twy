@@ -178,6 +178,18 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
+  {
+    handler: "packages/functions/src/api/load/listComments.handler",
+    routeKey: "GET /api/loads/{loadId}/comments",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/load/addComment.handler",
+    routeKey: "POST /api/loads/{loadId}/comments",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
   // auth/me — permissions snapshot for the current user
   {
     handler: "packages/functions/src/api/auth/me.handler",

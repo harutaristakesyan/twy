@@ -78,6 +78,27 @@ export interface ChangeLoadStatusDto {
   status: LoadStatus;
   isChargable: boolean;
   chargeAmount?: number | null;
+  comment?: string;
+}
+
+export type LoadCommentType = "charge_reason" | "hold_reason" | "decline_reason" | "general";
+
+export interface LoadComment {
+  id: string;
+  loadId: string;
+  userId: string | null;
+  authorName: string | null;
+  commentType: LoadCommentType;
+  body: string;
+  createdAt: string;
+}
+
+export interface LoadCommentsResponse {
+  comments: LoadComment[];
+}
+
+export interface AddCommentDto {
+  body: string;
 }
 
 export interface GetLoadsParams {

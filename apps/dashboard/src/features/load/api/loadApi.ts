@@ -1,9 +1,11 @@
 import ApiClient from "@/libs/ApiClient.ts";
 import type { ApiResponse } from "@/libs/api-types.ts";
 import type {
+  AddCommentDto,
   ChangeLoadStatusDto,
   CreateLoadDto,
   GetLoadsParams,
+  LoadCommentsResponse,
   PaginatedLoadsResponse,
   UpdateLoadDto,
 } from "../types/load";
@@ -47,6 +49,24 @@ export const loadApi = {
 
   delete: async (id: string): Promise<MessageResponse> => {
     const response = await ApiClient.delete<ApiResponse<MessageResponse>>(`/loads/${id}`);
+    return response.data;
+  },
+
+  listComments: async (loadId: string): Promise<LoadCommentsResponse> => {
+    const response = await ApiClient.get<ApiResponse<LoadCommentsResponse>>(
+      `/loads/${loadId}/comments`,
+    );
+    return response.data;
+  },
+
+  addComment: async (
+    loadId: string,
+    data: AddCommentDto,
+  ): Promise<{ message: string; commentId: string }> => {
+    const response = await ApiClient.post<ApiResponse<{ message: string; commentId: string }>>(
+      `/loads/${loadId}/comments`,
+      data,
+    );
     return response.data;
   },
 };
