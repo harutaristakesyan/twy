@@ -1,4 +1,4 @@
-import type { LoadStatus } from "@twy/db";
+import type { LoadCommentType, LoadStatus } from "@twy/db";
 import type { MessageResponse } from "../shared/response.js";
 
 export interface LoadLocationResponse {
@@ -62,4 +62,22 @@ export interface LoadFileResponse {
 export interface LoadListResponse {
   loads: LoadResponse[];
   total: number;
+}
+
+export interface LoadCommentResponse {
+  id: string;
+  loadId: string;
+  userId: string | null;
+  authorName: string | null;
+  commentType: LoadCommentType;
+  body: string;
+  createdAt: string;
+}
+
+export interface LoadCommentsResponse {
+  comments: LoadCommentResponse[];
+}
+
+export interface AddLoadCommentResponse extends MessageResponse {
+  commentId: string;
 }

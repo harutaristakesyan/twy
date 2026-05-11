@@ -126,10 +126,32 @@ export const ChangeLoadStatusEventSchema = z.object({
     status: loadStatusEnum,
     isChargable: z.boolean().optional().default(false),
     chargeAmount: z.number().nonnegative().nullable().optional(),
+    comment: z.string().trim().min(1).optional(),
   }),
 });
 
 export type ChangeLoadStatusEvent = z.infer<typeof ChangeLoadStatusEventSchema>;
+
+export const ListLoadCommentsEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    loadId: uuidField,
+  }),
+});
+
+export type ListLoadCommentsEvent = z.infer<typeof ListLoadCommentsEventSchema>;
+
+export const AddLoadCommentEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    loadId: uuidField,
+  }),
+  body: z.object({
+    body: z.string().trim().min(1, "Comment is required"),
+  }),
+});
+
+export type AddLoadCommentEvent = z.infer<typeof AddLoadCommentEventSchema>;
 
 export const DeleteLoadEventSchema = z.object({
   requestContext: AuthContext,
