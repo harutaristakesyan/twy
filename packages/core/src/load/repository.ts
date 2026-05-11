@@ -650,7 +650,7 @@ export const listLoadComments = async (loadId: string): Promise<LoadCommentRespo
     .from(loadComment)
     .leftJoin(users, eq(users.id, loadComment.userId))
     .where(eq(loadComment.loadId, loadId))
-    .orderBy(asc(loadComment.createdAt))
+    .orderBy(desc(loadComment.createdAt))
     .limit(200);
 
   return rows.map((row) => {
