@@ -12,12 +12,14 @@ import {
   loadFiles,
   loadStop,
   type OrderDirection,
+  paymentOrder,
   users,
 } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import createError from "http-errors";
 import {
   createPaymentOrderForLoad,
+  PaymentOrderRequiredError,
   syncPaymentOrderFromLoad,
 } from "../payment-order/repository.js";
 import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
@@ -578,13 +580,27 @@ export const changeLoadStatus = async (
 ): Promise<{ updated: boolean }> =>
   db.transaction(async (tx) => {
     const [existing] = await tx
-      .select({ id: load.id, status: load.status })
+      .select({
+        id: load.id,
+        status: load.status,
+        customerRate: load.customerRate,
+        carrierRate: load.carrierRate,
+        serviceFee: load.serviceFee,
+      })
       .from(load)
       .where(eq(load.id, loadId));
 
     if (!existing) return { updated: false };
 
     assertValidTransition(existing.status, status);
+
+    if (status === "Delivered") {
+      const [existingPO] = await tx
+        .select({ id: paymentOrder.id })
+        .from(paymentOrder)
+        .where(eq(paymentOrder.loadId, loadId));
+      if (!existingPO) throw new PaymentOrderRequiredError();
+    }
 
     const result = await tx
       .update(load)
@@ -607,7 +623,11 @@ export const changeLoadStatus = async (
       await createPaymentOrderForLoad(tx, loadId, changedBy);
     }
 
-    await syncPaymentOrderFromLoad(tx, loadId, status);
+    await syncPaymentOrderFromLoad(tx, loadId, status, {
+      customerRate: existing.customerRate,
+      carrierRate: existing.carrierRate,
+      serviceFee: existing.serviceFee,
+    });
 
     if (comment) {
       await tx.insert(loadComment).values({
