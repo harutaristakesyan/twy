@@ -34,6 +34,7 @@ export * from "./file/index.js";
 export * from "./load/index.js";
 export * from "./outside-broker/index.js";
 export * from "./payment-order/index.js";
+export * from "./permissions/index.js";
 export * from "./shared/index.js";
 export * from "./team/index.js";
 export * from "./user/index.js";
