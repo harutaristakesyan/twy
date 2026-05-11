@@ -13,7 +13,7 @@ import { carrier } from "./carrier.js";
 import { file } from "./file.js";
 import { users } from "./users.js";
 
-export const loadStatusValues = ["Pending", "Approved", "ApprovedPaid", "Denied", "Hold"] as const;
+export const loadStatusValues = ["Pending", "Approved", "Delivered", "Declined", "Hold"] as const;
 export type LoadStatus = (typeof loadStatusValues)[number];
 
 export const load = pgTable("load", {

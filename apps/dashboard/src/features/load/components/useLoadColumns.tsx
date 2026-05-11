@@ -21,8 +21,8 @@ type LoadListRow = Load & { pickup?: Location; dropoff?: Location };
 const statusColorMap: Record<string, string> = {
   Pending: "gold",
   Approved: "green",
-  ApprovedPaid: "cyan",
-  Denied: "red",
+  Delivered: "cyan",
+  Declined: "red",
   Hold: "orange",
 };
 

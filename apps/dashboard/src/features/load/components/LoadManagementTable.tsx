@@ -22,8 +22,8 @@ const FILTER_FIELDS: FilterField[] = [
     options: [
       { label: "Pending", value: "Pending" },
       { label: "Approved", value: "Approved" },
-      { label: "Approved Paid", value: "ApprovedPaid" },
-      { label: "Denied", value: "Denied" },
+      { label: "Delivered", value: "Delivered" },
+      { label: "Declined", value: "Declined" },
       { label: "Hold", value: "Hold" },
     ],
   },

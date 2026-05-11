@@ -25,8 +25,8 @@ interface StatusUpdateModalProps {
 const statusColors: Record<LoadStatus, string> = {
   Pending: "gold",
   Approved: "green",
-  ApprovedPaid: "cyan",
-  Denied: "red",
+  Delivered: "cyan",
+  Declined: "red",
   Hold: "orange",
 };
 
@@ -34,7 +34,7 @@ const STATUS_OPTIONS = [
   { value: "Pending", label: "Pending" },
   { value: "Approved", label: "Approved" },
   { value: "Hold", label: "Hold" },
-  { value: "Denied", label: "Denied" },
+  { value: "Declined", label: "Declined" },
 ];
 
 const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModalProps) => {
