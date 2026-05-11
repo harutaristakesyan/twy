@@ -169,6 +169,11 @@ export const syncPaymentOrderFromLoad = async (
   tx: Tx,
   loadId: string,
   toStatus: LoadStatus,
+  financials?: {
+    customerRate: string | null;
+    carrierRate: string;
+    serviceFee: string | null;
+  },
 ): Promise<void> => {
   const targetStatus = getPaymentStatusForLoadStatus(toStatus);
   if (!targetStatus) return;
@@ -180,10 +185,20 @@ export const syncPaymentOrderFromLoad = async (
 
   if (!existing) return;
 
-  await tx
-    .update(paymentOrder)
-    .set({ paymentStatus: targetStatus, updatedAt: new Date() })
-    .where(eq(paymentOrder.id, existing.id));
+  const setPayload: Partial<typeof paymentOrder.$inferInsert> = {
+    paymentStatus: targetStatus,
+    updatedAt: new Date(),
+  };
+
+  if (financials && (toStatus === "Approved" || toStatus === "Delivered")) {
+    const computed = computePaymentOrderFinancials(financials);
+    setPayload.brokerReceivable = computed.brokerReceivable;
+    setPayload.carrierPayable = computed.carrierPayable;
+    setPayload.incomePercentage = computed.incomePercentage;
+    setPayload.profit = computed.profit;
+  }
+
+  await tx.update(paymentOrder).set(setPayload).where(eq(paymentOrder.id, existing.id));
 };
 
 function buildPaymentOrderFilterConditions(filter: AdvancedFilter): SQL<unknown>[] {

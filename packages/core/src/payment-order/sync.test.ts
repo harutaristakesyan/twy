@@ -158,3 +158,61 @@ describe("computePaymentOrderFinancials", () => {
     expect(result.incomePercentage).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// syncPaymentOrderFromLoad — financials sync on Approved / Delivered
+// ---------------------------------------------------------------------------
+
+const sampleFinancials = { customerRate: "1000", carrierRate: "800", serviceFee: "30" };
+
+describe("syncPaymentOrderFromLoad — financials synced for Approved and Delivered", () => {
+  it.each([
+    ["Approved", "Pending"],
+    ["Delivered", "ReadyForInvoice"],
+  ] as const)("syncs paymentStatus + brokerReceivable + carrierPayable for Load → %s", async (toStatus, expectedPaymentStatus) => {
+    const { tx, mocks } = makeTx("po-1");
+    await syncPaymentOrderFromLoad(tx, "load-1", toStatus, sampleFinancials);
+    expect(mocks.setMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentStatus: expectedPaymentStatus,
+        brokerReceivable: "1000",
+        carrierPayable: "800",
+      }),
+    );
+  });
+
+  it("does NOT include financials for Hold even when financials param provided", async () => {
+    const { tx, mocks } = makeTx("po-1");
+    await syncPaymentOrderFromLoad(tx, "load-1", "Hold", sampleFinancials);
+    const setArg = mocks.setMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(setArg).not.toHaveProperty("brokerReceivable");
+    expect(setArg).not.toHaveProperty("carrierPayable");
+  });
+
+  it("does NOT include financials for Declined even when financials param provided", async () => {
+    const { tx, mocks } = makeTx("po-1");
+    await syncPaymentOrderFromLoad(tx, "load-1", "Declined", sampleFinancials);
+    const setArg = mocks.setMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(setArg).not.toHaveProperty("brokerReceivable");
+    expect(setArg).not.toHaveProperty("carrierPayable");
+  });
+
+  it("syncs null brokerReceivable when customerRate is null", async () => {
+    const { tx, mocks } = makeTx("po-1");
+    await syncPaymentOrderFromLoad(tx, "load-1", "Approved", {
+      customerRate: null,
+      carrierRate: "800",
+      serviceFee: "30",
+    });
+    expect(mocks.setMock).toHaveBeenCalledWith(
+      expect.objectContaining({ brokerReceivable: null, carrierPayable: "800" }),
+    );
+  });
+
+  it("does not include financials when financials param omitted (backward compat)", async () => {
+    const { tx, mocks } = makeTx("po-1");
+    await syncPaymentOrderFromLoad(tx, "load-1", "Approved");
+    const setArg = mocks.setMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(setArg).not.toHaveProperty("brokerReceivable");
+  });
+});
