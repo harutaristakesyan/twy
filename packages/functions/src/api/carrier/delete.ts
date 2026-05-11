@@ -21,7 +21,7 @@ const deleteCarrierHandler = async (event: DeleteCarrierEvent): Promise<MessageR
   if (existing === null) {
     throw new createError.NotFound("Carrier not found");
   }
-  assertPermission(ctx, carrierResource(existing.kind), "edit");
+  assertPermission(ctx, carrierResource(existing.kind), "delete");
 
   await deleteCarrier(carrierId);
   return { message: "Carrier deleted successfully" };

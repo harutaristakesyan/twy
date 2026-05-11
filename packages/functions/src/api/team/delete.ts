@@ -12,7 +12,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 const deleteTeam = async (event: DeleteTeamEvent): Promise<MessageResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "teams", "edit");
+  assertPermission(ctx, "teams", "delete");
 
   const { teamId } = event.pathParameters;
   await deleteTeamRecord(teamId);

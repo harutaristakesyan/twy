@@ -1,7 +1,7 @@
 import { middyfy } from "@shared/index";
 import type { ChangeLoadStatusResponse } from "@twy/core";
 import {
-  assertPermission,
+  assertTransition,
   type ChangeLoadStatusEvent,
   ChangeLoadStatusEventSchema,
   changeLoadStatus as changeLoadStatusRecord,
@@ -20,10 +20,11 @@ const changeLoadStatus = async (
 ): Promise<ChangeLoadStatusResponse> => {
   const changedBy = event.requestContext.authUser.userId;
   const ctx = await loadAuthContext(changedBy);
-  assertPermission(ctx, "loads", "edit");
 
   const { loadId } = event.pathParameters;
   const { status, isChargable = false, chargeAmount = null, comment } = event.body;
+
+  assertTransition(ctx, "loads", status);
 
   if (requiresComment(status, isChargable) && !comment) {
     throw new createError.BadRequest("A comment is required for this status change");

@@ -13,7 +13,7 @@ import createError from "http-errors";
 const deleteBranch = async (event: DeleteBranchEvent): Promise<MessageResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "branches", "edit");
+  assertPermission(ctx, "branches", "delete");
 
   const { branchId } = event.pathParameters;
 

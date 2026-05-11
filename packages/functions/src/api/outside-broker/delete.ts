@@ -13,7 +13,7 @@ import createError from "http-errors";
 const deleteBroker = async (event: DeleteBrokerEvent): Promise<MessageResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "brokers", "edit");
+  assertPermission(ctx, "brokers", "delete");
 
   const { brokerId } = event.pathParameters;
 

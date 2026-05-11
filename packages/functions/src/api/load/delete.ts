@@ -13,7 +13,7 @@ import createError from "http-errors";
 const deleteLoad = async (event: DeleteLoadEvent): Promise<MessageResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "loads", "edit");
+  assertPermission(ctx, "loads", "delete");
 
   const { loadId } = event.pathParameters;
 

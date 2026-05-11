@@ -22,7 +22,7 @@ const cognitoClient = new CognitoIdentityProviderClient({});
 const deleteUser = async (event: DeleteUserEvent): Promise<MessageResponse> => {
   const { userId: adminId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(adminId);
-  assertPermission(ctx, "users", "edit");
+  assertPermission(ctx, "users", "delete");
 
   const { userId } = event.pathParameters;
 
