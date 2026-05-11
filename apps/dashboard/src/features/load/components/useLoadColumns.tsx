@@ -248,7 +248,7 @@ export function useLoadColumns(
                 {
                   key: "approve",
                   icon: <CheckCircleOutlined />,
-                  label: "Approve",
+                  label: "Change Status",
                   onClick: () => openStatusUpdate({ load: record }, () => refresh()),
                 },
                 {

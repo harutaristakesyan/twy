@@ -1,4 +1,6 @@
 import type { LoadStatus } from "@twy/db";
+import { hasPermission } from "../shared/permissions.js";
+import type { UserPermissionsContext } from "../team/repository.js";
 
 type Transition = [from: LoadStatus, to: LoadStatus];
 
@@ -38,3 +40,9 @@ export const assertValidTransition = (from: LoadStatus, to: LoadStatus): void =>
     throw new InvalidTransitionError(from, to, getAllowedTransitions(from));
   }
 };
+
+export const getAllowedAndPermittedTransitions = (
+  ctx: UserPermissionsContext,
+  from: LoadStatus,
+): LoadStatus[] =>
+  getAllowedTransitions(from).filter((to) => hasPermission(ctx, "loads", `transition:${to}`));
