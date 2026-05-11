@@ -85,6 +85,20 @@
       "when": 1747052400000,
       "tag": "0010_rename_load_statuses",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1778520751374,
+      "tag": "0012_concerned_marten_broadcloak",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1778520779845,
+      "tag": "0013_seed_transition_permissions",
+      "breakpoints": true
     }
   ]
 }
