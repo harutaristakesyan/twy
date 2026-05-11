@@ -30,7 +30,7 @@ export const assertPermission = (
 ): void => {
   if (!hasPermission(ctx, entity, action)) {
     const err = createError(403, "Permission denied") as unknown as NodeJS.ErrnoException & {
-      permissionMissing: unknown;
+      permissionMissing: { entity: string; action: string };
     };
     err.permissionMissing = { entity, action };
     throw err;
