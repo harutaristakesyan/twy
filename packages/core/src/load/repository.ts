@@ -16,7 +16,10 @@ import {
 } from "@twy/db";
 import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import createError from "http-errors";
-import { createPaymentOrderForLoad } from "../payment-order/repository.js";
+import {
+  createPaymentOrderForLoad,
+  syncPaymentOrderFromLoad,
+} from "../payment-order/repository.js";
 import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
 import { buildLoadAdvancedFilterClause } from "../shared/load-advanced-filter.js";
 import type { LoadCommentResponse } from "./response.js";
@@ -603,6 +606,8 @@ export const changeLoadStatus = async (
     if (status === "Approved") {
       await createPaymentOrderForLoad(tx, loadId, changedBy);
     }
+
+    await syncPaymentOrderFromLoad(tx, loadId, status);
 
     if (comment) {
       await tx.insert(loadComment).values({

@@ -4,17 +4,21 @@ import type { PaymentStatus } from "../types/paymentOrder";
 const STATUS_COLOR: Record<PaymentStatus, string> = {
   Pending: "default",
   Approved: "blue",
-  ApprovedPaid: "green",
-  DeclinedHold: "red",
+  Paid: "green",
   PartialPaid: "orange",
+  Hold: "gold",
+  Declined: "red",
+  ReadyForInvoice: "cyan",
 };
 
 export const STATUS_LABEL: Record<PaymentStatus, string> = {
   Pending: "Pending",
   Approved: "Approved",
   PartialPaid: "Partial Paid",
-  ApprovedPaid: "Approved & Paid",
-  DeclinedHold: "Declined / Hold",
+  Paid: "Paid",
+  Hold: "Hold",
+  Declined: "Declined",
+  ReadyForInvoice: "Ready for Invoice",
 };
 
 interface PaymentStatusTagProps {

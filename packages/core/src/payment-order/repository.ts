@@ -4,6 +4,7 @@ import {
   carrier,
   db,
   file,
+  type LoadStatus,
   load,
   type PaymentStatus,
   paymentOrder,
@@ -116,6 +117,37 @@ export const createPaymentOrderForLoad = async (
       createdBy: userId,
     })
     .onConflictDoNothing({ target: paymentOrder.loadId });
+};
+
+const LOAD_STATUS_TO_PAYMENT_STATUS: Partial<Record<LoadStatus, PaymentStatus>> = {
+  Approved: "Pending",
+  Hold: "Hold",
+  Declined: "Declined",
+  Delivered: "ReadyForInvoice",
+};
+
+export const getPaymentStatusForLoadStatus = (loadStatus: LoadStatus): PaymentStatus | null =>
+  LOAD_STATUS_TO_PAYMENT_STATUS[loadStatus] ?? null;
+
+export const syncPaymentOrderFromLoad = async (
+  tx: Tx,
+  loadId: string,
+  toStatus: LoadStatus,
+): Promise<void> => {
+  const targetStatus = getPaymentStatusForLoadStatus(toStatus);
+  if (!targetStatus) return;
+
+  const [existing] = await tx
+    .select({ id: paymentOrder.id })
+    .from(paymentOrder)
+    .where(eq(paymentOrder.loadId, loadId));
+
+  if (!existing) return;
+
+  await tx
+    .update(paymentOrder)
+    .set({ paymentStatus: targetStatus, updatedAt: new Date() })
+    .where(eq(paymentOrder.id, existing.id));
 };
 
 function buildPaymentOrderFilterConditions(filter: AdvancedFilter): SQL<unknown>[] {

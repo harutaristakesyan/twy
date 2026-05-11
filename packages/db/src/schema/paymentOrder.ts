@@ -17,9 +17,11 @@ import { users } from "./users.js";
 export const paymentStatusValues = [
   "Pending",
   "Approved",
-  "ApprovedPaid",
-  "DeclinedHold",
+  "Paid",
   "PartialPaid",
+  "Hold",
+  "Declined",
+  "ReadyForInvoice",
 ] as const;
 export type PaymentStatus = (typeof paymentStatusValues)[number];
 

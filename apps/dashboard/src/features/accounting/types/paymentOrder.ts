@@ -1,9 +1,11 @@
 export type PaymentStatus =
   | "Pending"
   | "Approved"
-  | "ApprovedPaid"
-  | "DeclinedHold"
-  | "PartialPaid";
+  | "Paid"
+  | "PartialPaid"
+  | "Hold"
+  | "Declined"
+  | "ReadyForInvoice";
 
 export interface PaymentOrderInvoice {
   fileId: string;
