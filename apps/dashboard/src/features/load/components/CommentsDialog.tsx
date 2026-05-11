@@ -174,7 +174,9 @@ const CommentsDialog = ({ open, loadId, referenceNumber, onCancel }: CommentsDia
     setAddingComment(false);
   };
 
-  const comments = data?.comments ?? [];
+  const comments = (data?.comments ?? [])
+    .slice()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <Modal
