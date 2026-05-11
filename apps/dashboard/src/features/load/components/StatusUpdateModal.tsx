@@ -13,6 +13,7 @@ import {
 } from "antd";
 import { loadApi } from "@/features/load/api/loadApi";
 import type { Load, LoadStatus } from "@/features/load/types/load";
+import { getAllowedTransitions } from "@/features/load/utils/statusMachine";
 import { getErrorMessage } from "@/utils/errorUtils";
 
 interface StatusUpdateModalProps {
@@ -29,13 +30,6 @@ const statusColors: Record<LoadStatus, string> = {
   Declined: "red",
   Hold: "orange",
 };
-
-const STATUS_OPTIONS = [
-  { value: "Pending", label: "Pending" },
-  { value: "Approved", label: "Approved" },
-  { value: "Hold", label: "Hold" },
-  { value: "Declined", label: "Declined" },
-];
 
 const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModalProps) => {
   const { message: antMessage } = App.useApp();
@@ -81,6 +75,10 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
 
   if (!load) return null;
 
+  const allowedStatuses = getAllowedTransitions(load.status);
+  const statusOptions = allowedStatuses.map((s) => ({ value: s, label: s }));
+  const isTerminal = allowedStatuses.length === 0;
+
   return (
     <Modal
       title="Update Status Approval"
@@ -90,9 +88,11 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
       footer={
         <Space>
           <Button onClick={onCancel}>Cancel</Button>
-          <Button type="primary" onClick={handleSubmit} loading={loading}>
-            Update Status
-          </Button>
+          {!isTerminal && (
+            <Button type="primary" onClick={handleSubmit} loading={loading}>
+              Update Status
+            </Button>
+          )}
         </Space>
       }
       width={500}
@@ -104,52 +104,58 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
         </Descriptions.Item>
       </Descriptions>
 
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{
-          status: load.status,
-          isChargable: load.isChargable ?? false,
-          chargeAmount: load.chargeAmount ?? null,
-        }}
-      >
-        <Form.Item name="status" label="New Status">
-          <Select
-            options={STATUS_OPTIONS}
-            onChange={(v) => {
-              if (v !== "Approved") {
-                form.setFieldsValue({ isChargable: false, chargeAmount: null });
-              }
-            }}
-          />
-        </Form.Item>
+      {isTerminal ? (
+        <p style={{ color: "var(--ant-color-text-secondary)" }}>
+          This load is in a terminal state and cannot be transitioned further.
+        </p>
+      ) : (
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{
+            status: load.status,
+            isChargable: load.isChargable ?? false,
+            chargeAmount: load.chargeAmount ?? null,
+          }}
+        >
+          <Form.Item name="status" label="New Status">
+            <Select
+              options={statusOptions}
+              onChange={(v) => {
+                if (v !== "Approved") {
+                  form.setFieldsValue({ isChargable: false, chargeAmount: null });
+                }
+              }}
+            />
+          </Form.Item>
 
-        {selectedStatus === "Approved" && (
-          <>
-            <Form.Item name="isChargable" valuePropName="checked">
-              <Checkbox
-                onChange={(e) => {
-                  if (!e.target.checked) form.setFieldValue("chargeAmount", null);
-                }}
-              >
-                Is Chargable
-              </Checkbox>
-            </Form.Item>
-
-            {isChargable && (
-              <Form.Item name="chargeAmount" label="Charge Amount">
-                <InputNumber
-                  min={0}
-                  precision={2}
-                  prefix="€"
-                  style={{ width: "100%" }}
-                  placeholder="Enter charge amount"
-                />
+          {selectedStatus === "Approved" && (
+            <>
+              <Form.Item name="isChargable" valuePropName="checked">
+                <Checkbox
+                  onChange={(e) => {
+                    if (!e.target.checked) form.setFieldValue("chargeAmount", null);
+                  }}
+                >
+                  Is Chargable
+                </Checkbox>
               </Form.Item>
-            )}
-          </>
-        )}
-      </Form>
+
+              {isChargable && (
+                <Form.Item name="chargeAmount" label="Charge Amount">
+                  <InputNumber
+                    min={0}
+                    precision={2}
+                    prefix="€"
+                    style={{ width: "100%" }}
+                    placeholder="Enter charge amount"
+                  />
+                </Form.Item>
+              )}
+            </>
+          )}
+        </Form>
+      )}
     </Modal>
   );
 };
