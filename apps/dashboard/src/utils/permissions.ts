@@ -12,18 +12,18 @@ export const RESOURCES = [
   "external_billing",
   "internal_billing",
 ] as const;
-export const ACTIONS = ["add", "view", "edit"] as const;
+export const ACTIONS = ["add", "view", "edit", "delete"] as const;
 export const RESOURCE_ACTIONS: Record<Resource, readonly Action[]> = {
-  branches: ["add", "view", "edit"],
-  brokers: ["add", "view", "edit"],
+  branches: ["add", "view", "edit", "delete"],
+  brokers: ["add", "view", "edit", "delete"],
   brokers_requests: ["view", "edit"],
-  carriers_twy: ["add", "view", "edit"],
-  carriers_outside: ["add", "view", "edit"],
+  carriers_twy: ["add", "view", "edit", "delete"],
+  carriers_outside: ["add", "view", "edit", "delete"],
   carriers_requests: ["view", "edit"],
-  teams: ["add", "view", "edit"],
-  users: ["add", "view", "edit"],
-  loads: ["add", "view", "edit"],
-  payment_orders: ["view", "edit"],
+  teams: ["add", "view", "edit", "delete"],
+  users: ["add", "view", "edit", "delete"],
+  loads: ["add", "view", "edit", "delete"],
+  payment_orders: ["view", "edit", "delete"],
   external_billing: ["view"],
   internal_billing: ["view"],
 };
@@ -40,14 +40,14 @@ export interface AuthMe {
 export function emptyPermissionsMap(): PermissionsMap {
   const map = {} as PermissionsMap;
   for (const resource of RESOURCES) {
-    map[resource] = { add: false, view: false, edit: false };
+    map[resource] = { add: false, view: false, edit: false, delete: false };
   }
   return map;
 }
 
 /** Merge API/cached permissions into a full map so new resources never read as undefined. */
 export function normalizePermissionsMap(
-  input: Partial<Record<Resource, Partial<Record<Action, boolean>>>> | null | undefined,
+  input: Partial<Record<Resource, Partial<Record<string, boolean>>>> | null | undefined,
 ): PermissionsMap {
   const base = emptyPermissionsMap();
   if (!input) {
@@ -61,6 +61,12 @@ export function normalizePermissionsMap(
     for (const a of ACTIONS) {
       if (typeof row[a] === "boolean") {
         base[r][a] = row[a];
+      }
+    }
+    // Copy through transition:* keys not in the static ACTIONS list
+    for (const [key, val] of Object.entries(row)) {
+      if (key.startsWith("transition:") && typeof val === "boolean") {
+        (base[r] as Record<string, boolean>)[key] = val;
       }
     }
   }
