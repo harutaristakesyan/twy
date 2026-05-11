@@ -180,6 +180,62 @@ Add to the existing test file (or a new `changeStatus.test.ts`):
 
 ---
 
+## Section 5: UI — Modal Display
+
+### 5a — Fix `PaymentStatus` frontend type (pre-condition)
+
+`apps/dashboard/src/features/accounting/types/paymentOrder.ts` is currently missing statuses added in TWY-14. Update to match backend:
+
+```ts
+export type PaymentStatus =
+  | "Pending"
+  | "Approved"
+  | "Paid"
+  | "PartialPaid"
+  | "Hold"
+  | "Declined"
+  | "ReadyForInvoice";
+```
+
+### 5b — Add Broker Receivable + Carrier Payable to `UpdatePaymentStatusModal`
+
+File: `apps/dashboard/src/features/accounting/components/UpdatePaymentStatusModal.tsx`
+
+Both fields are **always read-only** (in both `edit` and `view` mode) because values are controlled by the system via Load transitions — not entered manually by the user.
+
+Display them as a row above the existing payment fields, using `disabled` `InputNumber`:
+
+```tsx
+<Row gutter={16}>
+  <Col span={12}>
+    <Form.Item label="Broker Receivable">
+      <InputNumber
+        style={{ width: "100%" }}
+        value={paymentOrder?.brokerReceivable ?? undefined}
+        precision={2}
+        prefix="€"
+        disabled
+      />
+    </Form.Item>
+  </Col>
+  <Col span={12}>
+    <Form.Item label="Carrier Payable">
+      <InputNumber
+        style={{ width: "100%" }}
+        value={paymentOrder?.carrierPayable}
+        precision={2}
+        prefix="€"
+        disabled
+      />
+    </Form.Item>
+  </Col>
+</Row>
+```
+
+These are **not** `Form.Item` with a `name` — they are display-only and never submitted. Use uncontrolled `value` props directly from `paymentOrder`. If `brokerReceivable` is null, show the field empty (`undefined`).
+
+---
+
 ## Out of Scope
 
 - Audit log (tracked in TWY-19)
