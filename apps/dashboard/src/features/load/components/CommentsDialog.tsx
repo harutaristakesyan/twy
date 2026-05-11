@@ -279,7 +279,7 @@ const CommentsDialog = ({ open, loadId, referenceNumber, onCancel }: CommentsDia
                     { required: true, message: "Please enter a comment" },
                     { max: 500, message: "Comment cannot exceed 500 characters" },
                   ]}
-                  style={{ marginBottom: token.marginSM }}
+                  style={{ marginBottom: 0 }}
                 >
                   <Input.TextArea
                     rows={4}
@@ -290,7 +290,7 @@ const CommentsDialog = ({ open, loadId, referenceNumber, onCancel }: CommentsDia
                     style={{ resize: "none" }}
                   />
                 </Form.Item>
-                <Flex justify="flex-end" gap={8}>
+                <Flex justify="flex-end" gap={8} style={{ marginTop: token.marginMD }}>
                   <Button onClick={handleCancelAdd} disabled={submitting}>
                     Cancel
                   </Button>
@@ -300,7 +300,7 @@ const CommentsDialog = ({ open, loadId, referenceNumber, onCancel }: CommentsDia
                     onClick={handleSubmit}
                     loading={submitting}
                   >
-                    Post comment
+                    Add
                   </Button>
                 </Flex>
               </Form>
