@@ -1,11 +1,12 @@
 import { useDebounceFn, useInfiniteScroll } from "ahooks";
 import { Select, Spin } from "antd";
 import { useRef, useState } from "react";
+import { SelectOption } from "@/components/SelectOption";
 import { createPopupScrollHandler } from "@/utils/selectUtils";
-import { getTeams } from "../api/teamApi";
-import type { Team } from "../types/team";
+import { getBranches } from "../api/branchApi";
+import type { Branch } from "../types/branch";
 
-interface TeamSelectProps {
+interface BranchSelectProps {
   value?: string | null;
   onChange?: (value: string | null) => void;
   placeholder?: string;
@@ -14,10 +15,10 @@ interface TeamSelectProps {
   initialOption?: { value: string; label: string };
 }
 
-const TeamSelect: React.FC<TeamSelectProps> = ({
+const BranchSelect: React.FC<BranchSelectProps> = ({
   value,
   onChange,
-  placeholder = "Search and select team",
+  placeholder = "Search and select branch",
   allowClear = true,
   disabled,
   initialOption,
@@ -30,12 +31,12 @@ const TeamSelect: React.FC<TeamSelectProps> = ({
     async (currentData) => {
       const limit = 20;
       const nextPage = Math.floor((currentData?.list?.length ?? 0) / limit);
-      const response = await getTeams({
+      const response = await getBranches({
         page: nextPage,
-        limit: 20,
+        limit,
         query: queryRef.current || undefined,
       });
-      return { list: response.teams as Team[], total: response.total };
+      return { list: response.branches as Branch[], total: response.total };
     },
     {
       reloadDeps: [query],
@@ -47,10 +48,10 @@ const TeamSelect: React.FC<TeamSelectProps> = ({
 
   const handlePopupScroll = createPopupScrollHandler(loadMore);
 
-  const fetched = data?.list?.map((t) => ({ value: t.id, label: t.name })) ?? [];
+  const fetched = data?.list?.map((b) => ({ value: b.id, label: b.name, owner: b.owner })) ?? [];
   const options =
     initialOption && !fetched.find((o) => o.value === initialOption.value)
-      ? [initialOption, ...fetched]
+      ? [{ ...initialOption, owner: null }, ...fetched]
       : fetched;
 
   return (
@@ -63,10 +64,20 @@ const TeamSelect: React.FC<TeamSelectProps> = ({
       showSearch={{ filterOption: false, onSearch }}
       onPopupScroll={handlePopupScroll}
       loading={loading}
-      notFoundContent={loading ? <Spin size="small" /> : "No teams found"}
+      notFoundContent={loading ? <Spin size="small" /> : "No branches found"}
       options={options}
+      optionRender={(option) => (
+        <SelectOption
+          label={option.label}
+          description={
+            option.data.owner
+              ? `Owner: ${option.data.owner.firstName} ${option.data.owner.lastName}`
+              : undefined
+          }
+        />
+      )}
     />
   );
 };
 
-export default TeamSelect;
+export default BranchSelect;

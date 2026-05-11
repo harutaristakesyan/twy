@@ -1,6 +1,6 @@
-import { Button, Checkbox, Col, Form, Input, InputNumber, Modal, message, Row, Space } from "antd";
+import { useRequest } from "ahooks";
+import { App, Button, Checkbox, Col, Form, Input, InputNumber, Modal, Row, Space } from "antd";
 import type React from "react";
-import { useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { submitBrokerRequest } from "../api/brokerRequestApi";
 import type { SubmitBrokerRequestBody } from "../types/brokerRequest";
@@ -21,6 +21,8 @@ type CreateFormValues = {
   email?: string;
   address?: string;
   notes?: string;
+  creditLimitUnlimited: boolean;
+  creditLimit: number | null;
 };
 
 const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
@@ -28,66 +30,55 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
   onCancel,
   onSuccess,
 }) => {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [creditLimitUnlimited, setCreditLimitUnlimited] = useState(true);
-  const [creditLimit, setCreditLimit] = useState<number | null>(null);
+  const { message } = App.useApp();
+  const [form] = Form.useForm<CreateFormValues>();
+  const creditLimitUnlimited = Form.useWatch("creditLimitUnlimited", form) ?? true;
 
-  const handleSubmit = async (values: CreateFormValues) => {
-    if (!creditLimitUnlimited && (creditLimit === null || creditLimit <= 0)) {
+  const { loading, run: submit } = useRequest(
+    async (payload: SubmitBrokerRequestBody) => submitBrokerRequest(payload),
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("Broker request submitted for review");
+        onSuccess();
+      },
+      onError: (error) => message.error(getErrorMessage(error)),
+    },
+  );
+
+  const handleFinish = (values: CreateFormValues) => {
+    if (!values.creditLimitUnlimited && (values.creditLimit === null || values.creditLimit <= 0)) {
       message.error("Please enter a valid credit limit amount");
       return;
     }
-    setLoading(true);
-    try {
-      const payload: SubmitBrokerRequestBody = {
-        brokerName: values.brokerName,
-        mcNumber: values.mcNumber,
-        contactName: values.contactName,
-        phone: values.phone,
-        email: values.email,
-        address: values.address,
-        notes: values.notes,
-        creditLimitUnlimited,
-        creditLimit: creditLimitUnlimited ? null : creditLimit,
-      };
-
-      await submitBrokerRequest(payload);
-      message.success("Broker request submitted for review");
-      form.resetFields();
-      onSuccess();
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-
-      if (errorMessage.includes("duplicate") || errorMessage.includes("unique constraint")) {
-        message.error(
-          `MC Number "${values.mcNumber}" already exists. Please use a different MC number.`,
-        );
-      } else {
-        message.error(errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    form.resetFields();
-    setCreditLimitUnlimited(true);
-    setCreditLimit(null);
-    onCancel();
+    submit({
+      brokerName: values.brokerName,
+      mcNumber: values.mcNumber,
+      contactName: values.contactName,
+      phone: values.phone,
+      email: values.email,
+      address: values.address,
+      notes: values.notes,
+      creditLimitUnlimited: values.creditLimitUnlimited,
+      creditLimit: values.creditLimitUnlimited ? null : values.creditLimit,
+    });
   };
 
   return (
     <Modal
       title="Request outside broker"
       open={open}
-      onCancel={handleCancel}
+      onCancel={onCancel}
       footer={null}
       width={600}
-      forceRender
+      destroyOnHidden
     >
-      <Form form={form} layout="vertical" onFinish={handleSubmit} id="outsideBrokerCreateForm">
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleFinish}
+        initialValues={{ creditLimitUnlimited: true, creditLimit: null }}
+      >
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -142,25 +133,19 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
         </Form.Item>
 
         <Form.Item label="Credit Limit">
-          <Checkbox
-            checked={creditLimitUnlimited}
-            onChange={(e) => {
-              setCreditLimitUnlimited(e.target.checked);
-              if (e.target.checked) setCreditLimit(null);
-            }}
-          >
-            Unlimited
-          </Checkbox>
+          <Form.Item name="creditLimitUnlimited" valuePropName="checked" noStyle>
+            <Checkbox>Unlimited</Checkbox>
+          </Form.Item>
           {!creditLimitUnlimited && (
-            <InputNumber
-              value={creditLimit}
-              onChange={setCreditLimit}
-              min={0.01}
-              precision={2}
-              prefix="€"
-              style={{ width: "100%", marginTop: 8 }}
-              placeholder="Enter credit limit"
-            />
+            <Form.Item name="creditLimit" noStyle>
+              <InputNumber
+                min={0.01}
+                precision={2}
+                prefix="€"
+                style={{ width: "100%", marginTop: 8 }}
+                placeholder="Enter credit limit"
+              />
+            </Form.Item>
           )}
         </Form.Item>
 
@@ -170,7 +155,7 @@ const OutsideBrokerCreateModal: React.FC<OutsideBrokerCreateModalProps> = ({
 
         <Form.Item>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Button onClick={onCancel}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
               Submit request
             </Button>

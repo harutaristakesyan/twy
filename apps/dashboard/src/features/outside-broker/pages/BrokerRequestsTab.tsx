@@ -1,6 +1,7 @@
 import { CheckOutlined, CloseOutlined, EyeOutlined } from "@ant-design/icons";
-import { useAntdTable } from "ahooks";
+import { useAntdTable, useRequest } from "ahooks";
 import {
+  App,
   Button,
   Card,
   Descriptions,
@@ -8,14 +9,13 @@ import {
   Empty,
   Flex,
   Input,
-  message,
   Table,
   Tag,
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -26,6 +26,7 @@ import {
   listBrokerRequests,
   rejectBrokerRequest,
 } from "../api/brokerRequestApi";
+import { useBrokerRequestDrawer } from "../hooks/useBrokerRequestDrawer";
 import type { BrokerRequest } from "../types/brokerRequest";
 
 const { Title, Text } = Typography;
@@ -57,6 +58,7 @@ const statusColors: Record<string, string> = {
 };
 
 const BrokerRequestsTab: React.FC = () => {
+  const { message } = App.useApp();
   const { permissions } = useCurrentUser();
   const canView = canViewBrokerRequests(permissions);
   const canReview = canEditBrokerRequests(permissions);
@@ -64,10 +66,16 @@ const BrokerRequestsTab: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
   const [activeQuery, setActiveQuery] = useState("");
 
-  const [viewRecord, setViewRecord] = useState<BrokerRequest | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [showRejectInput, setShowRejectInput] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
+  const {
+    record,
+    open,
+    showRejectInput,
+    rejectReason,
+    openView,
+    closeDrawer,
+    setShowRejectInput,
+    setRejectReason,
+  } = useBrokerRequestDrawer();
 
   const { tableProps, refresh } = useAntdTable(
     async ({ current, pageSize, sorter }) => {
@@ -85,59 +93,36 @@ const BrokerRequestsTab: React.FC = () => {
     { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 10 },
   );
 
-  const handleFilterApply = useCallback(
-    (filter: AdvancedFilter | undefined, query: string | undefined) => {
-      setActiveFilter(filter);
-      setActiveQuery(query ?? "");
+  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
+    setActiveFilter(filter);
+    setActiveQuery(query ?? "");
+  };
+
+  const { loading: approving, run: approve } = useRequest(
+    (id: string) => approveBrokerRequest(id),
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("Request approved; broker is now active");
+        closeDrawer();
+        refresh();
+      },
+      onError: (e) => message.error(getErrorMessage(e)),
     },
-    [],
   );
 
-  const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [rejecting, setRejecting] = useState(false);
-
-  const openView = (record: BrokerRequest) => {
-    setViewRecord(record);
-    setShowRejectInput(false);
-    setRejectReason("");
-    setDrawerOpen(true);
-  };
-
-  const closeDrawer = () => {
-    setDrawerOpen(false);
-    setViewRecord(null);
-    setShowRejectInput(false);
-    setRejectReason("");
-  };
-
-  const handleApprove = async (id: string) => {
-    setApprovingId(id);
-    try {
-      await approveBrokerRequest(id);
-      message.success("Request approved; broker is now active");
-      closeDrawer();
-      refresh();
-    } catch (e) {
-      message.error(getErrorMessage(e));
-    } finally {
-      setApprovingId(null);
-    }
-  };
-
-  const handleRejectConfirm = async () => {
-    if (!viewRecord) return;
-    setRejecting(true);
-    try {
-      await rejectBrokerRequest(viewRecord.id, { rejectionReason: rejectReason || undefined });
-      message.success("Request rejected");
-      closeDrawer();
-      refresh();
-    } catch (e) {
-      message.error(getErrorMessage(e));
-    } finally {
-      setRejecting(false);
-    }
-  };
+  const { loading: rejecting, run: reject } = useRequest(
+    (id: string, reason?: string) => rejectBrokerRequest(id, { rejectionReason: reason }),
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("Request rejected");
+        closeDrawer();
+        refresh();
+      },
+      onError: (e) => message.error(getErrorMessage(e)),
+    },
+  );
 
   const columns: ColumnsType<BrokerRequest> = [
     { title: "Broker name", dataIndex: "brokerName", key: "brokerName", sorter: true },
@@ -176,18 +161,16 @@ const BrokerRequestsTab: React.FC = () => {
       key: "actions",
       width: 90,
       fixed: "right",
-      render: (_, record) =>
+      render: (_, row) =>
         canView ? (
-          <Button size="small" icon={<EyeOutlined />} onClick={() => openView(record)}>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => openView(row)}>
             View
           </Button>
         ) : null,
     },
   ];
 
-  const drawerTitle = viewRecord
-    ? `${viewRecord.brokerName} — ${viewRecord.mcNumber}`
-    : "Broker request";
+  const drawerTitle = record ? `${record.brokerName} — ${record.mcNumber}` : "Broker request";
 
   return (
     <div>
@@ -223,11 +206,11 @@ const BrokerRequestsTab: React.FC = () => {
 
       <Drawer
         title={drawerTitle}
-        open={drawerOpen}
+        open={open}
         onClose={closeDrawer}
         size="large"
         footer={
-          viewRecord?.status === "pending" && canReview ? (
+          record?.status === "pending" && canReview ? (
             showRejectInput ? (
               <Flex vertical gap="small">
                 <Input.TextArea
@@ -239,7 +222,11 @@ const BrokerRequestsTab: React.FC = () => {
                 />
                 <Flex gap="small" justify="flex-end">
                   <Button onClick={() => setShowRejectInput(false)}>Cancel</Button>
-                  <Button danger loading={rejecting} onClick={() => void handleRejectConfirm()}>
+                  <Button
+                    danger
+                    loading={rejecting}
+                    onClick={() => reject(record.id, rejectReason || undefined)}
+                  >
                     Confirm reject
                   </Button>
                 </Flex>
@@ -252,8 +239,8 @@ const BrokerRequestsTab: React.FC = () => {
                 <Button
                   type="primary"
                   icon={<CheckOutlined />}
-                  loading={approvingId === viewRecord.id}
-                  onClick={() => void handleApprove(viewRecord.id)}
+                  loading={approving}
+                  onClick={() => approve(record.id)}
                 >
                   Approve
                 </Button>
@@ -262,63 +249,63 @@ const BrokerRequestsTab: React.FC = () => {
           ) : null
         }
       >
-        {viewRecord && (
+        {record && (
           <Flex vertical gap="large">
             <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="Broker name">{viewRecord.brokerName}</Descriptions.Item>
+              <Descriptions.Item label="Broker name">{record.brokerName}</Descriptions.Item>
               <Descriptions.Item label="MC number">
-                <Text code>{viewRecord.mcNumber}</Text>
+                <Text code>{record.mcNumber}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="Contact name">
-                {viewRecord.contactName ?? <Text type="secondary">—</Text>}
+                {record.contactName ?? <Text type="secondary">—</Text>}
               </Descriptions.Item>
               <Descriptions.Item label="Phone">
-                {viewRecord.phone ?? <Text type="secondary">—</Text>}
+                {record.phone ?? <Text type="secondary">—</Text>}
               </Descriptions.Item>
               <Descriptions.Item label="Email">
-                {viewRecord.email ?? <Text type="secondary">—</Text>}
+                {record.email ?? <Text type="secondary">—</Text>}
               </Descriptions.Item>
               <Descriptions.Item label="Address">
-                {viewRecord.address ?? <Text type="secondary">—</Text>}
+                {record.address ?? <Text type="secondary">—</Text>}
               </Descriptions.Item>
               <Descriptions.Item label="Credit limit">
-                {viewRecord.creditLimitUnlimited ? (
+                {record.creditLimitUnlimited ? (
                   <Tag color="blue">Unlimited</Tag>
-                ) : viewRecord.creditLimit !== null ? (
+                ) : record.creditLimit !== null ? (
                   new Intl.NumberFormat(undefined, { style: "currency", currency: "EUR" }).format(
-                    viewRecord.creditLimit,
+                    record.creditLimit,
                   )
                 ) : (
                   <Text type="secondary">—</Text>
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="Notes">
-                {viewRecord.notes ?? <Text type="secondary">—</Text>}
+                {record.notes ?? <Text type="secondary">—</Text>}
               </Descriptions.Item>
               <Descriptions.Item label="Status">
-                <Tag color={statusColors[viewRecord.status] ?? "default"}>{viewRecord.status}</Tag>
+                <Tag color={statusColors[record.status] ?? "default"}>{record.status}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Submitted">
-                {new Date(viewRecord.createdAt).toLocaleString()}
-                {viewRecord.submittedByName && (
-                  <Text type="secondary"> by {viewRecord.submittedByName}</Text>
+                {new Date(record.createdAt).toLocaleString()}
+                {record.submittedByName && (
+                  <Text type="secondary"> by {record.submittedByName}</Text>
                 )}
               </Descriptions.Item>
             </Descriptions>
 
-            {(viewRecord.status === "approved" || viewRecord.status === "rejected") &&
-              viewRecord.reviewedAt && (
+            {(record.status === "approved" || record.status === "rejected") &&
+              record.reviewedAt && (
                 <Card size="small">
                   <Flex vertical gap={4}>
                     <Text strong>
-                      {viewRecord.status === "approved" ? "Approved" : "Rejected"}
-                      {viewRecord.reviewedByName && <Text> by {viewRecord.reviewedByName}</Text>}
+                      {record.status === "approved" ? "Approved" : "Rejected"}
+                      {record.reviewedByName && <Text> by {record.reviewedByName}</Text>}
                     </Text>
-                    <Text type="secondary">{new Date(viewRecord.reviewedAt).toLocaleString()}</Text>
-                    {viewRecord.status === "rejected" && viewRecord.rejectionReason && (
+                    <Text type="secondary">{new Date(record.reviewedAt).toLocaleString()}</Text>
+                    {record.status === "rejected" && record.rejectionReason && (
                       <Flex vertical gap={4} style={{ marginTop: 8 }}>
                         <Text type="secondary">Reason:</Text>
-                        <Text>{viewRecord.rejectionReason}</Text>
+                        <Text>{record.rejectionReason}</Text>
                       </Flex>
                     )}
                   </Flex>

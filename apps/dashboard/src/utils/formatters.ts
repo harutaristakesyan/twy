@@ -39,6 +39,16 @@ export const formatChangeAmount = (amount: number): string => {
   return `${sign}${formatted}`;
 };
 
+export const renderCurrency = (v: number | string | null | undefined): string => formatCurrency(v);
+
+export const formatPercent = (v: number | null | undefined): string =>
+  v != null ? `${v.toFixed(2)}%` : "—";
+
+export const renderDate = (v: string | null | undefined): string =>
+  v
+    ? new Date(v).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+    : "—";
+
 export const toDate = (s: string): Date => new Date(s);
 
 export const diffDays = (future: Date, base: Date) =>

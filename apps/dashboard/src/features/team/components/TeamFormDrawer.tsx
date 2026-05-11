@@ -1,6 +1,6 @@
-import { Button, Divider, Drawer, Flex, Form, Input, message, Switch, Typography } from "antd";
+import { useRequest } from "ahooks";
+import { App, Button, Divider, Drawer, Flex, Form, Input, Switch, Typography } from "antd";
 import type React from "react";
-import { useCallback, useEffect } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { emptyPermissionsMap, normalizePermissionsMap } from "@/utils/permissions";
 import { createTeam, updateTeam } from "../api/teamApi";
@@ -55,45 +55,26 @@ interface TeamFormDrawerProps {
 }
 
 const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, onSuccess }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm<TeamFormData>();
   const isEdit = !!team;
 
-  useEffect(() => {
-    if (!open) return;
-    form.resetFields();
-    if (team) {
-      form.setFieldsValue({
-        name: team.name,
-        description: team.description ?? undefined,
-        branchRestricted: team.branchRestricted,
-        onlyOwnData: team.onlyOwnData,
-        permissions: normalizePermissionsMap(team.permissions),
-      });
-    }
-  }, [open, team, form]);
-
-  const handleClose = useCallback(() => {
-    form.resetFields();
-    onCancel();
-  }, [form, onCancel]);
-
-  const handleFinish = useCallback(
+  const { loading, run: submitForm } = useRequest(
     async (values: TeamFormData) => {
-      try {
-        if (isEdit) {
-          await updateTeam(team.id, values);
-          message.success("Team updated successfully");
-        } else {
-          await createTeam(values);
-          message.success("Team created successfully");
-        }
-        form.resetFields();
-        onSuccess();
-      } catch (error) {
-        message.error(getErrorMessage(error));
+      if (isEdit) {
+        await updateTeam(team.id, values);
+      } else {
+        await createTeam(values);
       }
     },
-    [isEdit, team, form, onSuccess],
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success(isEdit ? "Team updated successfully" : "Team created successfully");
+        onSuccess();
+      },
+      onError: (error) => message.error(getErrorMessage(error)),
+    },
   );
 
   const initialValues: Partial<TeamFormData> = team
@@ -122,20 +103,22 @@ const TeamFormDrawer: React.FC<TeamFormDrawerProps> = ({ open, team, onCancel, o
         </Flex>
       }
       open={open}
-      onClose={handleClose}
+      onClose={onCancel}
       size="large"
       destroyOnHidden
       footer={
         <Flex justify="flex-end" gap="small">
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button type="primary" onClick={() => form.submit()}>
+          <Button onClick={onCancel} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="primary" loading={loading} onClick={() => form.submit()}>
             {isEdit ? "Save Changes" : "Create"}
           </Button>
         </Flex>
       }
     >
       <Flex vertical gap={24}>
-        <Form form={form} layout="vertical" initialValues={initialValues} onFinish={handleFinish}>
+        <Form form={form} layout="vertical" initialValues={initialValues} onFinish={submitForm}>
           <Flex vertical gap={24}>
             <Section title="Team Info">
               <Form.Item

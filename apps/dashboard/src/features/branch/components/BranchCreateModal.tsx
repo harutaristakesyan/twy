@@ -1,6 +1,7 @@
-import { Button, Form, Input, Modal, message, Select, Space } from "antd";
+import { useRequest } from "ahooks";
+import { App, Button, Form, Input, Modal, Select, Space } from "antd";
 import type React from "react";
-import { useState } from "react";
+import { SelectOption } from "@/components/SelectOption";
 import type { User } from "@/features/user/types/user";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { createBranch } from "../api/branchApi";
@@ -23,48 +24,35 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
   onCancel,
   onSuccess,
 }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (values: BranchFormData) => {
-    setLoading(true);
-    try {
+  const { loading, run: submit } = useRequest(
+    async (values: BranchFormData) => {
       await createBranch(values);
-      message.success("Branch created successfully");
-      form.resetFields();
-      onSuccess();
-    } catch (error) {
-      // Handle duplicate branch name error
-      const errorMessage = getErrorMessage(error);
-
-      if (
-        errorMessage.includes('duplicate key value violates unique constraint "branch_name_key"') ||
-        errorMessage.includes("branch_name_key")
-      ) {
-        message.error(`Branch name "${values.name}" already exists. Please use a different name.`);
-      } else {
-        message.error(errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    form.resetFields();
-    onCancel();
-  };
+    },
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("Branch created successfully");
+        onSuccess();
+      },
+      onError: (error) => {
+        message.error(getErrorMessage(error));
+      },
+    },
+  );
 
   return (
     <Modal
       title="Create New Branch"
       open={open}
-      onCancel={handleCancel}
+      onCancel={onCancel}
       footer={null}
       width={600}
-      forceRender
+      destroyOnHidden
     >
-      <Form form={form} layout="vertical" onFinish={handleSubmit} id="branchCreateForm">
+      <Form form={form} layout="vertical" onFinish={submit} id="branchCreateForm">
         <Form.Item
           name="name"
           label="Branch Name"
@@ -79,12 +67,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
         <Form.Item
           name="contact"
           label="Contact Information"
-          rules={[
-            {
-              max: 500,
-              message: "Contact information cannot exceed 500 characters",
-            },
-          ]}
+          rules={[{ max: 500, message: "Contact information cannot exceed 500 characters" }]}
         >
           <TextArea
             placeholder="Enter contact information (phone, email, address, etc.)"
@@ -114,17 +97,14 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
               email: o.email,
             }))}
             optionRender={(option) => (
-              <div>
-                <div style={{ fontWeight: 500 }}>{option.label}</div>
-                <div style={{ fontSize: "12px", color: "#888" }}>{option.data.email}</div>
-              </div>
+              <SelectOption label={option.label} description={option.data.email} />
             )}
           />
         </Form.Item>
 
         <Form.Item>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Button onClick={onCancel}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
               Create Branch
             </Button>

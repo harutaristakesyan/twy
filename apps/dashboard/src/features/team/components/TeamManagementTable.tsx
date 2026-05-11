@@ -1,8 +1,8 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { useAntdTable, useRequest } from "ahooks";
-import { Button, Card, Empty, Flex, message, Table, Typography } from "antd";
+import { App, Button, Card, Empty, Flex, Table, Typography } from "antd";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -24,6 +24,7 @@ const FILTER_FIELDS: FilterField[] = [
 ];
 
 const TeamManagementTable: React.FC = () => {
+  const { message } = App.useApp();
   const { permissions } = useCurrentUser();
   const { openTeamCreate } = useTeamModal();
   const canAdd = permissions.teams.add;
@@ -55,13 +56,10 @@ const TeamManagementTable: React.FC = () => {
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const handleFilterApply = useCallback(
-    (filter: AdvancedFilter | undefined, query: string | undefined) => {
-      setActiveFilter(filter);
-      setActiveQuery(query ?? "");
-    },
-    [],
-  );
+  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
+    setActiveFilter(filter);
+    setActiveQuery(query ?? "");
+  };
 
   const columns = useTeamColumns(refresh, runDelete);
 

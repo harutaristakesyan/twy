@@ -1,5 +1,16 @@
-import { App, Button, Checkbox, InputNumber, Modal, Select, Space } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import { useRequest } from "ahooks";
+import {
+  App,
+  Button,
+  Checkbox,
+  Descriptions,
+  Form,
+  InputNumber,
+  Modal,
+  Select,
+  Space,
+  Tag,
+} from "antd";
 import { loadApi } from "@/features/load/api/loadApi";
 import type { Load, LoadStatus } from "@/features/load/types/load";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -11,77 +22,61 @@ interface StatusUpdateModalProps {
   onSuccess: () => void;
 }
 
+const statusColors: Record<LoadStatus, string> = {
+  Pending: "gold",
+  Approved: "green",
+  ApprovedPaid: "cyan",
+  Denied: "red",
+  Hold: "orange",
+};
+
+const STATUS_OPTIONS = [
+  { value: "Pending", label: "Pending" },
+  { value: "Approved", label: "Approved" },
+  { value: "Hold", label: "Hold" },
+  { value: "Denied", label: "Denied" },
+];
+
 const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModalProps) => {
   const { message: antMessage } = App.useApp();
-  const [loading, setLoading] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<LoadStatus | null>(null);
-  const [isChargable, setIsChargable] = useState(false);
-  const [chargeAmount, setChargeAmount] = useState<number | null>(null);
+  const [form] = Form.useForm();
+  const selectedStatus = Form.useWatch("status", form) as LoadStatus | undefined;
+  const isChargable = Form.useWatch("isChargable", form) as boolean | undefined;
 
-  const resetChargeFields = useCallback(() => {
-    setIsChargable(false);
-    setChargeAmount(null);
-  }, []);
+  const { loading, run: submit } = useRequest(
+    async (status: LoadStatus, chargable: boolean, chargeAmount: number | null) => {
+      await loadApi.changeStatus(load?.id ?? "", {
+        status,
+        isChargable: chargable,
+        chargeAmount: chargable ? chargeAmount : null,
+      });
+    },
+    {
+      manual: true,
+      onSuccess: () => {
+        antMessage.success("Load status updated successfully");
+        onSuccess();
+      },
+      onError: (error) => antMessage.error(getErrorMessage(error)),
+    },
+  );
 
-  useEffect(() => {
-    if (open && load) {
-      setSelectedStatus(load.status);
-      setIsChargable(load.isChargable ?? false);
-      setChargeAmount(load.chargeAmount ?? null);
-    } else {
-      setSelectedStatus(null);
-      resetChargeFields();
-    }
-  }, [open, load, resetChargeFields]);
-
-  const handleSubmit = async () => {
-    if (!load || !selectedStatus) return;
-
+  const handleSubmit = () => {
+    if (!load) return;
+    const { status, isChargable: chargable, chargeAmount } = form.getFieldsValue();
     if (
-      selectedStatus === load.status &&
-      isChargable === load.isChargable &&
-      chargeAmount === (load.chargeAmount ?? null)
+      status === load.status &&
+      (chargable ?? false) === (load.isChargable ?? false) &&
+      (chargeAmount ?? null) === (load.chargeAmount ?? null)
     ) {
       onCancel();
       return;
     }
-
-    if (isChargable && (chargeAmount === null || chargeAmount <= 0)) {
+    if (chargable && (chargeAmount === null || chargeAmount <= 0)) {
       antMessage.error("Please enter a valid charge amount");
       return;
     }
-
-    setLoading(true);
-    try {
-      await loadApi.changeStatus(load.id, {
-        status: selectedStatus,
-        isChargable,
-        chargeAmount: isChargable ? chargeAmount : null,
-      });
-      antMessage.success("Load status updated successfully");
-      onSuccess();
-    } catch (error) {
-      antMessage.error(getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setSelectedStatus(null);
-    resetChargeFields();
-    onCancel();
-  };
-
-  const getStatusColor = (status: LoadStatus) => {
-    const colors: Record<LoadStatus, string> = {
-      Pending: "gold",
-      Approved: "green",
-      ApprovedPaid: "cyan",
-      Denied: "red",
-      Hold: "orange",
-    };
-    return colors[status];
+    submit(status, chargable ?? false, chargeAmount ?? null);
   };
 
   if (!load) return null;
@@ -90,10 +85,11 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
     <Modal
       title="Update Status Approval"
       open={open}
-      onCancel={handleCancel}
+      onCancel={onCancel}
+      destroyOnHidden
       footer={
         <Space>
-          <Button onClick={handleCancel}>Cancel</Button>
+          <Button onClick={onCancel}>Cancel</Button>
           <Button type="primary" onClick={handleSubmit} loading={loading}>
             Update Status
           </Button>
@@ -101,75 +97,59 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
       }
       width={500}
     >
-      <div style={{ padding: "16px 0" }}>
-        <div style={{ marginBottom: 24 }}>
-          <strong>Reference Number:</strong> {load.referenceNumber}
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <strong>Current Status:</strong>
-          <span style={{ marginLeft: 8 }}>
-            <span
-              style={{
-                padding: "4px 12px",
-                borderRadius: "4px",
-                backgroundColor: `var(--ant-${getStatusColor(load.status)}-1)`,
-                color: `var(--ant-${getStatusColor(load.status)}-7)`,
-                textTransform: "capitalize",
-              }}
-            >
-              {load.status}
-            </span>
-          </span>
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <strong style={{ display: "block", marginBottom: 8 }}>New Status:</strong>
+      <Descriptions column={1} size="small" style={{ marginBottom: 24 }}>
+        <Descriptions.Item label="Reference Number">{load.referenceNumber}</Descriptions.Item>
+        <Descriptions.Item label="Current Status">
+          <Tag color={statusColors[load.status]}>{load.status}</Tag>
+        </Descriptions.Item>
+      </Descriptions>
+
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{
+          status: load.status,
+          isChargable: load.isChargable ?? false,
+          chargeAmount: load.chargeAmount ?? null,
+        }}
+      >
+        <Form.Item name="status" label="New Status">
           <Select
-            value={selectedStatus}
+            options={STATUS_OPTIONS}
             onChange={(v) => {
-              setSelectedStatus(v);
-              if (v !== "Approved") resetChargeFields();
+              if (v !== "Approved") {
+                form.setFieldsValue({ isChargable: false, chargeAmount: null });
+              }
             }}
-            style={{ width: "100%" }}
-            size="large"
-            options={[
-              { value: "Pending", label: "Pending" },
-              { value: "Approved", label: "Approved" },
-              { value: "Hold", label: "Hold" },
-              { value: "Denied", label: "Denied" },
-            ]}
           />
-        </div>
+        </Form.Item>
+
         {selectedStatus === "Approved" && (
           <>
-            <div style={{ marginBottom: isChargable ? 16 : 0 }}>
+            <Form.Item name="isChargable" valuePropName="checked">
               <Checkbox
-                checked={isChargable}
                 onChange={(e) => {
-                  setIsChargable(e.target.checked);
-                  if (!e.target.checked) setChargeAmount(null);
+                  if (!e.target.checked) form.setFieldValue("chargeAmount", null);
                 }}
               >
-                <strong>Is Chargable</strong>
+                Is Chargable
               </Checkbox>
-            </div>
+            </Form.Item>
+
             {isChargable && (
-              <div>
-                <strong style={{ display: "block", marginBottom: 8 }}>Charge Amount:</strong>
+              <Form.Item name="chargeAmount" label="Charge Amount">
                 <InputNumber
-                  value={chargeAmount}
-                  onChange={setChargeAmount}
                   min={0}
                   precision={2}
                   prefix="€"
                   style={{ width: "100%" }}
-                  size="large"
                   placeholder="Enter charge amount"
                 />
-              </div>
+              </Form.Item>
             )}
           </>
         )}
-      </div>
+      </Form>
     </Modal>
   );
 };

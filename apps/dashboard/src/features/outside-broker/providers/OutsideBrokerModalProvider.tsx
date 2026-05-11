@@ -1,5 +1,5 @@
 import type React from "react";
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import OutsideBrokerCreateModal from "../components/OutsideBrokerCreateModal";
 import OutsideBrokerEditModal from "../components/OutsideBrokerEditModal";
 import type { OutsideBroker } from "../types/broker";
@@ -18,58 +18,45 @@ export const useOutsideBrokerModal = (): OutsideBrokerModalContextType => {
   return ctx;
 };
 
+type CreateState = { open: boolean; onSuccess?: () => void };
+type EditState = { open: boolean; broker: OutsideBroker | null; onSuccess?: () => void };
+
 export const OutsideBrokerModalProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [brokerCreateOpen, setBrokerCreateOpen] = useState(false);
+  const [createState, setCreateState] = useState<CreateState>({ open: false });
+  const [editState, setEditState] = useState<EditState>({ open: false, broker: null });
 
-  const [brokerEdit, setBrokerEdit] = useState<{
-    open: boolean;
-    broker: OutsideBroker | null;
-  }>({ open: false, broker: null });
+  const openOutsideBrokerCreate = (onSuccess?: () => void) =>
+    setCreateState({ open: true, onSuccess });
 
-  const brokerCreateOnSuccess = useRef<(() => void) | undefined>(undefined);
-  const brokerEditOnSuccess = useRef<(() => void) | undefined>(undefined);
+  const openOutsideBrokerEdit = (data: { broker: OutsideBroker }, onSuccess?: () => void) =>
+    setEditState({ open: true, broker: data.broker, onSuccess });
 
-  const openOutsideBrokerCreate = useCallback((onSuccess?: () => void) => {
-    brokerCreateOnSuccess.current = onSuccess;
-    setBrokerCreateOpen(true);
-  }, []);
-
-  const openOutsideBrokerEdit = useCallback(
-    (data: { broker: OutsideBroker }, onSuccess?: () => void) => {
-      brokerEditOnSuccess.current = onSuccess;
-      setBrokerEdit({ open: true, broker: data.broker });
-    },
-    [],
-  );
-
-  const contextValue = useMemo(
-    () => ({ openOutsideBrokerCreate, openOutsideBrokerEdit }),
-    [openOutsideBrokerCreate, openOutsideBrokerEdit],
-  );
+  const closeCreate = () => setCreateState((prev) => ({ ...prev, open: false }));
+  const closeEdit = () => setEditState((prev) => ({ ...prev, open: false }));
 
   return (
-    <OutsideBrokerModalContext.Provider value={contextValue}>
+    <OutsideBrokerModalContext.Provider value={{ openOutsideBrokerCreate, openOutsideBrokerEdit }}>
       {children}
 
       <OutsideBrokerCreateModal
-        open={brokerCreateOpen}
-        onCancel={() => setBrokerCreateOpen(false)}
+        open={createState.open}
+        onCancel={closeCreate}
         onSuccess={() => {
-          setBrokerCreateOpen(false);
-          brokerCreateOnSuccess.current?.();
+          closeCreate();
+          createState.onSuccess?.();
         }}
       />
 
-      {brokerEdit.broker !== null && (
+      {editState.broker !== null && (
         <OutsideBrokerEditModal
-          open={brokerEdit.open}
-          broker={brokerEdit.broker}
-          onCancel={() => setBrokerEdit((prev) => ({ ...prev, open: false }))}
+          open={editState.open}
+          broker={editState.broker}
+          onCancel={closeEdit}
           onSuccess={() => {
-            setBrokerEdit((prev) => ({ ...prev, open: false }));
-            brokerEditOnSuccess.current?.();
+            closeEdit();
+            editState.onSuccess?.();
           }}
         />
       )}

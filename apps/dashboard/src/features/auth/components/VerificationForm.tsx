@@ -1,6 +1,6 @@
 import { CheckOutlined } from "@ant-design/icons";
-import { Button, Form, Input, message } from "antd";
-import { useState } from "react";
+import { useRequest } from "ahooks";
+import { App, Button, Form, Input } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import ResendCode from "@/features/auth/components/ResendCode.tsx";
 import ApiClient from "@/libs/ApiClient.ts";
@@ -11,32 +11,37 @@ interface VerificationFormValues {
 }
 
 const VerificationForm = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const location = useLocation();
   const email = location.state?.email;
   const isSignUpFlow = location.state?.signUp === true;
-  const [loading, setLoading] = useState(false);
 
-  const onFinish = async (values: VerificationFormValues) => {
-    const code = values.code;
-    setLoading(true);
-    try {
-      await ApiClient.post<{ userSub: string; message: string }>("/verify", { email, code }, true);
-      if (isSignUpFlow) {
-        navigate("/login", { state: { email } });
-      } else {
-        navigate("/create-password", { state: { email, code } });
-      }
-    } catch (err: unknown) {
-      message.error(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { loading, run: submit } = useRequest(
+    async (values: VerificationFormValues) => {
+      await ApiClient.post<{ userSub: string; message: string }>(
+        "/verify",
+        { email, code: values.code },
+        true,
+      );
+      return values.code;
+    },
+    {
+      manual: true,
+      onSuccess: (code: string) => {
+        if (isSignUpFlow) {
+          navigate("/login", { state: { email } });
+        } else {
+          navigate("/create-password", { state: { email, code } });
+        }
+      },
+      onError: (err) => message.error(getErrorMessage(err)),
+    },
+  );
 
   return (
-    <Form layout="vertical" form={form} onFinish={onFinish}>
+    <Form layout="vertical" form={form} onFinish={submit}>
       <Form.Item
         name="code"
         rules={[{ required: true, message: "Please enter the 6-digit code" }]}

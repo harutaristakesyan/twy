@@ -1,5 +1,5 @@
 import type React from "react";
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import LoadEditModal from "../components/LoadEditModal";
 import StatusUpdateModal from "../components/StatusUpdateModal";
 import type { Load } from "../types/load";
@@ -17,47 +17,45 @@ export const useLoadModal = (): LoadModalContextType => {
   return ctx;
 };
 
+type LoadEditState = {
+  open: boolean;
+  load: Load | null;
+  onSuccess?: () => void;
+};
+
+type StatusUpdateState = {
+  open: boolean;
+  load: Load | null;
+  onSuccess?: () => void;
+};
+
 export const LoadModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [loadEdit, setLoadEdit] = useState<{
-    open: boolean;
-    load: Load | null;
-  }>({ open: false, load: null });
+  const [loadEdit, setLoadEdit] = useState<LoadEditState>({ open: false, load: null });
+  const [statusUpdate, setStatusUpdate] = useState<StatusUpdateState>({ open: false, load: null });
 
-  const [statusUpdate, setStatusUpdate] = useState<{
-    open: boolean;
-    load: Load | null;
-  }>({ open: false, load: null });
+  const openLoadEdit = (data: { load: Load | null }, onSuccess?: () => void) => {
+    setLoadEdit({ open: true, ...data, onSuccess });
+  };
 
-  const loadEditOnSuccess = useRef<(() => void) | undefined>(undefined);
-  const statusUpdateOnSuccess = useRef<(() => void) | undefined>(undefined);
+  const openStatusUpdate = (data: { load: Load | null }, onSuccess?: () => void) => {
+    setStatusUpdate({ open: true, ...data, onSuccess });
+  };
 
-  const openLoadEdit = useCallback((data: { load: Load | null }, onSuccess?: () => void) => {
-    loadEditOnSuccess.current = onSuccess;
-    setLoadEdit({ open: true, ...data });
-  }, []);
-
-  const openStatusUpdate = useCallback((data: { load: Load | null }, onSuccess?: () => void) => {
-    statusUpdateOnSuccess.current = onSuccess;
-    setStatusUpdate({ open: true, ...data });
-  }, []);
-
-  const contextValue = useMemo(
-    () => ({ openLoadEdit, openStatusUpdate }),
-    [openLoadEdit, openStatusUpdate],
-  );
+  const closeLoadEdit = () => setLoadEdit((prev) => ({ ...prev, open: false }));
+  const closeStatusUpdate = () => setStatusUpdate((prev) => ({ ...prev, open: false }));
 
   return (
-    <LoadModalContext.Provider value={contextValue}>
+    <LoadModalContext.Provider value={{ openLoadEdit, openStatusUpdate }}>
       {children}
 
       {loadEdit.load !== null && (
         <LoadEditModal
           open={loadEdit.open}
           load={loadEdit.load}
-          onCancel={() => setLoadEdit({ open: false, load: null })}
+          onCancel={closeLoadEdit}
           onSuccess={() => {
-            setLoadEdit({ open: false, load: null });
-            loadEditOnSuccess.current?.();
+            closeLoadEdit();
+            loadEdit.onSuccess?.();
           }}
         />
       )}
@@ -66,10 +64,10 @@ export const LoadModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         <StatusUpdateModal
           open={statusUpdate.open}
           load={statusUpdate.load}
-          onCancel={() => setStatusUpdate({ open: false, load: null })}
+          onCancel={closeStatusUpdate}
           onSuccess={() => {
-            setStatusUpdate({ open: false, load: null });
-            statusUpdateOnSuccess.current?.();
+            closeStatusUpdate();
+            statusUpdate.onSuccess?.();
           }}
         />
       )}

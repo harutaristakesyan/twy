@@ -1,5 +1,5 @@
 import { CheckOutlined, CloseOutlined, EyeOutlined } from "@ant-design/icons";
-import { useAntdTable } from "ahooks";
+import { useAntdTable, useRequest } from "ahooks";
 import {
   Button,
   Card,
@@ -15,7 +15,7 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -25,6 +25,7 @@ import {
   listCarrierRequests,
   rejectCarrierRequest,
 } from "../api/carrierRequestApi";
+import { useCarrierRequestDrawer } from "../hooks/useCarrierRequestDrawer";
 import { InsuranceStatus } from "../types/carrier";
 import type { CarrierRequest } from "../types/carrierRequest";
 import { deriveInsuranceStatus } from "../utils/insuranceStatus";
@@ -76,10 +77,16 @@ const CarrierRequestsTab: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
   const [activeQuery, setActiveQuery] = useState("");
 
-  const [viewRecord, setViewRecord] = useState<CarrierRequest | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [showRejectInput, setShowRejectInput] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
+  const {
+    record,
+    open,
+    showRejectInput,
+    rejectReason,
+    openView,
+    closeDrawer,
+    setShowRejectInput,
+    setRejectReason,
+  } = useCarrierRequestDrawer();
 
   const { tableProps, refresh } = useAntdTable(
     async ({ current, pageSize, sorter }) => {
@@ -101,59 +108,36 @@ const CarrierRequestsTab: React.FC = () => {
     { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 10 },
   );
 
-  const handleFilterApply = useCallback(
-    (filter: AdvancedFilter | undefined, query: string | undefined) => {
-      setActiveFilter(filter);
-      setActiveQuery(query ?? "");
+  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
+    setActiveFilter(filter);
+    setActiveQuery(query ?? "");
+  };
+
+  const { loading: approving, run: approve } = useRequest(
+    (id: string) => approveCarrierRequest(id),
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("Request approved; carrier is now active");
+        closeDrawer();
+        refresh();
+      },
+      onError: (e) => message.error(getErrorMessage(e)),
     },
-    [],
   );
 
-  const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [rejecting, setRejecting] = useState(false);
-
-  const openView = (record: CarrierRequest) => {
-    setViewRecord(record);
-    setShowRejectInput(false);
-    setRejectReason("");
-    setDrawerOpen(true);
-  };
-
-  const closeDrawer = () => {
-    setDrawerOpen(false);
-    setViewRecord(null);
-    setShowRejectInput(false);
-    setRejectReason("");
-  };
-
-  const handleApprove = async (id: string) => {
-    setApprovingId(id);
-    try {
-      await approveCarrierRequest(id);
-      message.success("Request approved; carrier is now active");
-      closeDrawer();
-      refresh();
-    } catch (e) {
-      message.error(getErrorMessage(e));
-    } finally {
-      setApprovingId(null);
-    }
-  };
-
-  const handleRejectConfirm = async () => {
-    if (!viewRecord) return;
-    setRejecting(true);
-    try {
-      await rejectCarrierRequest(viewRecord.id, { rejectionReason: rejectReason || undefined });
-      message.success("Request rejected");
-      closeDrawer();
-      refresh();
-    } catch (e) {
-      message.error(getErrorMessage(e));
-    } finally {
-      setRejecting(false);
-    }
-  };
+  const { loading: rejecting, run: reject } = useRequest(
+    (id: string, reason?: string) => rejectCarrierRequest(id, { rejectionReason: reason }),
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("Request rejected");
+        closeDrawer();
+        refresh();
+      },
+      onError: (e) => message.error(getErrorMessage(e)),
+    },
+  );
 
   const columns: ColumnsType<CarrierRequest> = [
     {
@@ -199,17 +183,15 @@ const CarrierRequestsTab: React.FC = () => {
       key: "actions",
       width: 90,
       fixed: "right",
-      render: (_, record) => (
-        <Button size="small" icon={<EyeOutlined />} onClick={() => openView(record)}>
+      render: (_, r) => (
+        <Button size="small" icon={<EyeOutlined />} onClick={() => openView(r)}>
           View
         </Button>
       ),
     },
   ];
 
-  const drawerTitle = viewRecord
-    ? `${viewRecord.carrierName} — ${viewRecord.mcDotNumber}`
-    : "Carrier request";
+  const drawerTitle = record ? `${record.carrierName} — ${record.mcDotNumber}` : "Carrier request";
 
   return (
     <div>
@@ -245,11 +227,11 @@ const CarrierRequestsTab: React.FC = () => {
 
       <Drawer
         title={drawerTitle}
-        open={drawerOpen}
+        open={open}
         onClose={closeDrawer}
         size="large"
         footer={
-          viewRecord?.status === "pending" && canReview ? (
+          record?.status === "pending" && canReview ? (
             showRejectInput ? (
               <Flex vertical gap="small">
                 <Input.TextArea
@@ -261,7 +243,11 @@ const CarrierRequestsTab: React.FC = () => {
                 />
                 <Flex gap="small" justify="flex-end">
                   <Button onClick={() => setShowRejectInput(false)}>Cancel</Button>
-                  <Button danger loading={rejecting} onClick={() => void handleRejectConfirm()}>
+                  <Button
+                    danger
+                    loading={rejecting}
+                    onClick={() => reject(record.id, rejectReason || undefined)}
+                  >
                     Confirm reject
                   </Button>
                 </Flex>
@@ -274,8 +260,8 @@ const CarrierRequestsTab: React.FC = () => {
                 <Button
                   type="primary"
                   icon={<CheckOutlined />}
-                  loading={approvingId === viewRecord.id}
-                  onClick={() => void handleApprove(viewRecord.id)}
+                  loading={approving}
+                  onClick={() => approve(record.id)}
                 >
                   Approve
                 </Button>
@@ -284,68 +270,69 @@ const CarrierRequestsTab: React.FC = () => {
           ) : null
         }
       >
-        {viewRecord && (
+        {record && (
           <Flex vertical gap="large">
             <Descriptions column={1} size="small" bordered>
               <Descriptions.Item label="Kind">
-                <Tag>{viewRecord.kind === "twy" ? "Twy" : "Outside"}</Tag>
+                <Tag>{record.kind === "twy" ? "Twy" : "Outside"}</Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Carrier name">{viewRecord.carrierName}</Descriptions.Item>
+              <Descriptions.Item label="Carrier name">{record.carrierName}</Descriptions.Item>
               <Descriptions.Item label="MC / DOT">
-                <Text code>{viewRecord.mcDotNumber}</Text>
+                <Text code>{record.mcDotNumber}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="Equipment type">
-                {viewRecord.equipmentType ?? <Text type="secondary">—</Text>}
+                {record.equipmentType ?? <Text type="secondary">—</Text>}
               </Descriptions.Item>
               <Descriptions.Item label="Insurance status">
-                {viewRecord.insuranceExpiry ? (
-                  <Tag color={deriveInsuranceStatus(viewRecord.insuranceExpiry).color}>
-                    {deriveInsuranceStatus(viewRecord.insuranceExpiry).label}
-                  </Tag>
+                {record.insuranceExpiry ? (
+                  (() => {
+                    const { color, label } = deriveInsuranceStatus(record.insuranceExpiry);
+                    return <Tag color={color}>{label}</Tag>;
+                  })()
                 ) : (
                   <Text type="secondary">—</Text>
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="Insurance expiry">
-                {viewRecord.insuranceExpiry ? (
-                  new Date(viewRecord.insuranceExpiry).toLocaleDateString()
+                {record.insuranceExpiry ? (
+                  new Date(record.insuranceExpiry).toLocaleDateString()
                 ) : (
                   <Text type="secondary">—</Text>
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="Phone">
-                {viewRecord.phone ?? <Text type="secondary">—</Text>}
+                {record.phone ?? <Text type="secondary">—</Text>}
               </Descriptions.Item>
               <Descriptions.Item label="Email">
-                {viewRecord.email ?? <Text type="secondary">—</Text>}
+                {record.email ?? <Text type="secondary">—</Text>}
               </Descriptions.Item>
               <Descriptions.Item label="Notes">
-                {viewRecord.notes ?? <Text type="secondary">—</Text>}
+                {record.notes ?? <Text type="secondary">—</Text>}
               </Descriptions.Item>
               <Descriptions.Item label="Status">
-                <Tag color={statusColors[viewRecord.status] ?? "default"}>{viewRecord.status}</Tag>
+                <Tag color={statusColors[record.status] ?? "default"}>{record.status}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Submitted">
-                {new Date(viewRecord.createdAt).toLocaleString()}
-                {viewRecord.submittedByName && (
-                  <Text type="secondary"> by {viewRecord.submittedByName}</Text>
+                {new Date(record.createdAt).toLocaleString()}
+                {record.submittedByName && (
+                  <Text type="secondary"> by {record.submittedByName}</Text>
                 )}
               </Descriptions.Item>
             </Descriptions>
 
-            {(viewRecord.status === "approved" || viewRecord.status === "rejected") &&
-              viewRecord.reviewedAt && (
+            {(record.status === "approved" || record.status === "rejected") &&
+              record.reviewedAt && (
                 <Card size="small">
                   <Flex vertical gap={4}>
                     <Text strong>
-                      {viewRecord.status === "approved" ? "Approved" : "Rejected"}
-                      {viewRecord.reviewedByName && <Text> by {viewRecord.reviewedByName}</Text>}
+                      {record.status === "approved" ? "Approved" : "Rejected"}
+                      {record.reviewedByName && <Text> by {record.reviewedByName}</Text>}
                     </Text>
-                    <Text type="secondary">{new Date(viewRecord.reviewedAt).toLocaleString()}</Text>
-                    {viewRecord.status === "rejected" && viewRecord.rejectionReason && (
+                    <Text type="secondary">{new Date(record.reviewedAt).toLocaleString()}</Text>
+                    {record.status === "rejected" && record.rejectionReason && (
                       <Flex vertical gap={4} style={{ marginTop: 8 }}>
                         <Text type="secondary">Reason:</Text>
-                        <Text>{viewRecord.rejectionReason}</Text>
+                        <Text>{record.rejectionReason}</Text>
                       </Flex>
                     )}
                   </Flex>

@@ -1,32 +1,32 @@
 import { ArrowRightOutlined } from "@ant-design/icons";
-import { Button, Form, Input, message } from "antd";
-import { useState } from "react";
+import { useRequest } from "ahooks";
+import { App, Button, Form, Input } from "antd";
 import { useNavigate } from "react-router-dom";
 import ApiClient from "@/libs/ApiClient.ts";
 import { getErrorMessage } from "@/utils/errorUtils";
 
 const ForgotPasswordForm = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const onFinish = async ({ email }: { email: string }) => {
-    setLoading(true);
-    try {
+  const { loading, run: submit } = useRequest(
+    async ({ email }: { email: string }) => {
       await ApiClient.post("/forgot-password", { email });
-      message.success("Verification code sent");
-      navigate("/create-password", {
-        state: { email, signUp: false },
-      });
-    } catch (error) {
-      message.error(getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  };
+      return email;
+    },
+    {
+      manual: true,
+      onSuccess: (email: string) => {
+        message.success("Verification code sent");
+        navigate("/create-password", { state: { email, signUp: false } });
+      },
+      onError: (error) => message.error(getErrorMessage(error)),
+    },
+  );
 
   return (
-    <Form layout="vertical" form={form} onFinish={onFinish}>
+    <Form layout="vertical" form={form} onFinish={submit}>
       <Form.Item
         label="Email Address"
         name="email"

@@ -9,12 +9,12 @@ const STATUS_COLOR: Record<PaymentStatus, string> = {
   PartialPaid: "orange",
 };
 
-const STATUS_LABEL: Record<PaymentStatus, string> = {
+export const STATUS_LABEL: Record<PaymentStatus, string> = {
   Pending: "Pending",
   Approved: "Approved",
+  PartialPaid: "Partial Paid",
   ApprovedPaid: "Approved & Paid",
   DeclinedHold: "Declined / Hold",
-  PartialPaid: "Partial Paid",
 };
 
 interface PaymentStatusTagProps {

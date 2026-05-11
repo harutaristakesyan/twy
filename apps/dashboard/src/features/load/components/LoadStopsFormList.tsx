@@ -1,6 +1,6 @@
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import type { CollapseProps } from "antd";
-import { Button, Col, Collapse, Form, Input, Row, Space, Typography } from "antd";
+import { Button, Col, Collapse, Flex, Form, Input, Row, Typography } from "antd";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 
@@ -14,7 +14,6 @@ const emptyStop = () => ({
 
 export interface LoadStopsFormListProps {
   name: "pickups" | "dropoffs";
-  /** e.g. "Pick-up" or "Drop-off" — used for titles and add button */
   legLabel: string;
 }
 
@@ -63,23 +62,19 @@ const LoadStopsFormListInner: React.FC<LoadStopsFormListInnerProps> = ({
   }, [fields]);
 
   const handleCollapseChange: CollapseProps["onChange"] = (keys) => {
-    setActiveKeys(keys ?? []);
+    setActiveKeys(Array.isArray(keys) ? keys : [keys]);
   };
 
   const items: CollapseProps["items"] = fields.map((field, index) => ({
     key: String(field.key),
     label: (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 12,
-          width: "100%",
-          paddingRight: 4,
-        }}
+      <Flex
+        justify="space-between"
+        align="flex-start"
+        gap={12}
+        style={{ width: "100%", paddingRight: 4 }}
       >
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <Flex vertical style={{ flex: 1, minWidth: 0 }}>
           <Typography.Text strong>
             {legLabel} stop {index + 1}
           </Typography.Text>
@@ -106,22 +101,22 @@ const LoadStopsFormListInner: React.FC<LoadStopsFormListInnerProps> = ({
               );
             }}
           </Form.Item>
-        </div>
-        {fields.length > 1 ? (
+        </Flex>
+        {fields.length > 1 && (
           <Button
             type="link"
             danger
             size="small"
             icon={<MinusCircleOutlined />}
-            onClick={(event) => {
-              event.stopPropagation();
+            onClick={(e) => {
+              e.stopPropagation();
               remove(field.name);
             }}
           >
             Remove
           </Button>
-        ) : null}
-      </div>
+        )}
+      </Flex>
     ),
     children: (
       <Row gutter={[16, 16]}>
@@ -167,7 +162,7 @@ const LoadStopsFormListInner: React.FC<LoadStopsFormListInnerProps> = ({
   }));
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }} size="middle">
+    <Flex vertical gap="middle">
       <Collapse
         bordered
         size="small"
@@ -179,7 +174,7 @@ const LoadStopsFormListInner: React.FC<LoadStopsFormListInnerProps> = ({
       <Button type="dashed" onClick={() => add(emptyStop())} block icon={<PlusOutlined />}>
         Add {legLabel} stop
       </Button>
-    </Space>
+    </Flex>
   );
 };
 

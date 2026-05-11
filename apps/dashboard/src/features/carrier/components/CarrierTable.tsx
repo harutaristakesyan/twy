@@ -1,8 +1,8 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { useAntdTable, useRequest } from "ahooks";
-import { Button, Card, Empty, Flex, message, Table, Typography } from "antd";
+import { App, Button, Card, Empty, Flex, Table, Typography } from "antd";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -50,6 +50,7 @@ interface CarrierTableProps {
 }
 
 const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
+  const { message } = App.useApp();
   const { permissions } = useCurrentUser();
   const { openCarrierCreate } = useCarrierModal();
   const addResource = kind === "twy" ? "carriers_twy" : "carriers_outside";
@@ -84,13 +85,10 @@ const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const handleFilterApply = useCallback(
-    (filter: AdvancedFilter | undefined, query: string | undefined) => {
-      setActiveFilter(filter);
-      setActiveQuery(query ?? "");
-    },
-    [],
-  );
+  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
+    setActiveFilter(filter);
+    setActiveQuery(query ?? "");
+  };
 
   const columns = useCarrierColumns(refresh, runDelete, kind);
   const title = kind === "twy" ? "Twy Carriers" : "Outside Carriers";

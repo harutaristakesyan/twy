@@ -1,4 +1,4 @@
-import { Flex, message, Space, Typography } from "antd";
+import { App, Flex, Space, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import ApiClient from "@/libs/ApiClient.ts";
@@ -6,6 +6,7 @@ import ApiClient from "@/libs/ApiClient.ts";
 const { Text, Link } = Typography;
 
 const ResendCode = () => {
+  const { message } = App.useApp();
   const location = useLocation();
   const email = location.state?.email;
 

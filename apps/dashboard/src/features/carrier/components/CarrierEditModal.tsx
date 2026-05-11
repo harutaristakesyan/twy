@@ -1,13 +1,17 @@
-import { Button, DatePicker, Form, Input, Modal, message, Select, Space } from "antd";
+import { useRequest } from "ahooks";
+import { App, Button, DatePicker, Form, Input, Modal, Select, Space } from "antd";
 import dayjs from "dayjs";
 import type React from "react";
-import { useEffect, useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { updateCarrier } from "../api/carrierApi";
 import type { Carrier, CarrierFormData, UpdateCarrierRequest } from "../types/carrier";
 import { CarrierStatus } from "../types/carrier";
 
 const { TextArea } = Input;
+
+type FormValues = Omit<CarrierFormData, "insuranceExpiry" | "kind"> & {
+  insuranceExpiry: dayjs.Dayjs;
+};
 
 interface CarrierEditModalProps {
   open: boolean;
@@ -22,31 +26,11 @@ const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
   onCancel,
   onSuccess,
 }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (open && carrier) {
-      form.setFieldsValue({
-        carrierName: carrier.carrierName,
-        mcDotNumber: carrier.mcDotNumber,
-        equipmentType: carrier.equipmentType || "",
-        insuranceExpiry: carrier.insuranceExpiry ? dayjs(carrier.insuranceExpiry) : null,
-        phone: carrier.phone || "",
-        email: carrier.email || "",
-        notes: carrier.notes || "",
-        status: carrier.status,
-      });
-    }
-  }, [open, carrier, form]);
-
-  type FormValues = Omit<CarrierFormData, "insuranceExpiry" | "kind"> & {
-    insuranceExpiry: dayjs.Dayjs;
-  };
-
-  const handleSubmit = async (values: FormValues) => {
-    setLoading(true);
-    try {
+  const { loading, run: submit } = useRequest(
+    async (values: FormValues) => {
       const updateData: UpdateCarrierRequest = {
         id: carrier.id,
         carrierName: values.carrierName,
@@ -58,51 +42,42 @@ const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
         notes: values.notes,
         status: values.status,
       };
-
       await updateCarrier(updateData);
-      message.success("Carrier updated successfully");
-      onSuccess();
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      if (errorMessage.includes("duplicate") || errorMessage.includes("unique constraint")) {
-        message.error(
-          `MC/DOT Number "${values.mcDotNumber}" already exists. Please use a different number.`,
-        );
-      } else {
-        message.error(errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    form.resetFields();
-    onCancel();
-  };
+    },
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("Carrier updated successfully");
+        onSuccess();
+      },
+      onError: (error) => {
+        message.error(getErrorMessage(error));
+      },
+    },
+  );
 
   return (
     <Modal
       title="Edit Carrier"
       open={open}
-      onCancel={handleCancel}
+      onCancel={onCancel}
       footer={null}
       width={600}
-      forceRender
+      destroyOnHidden
     >
       <Form
         form={form}
         layout="vertical"
-        onFinish={handleSubmit}
+        onFinish={submit}
         initialValues={{
-          carrierName: carrier?.carrierName,
-          mcDotNumber: carrier?.mcDotNumber,
-          equipmentType: carrier?.equipmentType || "",
-          insuranceExpiry: carrier?.insuranceExpiry ? dayjs(carrier.insuranceExpiry) : null,
-          phone: carrier?.phone || "",
-          email: carrier?.email || "",
-          notes: carrier?.notes || "",
-          status: carrier?.status,
+          carrierName: carrier.carrierName,
+          mcDotNumber: carrier.mcDotNumber,
+          equipmentType: carrier.equipmentType || "",
+          insuranceExpiry: carrier.insuranceExpiry ? dayjs(carrier.insuranceExpiry) : null,
+          phone: carrier.phone || "",
+          email: carrier.email || "",
+          notes: carrier.notes || "",
+          status: carrier.status,
         }}
       >
         <Form.Item
@@ -183,7 +158,7 @@ const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
 
         <Form.Item>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Button onClick={onCancel}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
               Update Carrier
             </Button>

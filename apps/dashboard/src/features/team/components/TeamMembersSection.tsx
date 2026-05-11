@@ -1,6 +1,6 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { useAntdTable } from "ahooks";
-import { Button, Flex, message, Popconfirm, Table, Tag, Typography } from "antd";
+import { useAntdTable, useRequest } from "ahooks";
+import { App, Button, Flex, Popconfirm, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type React from "react";
 import { useState } from "react";
@@ -16,26 +16,28 @@ interface TeamMembersSectionProps {
 }
 
 const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
+  const { message } = App.useApp();
   const [showPicker, setShowPicker] = useState(false);
 
   const { tableProps, refresh } = useAntdTable(
     async ({ current, pageSize }) => {
       const result = await getTeamMembers(teamId, { page: current - 1, limit: pageSize });
-
       return { list: result.items, total: result.total };
     },
     { defaultPageSize: 20, refreshDeps: [teamId] },
   );
 
-  const handleRemove = async (memberId: string) => {
-    try {
-      await removeTeamMember(teamId, memberId);
-      message.success("Member removed");
-      refresh();
-    } catch (error) {
-      message.error(getErrorMessage(error));
-    }
-  };
+  const { run: removeMember } = useRequest(
+    (memberId: string) => removeTeamMember(teamId, memberId),
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("Member removed");
+        refresh();
+      },
+      onError: (error) => message.error(getErrorMessage(error)),
+    },
+  );
 
   const handleAdded = () => {
     setShowPicker(false);
@@ -73,7 +75,7 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
         <Popconfirm
           title="Remove member?"
           description="This will unassign the user from this team."
-          onConfirm={() => handleRemove(r.id)}
+          onConfirm={() => removeMember(r.id)}
           okText="Remove"
           cancelText="Cancel"
         >

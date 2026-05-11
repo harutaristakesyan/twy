@@ -2,7 +2,7 @@ import { PlusOutlined } from "@ant-design/icons";
 import { useAntdTable, useRequest } from "ahooks";
 import { App, Button, Card, Flex, Table, Tooltip, Typography } from "antd";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
@@ -72,13 +72,10 @@ export const LoadManagementTable: React.FC = () => {
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const handleFilterApply = useCallback(
-    (filter: AdvancedFilter | undefined, query: string | undefined) => {
-      setActiveFilter(filter);
-      setActiveQuery(query ?? "");
-    },
-    [],
-  );
+  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
+    setActiveFilter(filter);
+    setActiveQuery(query ?? "");
+  };
 
   const columns = useLoadColumns(refresh, runDelete);
 

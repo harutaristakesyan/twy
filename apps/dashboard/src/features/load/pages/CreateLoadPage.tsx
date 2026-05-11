@@ -1,4 +1,5 @@
 import { ArrowLeftOutlined, DeleteOutlined, UploadOutlined } from "@ant-design/icons";
+import { useRequest } from "ahooks";
 import type { UploadFile } from "antd";
 import {
   App,
@@ -19,7 +20,7 @@ import {
 } from "antd";
 import type { NamePath } from "antd/es/form/interface";
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadApi } from "@/features/load/api/loadApi";
 import { LoadStopsFormList } from "@/features/load/components/LoadStopsFormList";
@@ -29,7 +30,6 @@ import { getErrorMessage } from "@/utils/errorUtils";
 
 const { Title } = Typography;
 
-/** Two-column layout from `md` up; stacked on small screens */
 const FORM_COL = { xs: 24 as const, md: 12 as const };
 
 const STEP_ITEMS_META = [
@@ -40,29 +40,94 @@ const STEP_ITEMS_META = [
   { title: "Files", description: "Optional documents" },
 ] as const;
 
+const LAST_STEP_INDEX = STEP_ITEMS_META.length - 1;
+
+const toNumberOrNull = (value?: string, fieldName?: string): number | null | undefined => {
+  if (value === undefined) return undefined;
+  if (fieldName === "customerRate" || fieldName === "carrierRate") {
+    if (value === null || value === "")
+      throw new Error(
+        `${fieldName === "customerRate" ? "Customer Rate" : "Carrier Rate"} is required`,
+      );
+  } else {
+    if (value === null || value === "") return null;
+  }
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) {
+    if (fieldName === "customerRate" || fieldName === "carrierRate")
+      throw new Error(
+        `${fieldName === "customerRate" ? "Customer Rate" : "Carrier Rate"} must be a valid number`,
+      );
+    return null;
+  }
+  if ((fieldName === "customerRate" || fieldName === "carrierRate") && parsed <= 0)
+    throw new Error(
+      `${fieldName === "customerRate" ? "Customer Rate" : "Carrier Rate"} must be greater than 0`,
+    );
+  return parsed;
+};
+
+const toNullableString = (value?: string | null): string | null | undefined => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
+};
+
+const getFieldsForStep = (form: ReturnType<typeof Form.useForm>[0], step: number): NamePath[] => {
+  switch (step) {
+    case 0:
+      return [
+        "customer",
+        "referenceNumber",
+        "contactName",
+        "customerRate",
+        "paymentMethod",
+        "paymentTerms",
+        "carrierRate",
+      ];
+    case 1:
+      return [
+        "loadType",
+        "serviceType",
+        "serviceGivenAs",
+        "commodity",
+        "bookedAs",
+        "soldAs",
+        "weight",
+      ];
+    case 2: {
+      const list = (form.getFieldValue("pickups") ?? []) as unknown[];
+      return list.flatMap((_, i) => [
+        ["pickups", i, "carrier"],
+        ["pickups", i, "name"],
+        ["pickups", i, "address"],
+      ]);
+    }
+    case 3: {
+      const list = (form.getFieldValue("dropoffs") ?? []) as unknown[];
+      return list.flatMap((_, i) => [
+        ["dropoffs", i, "carrier"],
+        ["dropoffs", i, "name"],
+        ["dropoffs", i, "address"],
+      ]);
+    }
+    default:
+      return [];
+  }
+};
+
 const CreateLoadPage: React.FC = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const screens = Grid.useBreakpoint();
   const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(0);
-  /** Furthest step the user reached via Next — enables clicking Steps to revisit without skipping validation */
   const [maxStepVisited, setMaxStepVisited] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [activeUploadCount, setActiveUploadCount] = useState(0);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<LoadFile[]>([]);
   const stepContentRef = useRef<HTMLDivElement>(null);
-
-  const stepItems = useMemo(
-    () =>
-      STEP_ITEMS_META.map((meta, index) => ({
-        title: meta.title,
-        description: meta.description,
-        disabled: index > maxStepVisited,
-      })),
-    [maxStepVisited],
-  );
 
   useEffect(() => {
     void currentStep;
@@ -71,26 +136,40 @@ const CreateLoadPage: React.FC = () => {
     }
   }, [currentStep, screens.md]);
 
+  const stepItems = STEP_ITEMS_META.map((meta, index) => ({
+    title: meta.title,
+    description: meta.description,
+    disabled: index > maxStepVisited,
+  }));
+
   const handleStepChange = (next: number) => {
-    if (next <= maxStepVisited) {
-      setCurrentStep(next);
-    }
+    if (next <= maxStepVisited) setCurrentStep(next);
   };
 
   const handleNext = async () => {
     try {
-      await form.validateFields(getFieldsForStep(currentStep));
+      await form.validateFields(getFieldsForStep(form, currentStep));
       const advanced = currentStep + 1;
       setMaxStepVisited((prev) => Math.max(prev, advanced));
       setCurrentStep(advanced);
     } catch {
-      // validateFields failed — Ant Design shows field-level errors
+      // field-level errors shown by Ant Design
     }
   };
 
-  const handlePrev = () => {
-    setCurrentStep(currentStep - 1);
-  };
+  const handlePrev = () => setCurrentStep(currentStep - 1);
+
+  const { loading, run: create } = useRequest(
+    async (payload: CreateLoadDto) => loadApi.create(payload),
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("Load created successfully");
+        navigate("/loads");
+      },
+      onError: (error) => message.error(getErrorMessage(error)),
+    },
+  );
 
   const handleSubmit = async () => {
     if (activeUploadCount > 0) {
@@ -98,97 +177,48 @@ const CreateLoadPage: React.FC = () => {
       return;
     }
     try {
-      setLoading(true);
       await form.validateFields();
-
-      const values = form.getFieldsValue(true);
-      const pickups = (values.pickups ?? []) as Location[];
-      const dropoffs = (values.dropoffs ?? []) as Location[];
-
-      const toNumberOrNull = (value?: string, fieldName?: string): number | null | undefined => {
-        if (value === undefined) return undefined;
-        // For required fields (customerRate, carrierRate), don't allow null/empty
-        if (fieldName === "customerRate" || fieldName === "carrierRate") {
-          if (value === null || value === "") {
-            throw new Error(
-              `${fieldName === "customerRate" ? "Customer Rate" : "Carrier Rate"} is required`,
-            );
-          }
-        } else {
-          if (value === null || value === "") return null;
-        }
-        const parsed = Number(value);
-        if (Number.isNaN(parsed)) {
-          if (fieldName === "customerRate" || fieldName === "carrierRate") {
-            throw new Error(
-              `${fieldName === "customerRate" ? "Customer Rate" : "Carrier Rate"} must be a valid number`,
-            );
-          }
-          return null;
-        }
-        if ((fieldName === "customerRate" || fieldName === "carrierRate") && parsed <= 0) {
-          throw new Error(
-            `${fieldName === "customerRate" ? "Customer Rate" : "Carrier Rate"} must be greater than 0`,
-          );
-        }
-        return parsed;
-      };
-
-      const toNullableString = (value?: string | null): string | null | undefined => {
-        if (value === undefined) return undefined;
-        if (value === null) return null;
-        const trimmed = value.trim();
-        return trimmed.length ? trimmed : null;
-      };
-
-      const payload: CreateLoadDto = {
-        customer: values.customer,
-        referenceNumber: values.referenceNumber,
-        customerRate: toNumberOrNull(values.customerRate, "customerRate"),
-        contactName: values.contactName,
-        paymentMethod: values.paymentMethod,
-        paymentTerms: values.paymentTerms,
-        carrier: toNullableString(values.carrier),
-        carrierPaymentMethod: toNullableString(values.carrierPaymentMethod),
-        carrierRate: toNumberOrNull(values.carrierRate, "carrierRate"),
-        chargeServiceFeeToOffice: values.chargeServiceFeeToOffice ?? false,
-        loadType: values.loadType,
-        serviceType: values.serviceType,
-        serviceGivenAs: values.serviceGivenAs,
-        commodity: values.commodity,
-        bookedAs: values.bookedAs,
-        soldAs: values.soldAs,
-        weight: values.weight,
-        temperature: toNullableString(values.temperature),
-        pickups: pickups.map((p) => ({
-          cityZipCode: toNullableString(p.cityZipCode),
-          phone: toNullableString(p.phone),
-          carrier: p.carrier,
-          name: p.name,
-          address: p.address,
-        })),
-        dropoffs: dropoffs.map((d) => ({
-          cityZipCode: toNullableString(d.cityZipCode),
-          phone: toNullableString(d.phone),
-          carrier: d.carrier,
-          name: d.name,
-          address: d.address,
-        })),
-        files: uploadedFiles.length ? uploadedFiles : undefined,
-      };
-
-      await loadApi.create(payload);
-      message.success("Load created successfully");
-      navigate("/loads");
-    } catch (error) {
-      message.error(getErrorMessage(error));
-    } finally {
-      setLoading(false);
+    } catch {
+      return;
     }
-  };
-
-  const handleCancel = () => {
-    navigate("/loads");
+    const values = form.getFieldsValue(true);
+    const pickups = (values.pickups ?? []) as Location[];
+    const dropoffs = (values.dropoffs ?? []) as Location[];
+    create({
+      customer: values.customer,
+      referenceNumber: values.referenceNumber,
+      customerRate: toNumberOrNull(values.customerRate, "customerRate"),
+      contactName: values.contactName,
+      paymentMethod: values.paymentMethod,
+      paymentTerms: values.paymentTerms,
+      carrier: toNullableString(values.carrier),
+      carrierPaymentMethod: toNullableString(values.carrierPaymentMethod),
+      carrierRate: toNumberOrNull(values.carrierRate, "carrierRate"),
+      chargeServiceFeeToOffice: values.chargeServiceFeeToOffice ?? false,
+      loadType: values.loadType,
+      serviceType: values.serviceType,
+      serviceGivenAs: values.serviceGivenAs,
+      commodity: values.commodity,
+      bookedAs: values.bookedAs,
+      soldAs: values.soldAs,
+      weight: values.weight,
+      temperature: toNullableString(values.temperature),
+      pickups: pickups.map((p) => ({
+        cityZipCode: toNullableString(p.cityZipCode),
+        phone: toNullableString(p.phone),
+        carrier: p.carrier,
+        name: p.name,
+        address: p.address,
+      })),
+      dropoffs: dropoffs.map((d) => ({
+        cityZipCode: toNullableString(d.cityZipCode),
+        phone: toNullableString(d.phone),
+        carrier: d.carrier,
+        name: d.name,
+        address: d.address,
+      })),
+      files: uploadedFiles.length ? uploadedFiles : undefined,
+    });
   };
 
   const handleFileUpload = async (file: File): Promise<UploadFile | null> => {
@@ -199,13 +229,7 @@ const CreateLoadPage: React.FC = () => {
       const fileEntry: LoadFile = { id: fileId, fileName: file.name, documentCategory: null };
       setUploadedFiles((prev) => [...prev, fileEntry]);
       message.success({ content: "File uploaded successfully", key: "upload" });
-      return {
-        uid: fileId,
-        name: file.name,
-        status: "done",
-        size: file.size,
-        type: file.type,
-      };
+      return { uid: fileId, name: file.name, status: "done", size: file.size, type: file.type };
     } catch (error) {
       message.error({ content: getErrorMessage(error), key: "upload" });
       return null;
@@ -221,54 +245,9 @@ const CreateLoadPage: React.FC = () => {
     return true;
   };
 
-  const getFieldsForStep = (step: number): NamePath[] => {
-    switch (step) {
-      case 0: // Customer + carrier
-        return [
-          "customer",
-          "referenceNumber",
-          "contactName",
-          "customerRate",
-          "paymentMethod",
-          "paymentTerms",
-          "carrierRate",
-        ];
-      case 1: // Service + booking
-        return [
-          "loadType",
-          "serviceType",
-          "serviceGivenAs",
-          "commodity",
-          "bookedAs",
-          "soldAs",
-          "weight",
-        ];
-      case 2: {
-        const list = (form.getFieldValue("pickups") ?? []) as unknown[];
-        return list.flatMap((_, i) => [
-          ["pickups", i, "carrier"],
-          ["pickups", i, "name"],
-          ["pickups", i, "address"],
-        ]);
-      }
-      case 3: {
-        const list = (form.getFieldValue("dropoffs") ?? []) as unknown[];
-        return list.flatMap((_, i) => [
-          ["dropoffs", i, "carrier"],
-          ["dropoffs", i, "name"],
-          ["dropoffs", i, "address"],
-        ]);
-      }
-      case 4: // Files
-        return [];
-      default:
-        return [];
-    }
-  };
-
   const renderStepContent = () => {
     switch (currentStep) {
-      case 0: // Customer + carrier
+      case 0:
         return (
           <>
             <Divider titlePlacement="start">Customer</Divider>
@@ -299,15 +278,14 @@ const CreateLoadPage: React.FC = () => {
                     { required: true, message: "Please enter customer rate" },
                     {
                       validator: (_, value) => {
-                        const numValue =
+                        const n =
                           value === "" || value === null || value === undefined
                             ? null
                             : Number(value);
-                        if (numValue === null || Number.isNaN(numValue) || numValue <= 0) {
+                        if (n === null || Number.isNaN(n) || n <= 0)
                           return Promise.reject(
                             new Error("Please enter a valid customer rate greater than 0"),
                           );
-                        }
                         return Promise.resolve();
                       },
                     },
@@ -371,15 +349,14 @@ const CreateLoadPage: React.FC = () => {
                     { required: true, message: "Please enter carrier rate" },
                     {
                       validator: (_, value) => {
-                        const numValue =
+                        const n =
                           value === "" || value === null || value === undefined
                             ? null
                             : Number(value);
-                        if (numValue === null || Number.isNaN(numValue) || numValue <= 0) {
+                        if (n === null || Number.isNaN(n) || n <= 0)
                           return Promise.reject(
                             new Error("Please enter a valid carrier rate greater than 0"),
                           );
-                        }
                         return Promise.resolve();
                       },
                     },
@@ -398,7 +375,7 @@ const CreateLoadPage: React.FC = () => {
           </>
         );
 
-      case 1: // Service + booking
+      case 1:
         return (
           <>
             <Divider titlePlacement="start">Service</Divider>
@@ -488,13 +465,13 @@ const CreateLoadPage: React.FC = () => {
           </>
         );
 
-      case 2: // Pick-up
+      case 2:
         return <LoadStopsFormList name="pickups" legLabel="Pick-up" />;
 
-      case 3: // Drop-off
+      case 3:
         return <LoadStopsFormList name="dropoffs" legLabel="Drop-off" />;
 
-      case 4: // Files
+      case 4:
         return (
           <Form.Item label="Upload Files">
             <Upload
@@ -502,11 +479,9 @@ const CreateLoadPage: React.FC = () => {
               fileList={fileList}
               beforeUpload={(file) => {
                 handleFileUpload(file).then((uploaded) => {
-                  if (uploaded) {
-                    setFileList((prev) => [...prev, uploaded]);
-                  }
+                  if (uploaded) setFileList((prev) => [...prev, uploaded]);
                 });
-                return false; // Prevent auto upload
+                return false;
               }}
               onRemove={handleFileRemove}
               iconRender={() => <DeleteOutlined />}
@@ -534,7 +509,7 @@ const CreateLoadPage: React.FC = () => {
         <Title level={2} style={{ margin: 0 }}>
           Create New Load
         </Title>
-        <Button icon={<ArrowLeftOutlined />} onClick={handleCancel}>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/loads")}>
           Back to Loads
         </Button>
       </Flex>
@@ -556,31 +531,15 @@ const CreateLoadPage: React.FC = () => {
           size="large"
           initialValues={{
             chargeServiceFeeToOffice: false,
-            pickups: [
-              {
-                cityZipCode: null,
-                phone: null,
-                carrier: "",
-                name: "",
-                address: "",
-              },
-            ],
-            dropoffs: [
-              {
-                cityZipCode: null,
-                phone: null,
-                carrier: "",
-                name: "",
-                address: "",
-              },
-            ],
+            pickups: [{ cityZipCode: null, phone: null, carrier: "", name: "", address: "" }],
+            dropoffs: [{ cityZipCode: null, phone: null, carrier: "", name: "", address: "" }],
           }}
         >
           <div ref={stepContentRef}>{renderStepContent()}</div>
         </Form>
 
         <Flex justify="space-between" style={{ marginTop: 32 }} wrap="wrap" gap={8}>
-          <Button onClick={handleCancel} size="large">
+          <Button onClick={() => navigate("/loads")} size="large">
             Cancel
           </Button>
           <Space wrap>
@@ -589,15 +548,15 @@ const CreateLoadPage: React.FC = () => {
                 Previous
               </Button>
             )}
-            {currentStep < STEP_ITEMS_META.length - 1 && (
-              <Button type="primary" onClick={handleNext} size="large">
+            {currentStep < LAST_STEP_INDEX && (
+              <Button type="primary" onClick={() => void handleNext()} size="large">
                 Next
               </Button>
             )}
-            {currentStep === STEP_ITEMS_META.length - 1 && (
+            {currentStep === LAST_STEP_INDEX && (
               <Button
                 type="primary"
-                onClick={handleSubmit}
+                onClick={() => void handleSubmit()}
                 loading={loading}
                 disabled={activeUploadCount > 0}
                 size="large"

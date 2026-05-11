@@ -1,8 +1,7 @@
-import { Button, Col, Form, Input, Modal, message, Row, Select, Space, Spin, Switch } from "antd";
+import { useRequest } from "ahooks";
+import { App, Button, Col, Form, Input, Modal, Row, Space, Switch } from "antd";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { getBranches } from "@/features/branch/api/branchApi";
-import type { Branch } from "@/features/branch/types/branch";
+import BranchSelect from "@/features/branch/components/BranchSelect";
 import TeamSelect from "@/features/team/components/TeamSelect";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { createUser } from "../api/userApi";
@@ -15,114 +14,35 @@ interface UserCreateModalProps {
 }
 
 const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuccess }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
 
-  // Branch select state
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [loadingBranches, setLoadingBranches] = useState(false);
-  const [branchPage, setBranchPage] = useState(0);
-  const [_branchTotal, setBranchTotal] = useState(0);
-  const [branchSearch, setBranchSearch] = useState("");
-  const [hasMoreBranches, setHasMoreBranches] = useState(true);
-  const branchSearchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  const isInitialFetchRef = useRef(false);
-
-  // Fetch branches
-  const fetchBranches = useCallback(async (page: number, search: string, append = false) => {
-    setLoadingBranches(true);
-    try {
-      const response = await getBranches({
-        page,
-        limit: 20,
-        query: search || undefined,
-      });
-
-      if (append) {
-        setBranches((prev) => [...prev, ...response.branches]);
-      } else {
-        setBranches(response.branches);
-      }
-
-      setBranchTotal(response.total);
-      setHasMoreBranches((page + 1) * 20 < response.total);
-    } catch (error) {
-      message.error(getErrorMessage(error));
-    } finally {
-      setLoadingBranches(false);
-    }
-  }, []);
-
-  // Load initial branches when modal opens
-  useEffect(() => {
-    if (open && !isInitialFetchRef.current) {
-      isInitialFetchRef.current = true;
-      setBranchPage(0);
-      setBranchSearch("");
-      setHasMoreBranches(true);
-      fetchBranches(0, "");
-    } else if (!open) {
-      isInitialFetchRef.current = false;
-    }
-  }, [open, fetchBranches]);
-
-  const handleSubmit = async (values: UserFormData) => {
-    setLoading(true);
-    try {
+  const { loading, run: submit } = useRequest(
+    async (values: UserFormData) => {
       await createUser(values);
-      message.success("User created successfully");
-      form.resetFields();
-      onSuccess();
-    } catch (error) {
-      message.error(getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    form.resetFields();
-    setBranches([]);
-    setBranchPage(0);
-    setBranchSearch("");
-    onCancel();
-  };
-
-  // Handle branch search
-  const handleBranchSearch = (value: string) => {
-    if (branchSearchTimeoutRef.current) {
-      clearTimeout(branchSearchTimeoutRef.current);
-    }
-
-    branchSearchTimeoutRef.current = setTimeout(() => {
-      setBranchSearch(value);
-      setBranchPage(0);
-      fetchBranches(0, value, false);
-    }, 300);
-  };
-
-  // Handle branch select scroll (infinite scroll)
-  const handleBranchScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLDivElement;
-    const isBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 10;
-
-    if (isBottom && !loadingBranches && hasMoreBranches) {
-      const nextPage = branchPage + 1;
-      setBranchPage(nextPage);
-      fetchBranches(nextPage, branchSearch, true);
-    }
-  };
+    },
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("User created successfully");
+        onSuccess();
+      },
+      onError: (error) => {
+        message.error(getErrorMessage(error));
+      },
+    },
+  );
 
   return (
     <Modal
       title="Create New User"
       open={open}
-      onCancel={handleCancel}
+      onCancel={onCancel}
       footer={null}
       width={600}
-      forceRender
+      destroyOnHidden
     >
-      <Form form={form} layout="vertical" onFinish={handleSubmit} id="userCreateForm">
+      <Form form={form} layout="vertical" onFinish={submit} id="userCreateForm">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -162,35 +82,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuc
         </Form.Item>
 
         <Form.Item name="branch" label="Branch">
-          <Select
-            placeholder="Search and select branch"
-            allowClear
-            showSearch={{ filterOption: false, onSearch: handleBranchSearch }}
-            onPopupScroll={handleBranchScroll}
-            loading={loadingBranches}
-            notFoundContent={loadingBranches ? <Spin size="small" /> : "No branches found"}
-            options={branches.map((b) => ({ value: b.id, label: b.name, owner: b.owner ?? null }))}
-            optionRender={(option) => (
-              <div>
-                <div style={{ fontWeight: 500 }}>{option.label}</div>
-                {option.data.owner && (
-                  <div style={{ fontSize: "12px", color: "#888" }}>
-                    Owner: {option.data.owner.firstName} {option.data.owner.lastName}
-                  </div>
-                )}
-              </div>
-            )}
-            popupRender={(menu) => (
-              <>
-                {menu}
-                {loadingBranches && hasMoreBranches && (
-                  <div style={{ textAlign: "center", padding: "8px" }}>
-                    <Spin size="small" /> Loading more...
-                  </div>
-                )}
-              </>
-            )}
-          />
+          <BranchSelect />
         </Form.Item>
 
         <Form.Item name="teamId" label="Team">
@@ -203,7 +95,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuc
 
         <Form.Item>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Button onClick={onCancel}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
               Create User
             </Button>

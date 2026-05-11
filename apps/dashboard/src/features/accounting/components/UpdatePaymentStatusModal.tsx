@@ -1,6 +1,6 @@
 import { UploadOutlined } from "@ant-design/icons";
 import { useRequest } from "ahooks";
-import type { UploadFile, UploadProps } from "antd";
+
 import {
   App,
   Button,
@@ -15,18 +15,17 @@ import {
   Upload,
 } from "antd";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useState } from "react";
+
 import { getErrorMessage } from "@/utils/errorUtils";
 import { paymentOrderApi } from "../api/paymentOrderApi";
+import { useInvoiceHandlers } from "../hooks/useInvoiceHandlers";
 import type { PaymentOrder, PaymentStatus } from "../types/paymentOrder";
+import { STATUS_LABEL } from "./PaymentStatusTag";
 
-const STATUS_OPTIONS: { label: string; value: PaymentStatus }[] = [
-  { label: "Pending", value: "Pending" },
-  { label: "Approved", value: "Approved" },
-  { label: "Approved Paid", value: "ApprovedPaid" },
-  { label: "Declined / Hold", value: "DeclinedHold" },
-  { label: "Partial Paid", value: "PartialPaid" },
-];
+const STATUS_OPTIONS = (Object.keys(STATUS_LABEL) as PaymentStatus[]).map((value) => ({
+  value,
+  label: STATUS_LABEL[value],
+}));
 
 interface FormValues {
   paymentStatus: PaymentStatus;
@@ -44,8 +43,6 @@ interface Props {
   onSuccess: () => void;
 }
 
-const getFileId = (file: UploadFile): string => (file.response as string | undefined) ?? file.uid;
-
 export default function UpdatePaymentStatusModal({
   paymentOrder,
   open,
@@ -56,27 +53,22 @@ export default function UpdatePaymentStatusModal({
   const readOnly = mode === "view";
   const { message } = App.useApp();
   const [form] = Form.useForm<FormValues>();
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const { fileList, handleUpload, handleChange, handleRemove, handleDownload } = useInvoiceHandlers(
+    paymentOrder,
+    onSuccess,
+  );
 
-  useEffect(() => {
-    if (!paymentOrder || !open) return;
-    form.setFieldsValue({
-      paymentStatus: paymentOrder.paymentStatus,
-      carrierPaidAmount: paymentOrder.carrierPaidAmount,
-      carrierPaidDate: paymentOrder.carrierPaidDate ? dayjs(paymentOrder.carrierPaidDate) : null,
-      brokerReceivedAmount: paymentOrder.brokerReceivedAmount,
-      brokerReceivedDate: paymentOrder.brokerReceivedDate
-        ? dayjs(paymentOrder.brokerReceivedDate)
-        : null,
-    });
-    setFileList(
-      (paymentOrder.invoices ?? []).map((inv) => ({
-        uid: inv.fileId,
-        name: inv.fileName,
-        status: "done" as const,
-      })),
-    );
-  }, [paymentOrder, open, form]);
+  const initialValues: Partial<FormValues> = paymentOrder
+    ? {
+        paymentStatus: paymentOrder.paymentStatus,
+        carrierPaidAmount: paymentOrder.carrierPaidAmount,
+        carrierPaidDate: paymentOrder.carrierPaidDate ? dayjs(paymentOrder.carrierPaidDate) : null,
+        brokerReceivedAmount: paymentOrder.brokerReceivedAmount,
+        brokerReceivedDate: paymentOrder.brokerReceivedDate
+          ? dayjs(paymentOrder.brokerReceivedDate)
+          : null,
+      }
+    : {};
 
   const { loading, run: save } = useRequest(
     async (values: FormValues) => {
@@ -100,57 +92,6 @@ export default function UpdatePaymentStatusModal({
     },
   );
 
-  const handleUpload: NonNullable<UploadProps["customRequest"]> = useCallback(
-    async ({ file, onSuccess: onUploadSuccess, onError }) => {
-      if (!paymentOrder) return;
-      try {
-        const fileId = await paymentOrderApi.addInvoice(paymentOrder.id, file as File);
-        onUploadSuccess?.(fileId);
-      } catch (err) {
-        onError?.(err instanceof Error ? err : new Error(String(err)));
-      }
-    },
-    [paymentOrder],
-  );
-
-  const handleChange: UploadProps["onChange"] = useCallback(
-    ({ file, fileList: newList }) => {
-      setFileList(newList);
-      if (file.status === "done") {
-        message.success(`${file.name} uploaded`);
-        onSuccess();
-      } else if (file.status === "error") {
-        message.error(`${file.name} failed to upload`);
-      }
-    },
-    [message, onSuccess],
-  );
-
-  const handleRemove = useCallback(
-    async (file: UploadFile): Promise<boolean> => {
-      if (!paymentOrder) return false;
-      try {
-        await paymentOrderApi.removeInvoice(paymentOrder.id, getFileId(file));
-        message.success(`${file.name} removed`);
-        onSuccess();
-        return true;
-      } catch (err) {
-        message.error(getErrorMessage(err));
-        return false;
-      }
-    },
-    [paymentOrder, message, onSuccess],
-  );
-
-  const handleDownload = useCallback(
-    (file: UploadFile) => {
-      paymentOrderApi.downloadInvoice(getFileId(file), file.name).catch((err) => {
-        message.error(getErrorMessage(err));
-      });
-    },
-    [message],
-  );
-
   return (
     <Modal
       title={`${readOnly ? "View" : "Edit"} Payment Order — ${paymentOrder?.referenceNumber ?? ""}`}
@@ -171,7 +112,13 @@ export default function UpdatePaymentStatusModal({
       }
       destroyOnHidden
     >
-      <Form form={form} layout="vertical" onFinish={save} style={{ marginTop: 16 }}>
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={save}
+        initialValues={initialValues}
+        style={{ marginTop: 16 }}
+      >
         <Form.Item name="paymentStatus" label="Payment Status" rules={[{ required: true }]}>
           <Select options={STATUS_OPTIONS} disabled={readOnly} />
         </Form.Item>
@@ -222,10 +169,7 @@ export default function UpdatePaymentStatusModal({
             onChange={handleChange}
             onRemove={readOnly ? undefined : handleRemove}
             onDownload={handleDownload}
-            showUploadList={{
-              showDownloadIcon: true,
-              showRemoveIcon: !readOnly,
-            }}
+            showUploadList={{ showDownloadIcon: true, showRemoveIcon: !readOnly }}
           >
             {!readOnly && <Button icon={<UploadOutlined />}>Upload Invoice</Button>}
           </Upload>

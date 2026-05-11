@@ -1,5 +1,5 @@
 import type React from "react";
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import CarrierCreateModal from "../components/CarrierCreateModal";
 import CarrierEditModal from "../components/CarrierEditModal";
 import type { Carrier, CarrierKind } from "../types/carrier";
@@ -17,57 +17,55 @@ export const useCarrierModal = (): CarrierModalContextType => {
   return ctx;
 };
 
+type CreateState = {
+  open: boolean;
+  kind: CarrierKind;
+  onSuccess?: () => void;
+};
+
+type EditState = {
+  open: boolean;
+  carrier: Carrier | null;
+  onSuccess?: () => void;
+};
+
 export const CarrierModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [carrierCreate, setCarrierCreate] = useState<{ open: boolean; kind: CarrierKind }>({
-    open: false,
-    kind: "twy",
-  });
+  const [createState, setCreateState] = useState<CreateState>({ open: false, kind: "twy" });
+  const [editState, setEditState] = useState<EditState>({ open: false, carrier: null });
 
-  const [carrierEdit, setCarrierEdit] = useState<{ open: boolean; carrier: Carrier | null }>({
-    open: false,
-    carrier: null,
-  });
+  const openCarrierCreate = (kind: CarrierKind, onSuccess?: () => void) => {
+    setCreateState({ open: true, kind, onSuccess });
+  };
 
-  const carrierCreateOnSuccess = useRef<(() => void) | undefined>(undefined);
-  const carrierEditOnSuccess = useRef<(() => void) | undefined>(undefined);
+  const openCarrierEdit = (data: { carrier: Carrier }, onSuccess?: () => void) => {
+    setEditState({ open: true, ...data, onSuccess });
+  };
 
-  const openCarrierCreate = useCallback((kind: CarrierKind, onSuccess?: () => void) => {
-    carrierCreateOnSuccess.current = onSuccess;
-    setCarrierCreate({ open: true, kind });
-  }, []);
-
-  const openCarrierEdit = useCallback((data: { carrier: Carrier }, onSuccess?: () => void) => {
-    carrierEditOnSuccess.current = onSuccess;
-    setCarrierEdit({ open: true, ...data });
-  }, []);
-
-  const contextValue = useMemo(
-    () => ({ openCarrierCreate, openCarrierEdit }),
-    [openCarrierCreate, openCarrierEdit],
-  );
+  const closeCreate = () => setCreateState((prev) => ({ ...prev, open: false }));
+  const closeEdit = () => setEditState((prev) => ({ ...prev, open: false }));
 
   return (
-    <CarrierModalContext.Provider value={contextValue}>
+    <CarrierModalContext.Provider value={{ openCarrierCreate, openCarrierEdit }}>
       {children}
 
       <CarrierCreateModal
-        open={carrierCreate.open}
-        kind={carrierCreate.kind}
-        onCancel={() => setCarrierCreate((prev) => ({ ...prev, open: false }))}
+        open={createState.open}
+        kind={createState.kind}
+        onCancel={closeCreate}
         onSuccess={() => {
-          setCarrierCreate((prev) => ({ ...prev, open: false }));
-          carrierCreateOnSuccess.current?.();
+          closeCreate();
+          createState.onSuccess?.();
         }}
       />
 
-      {carrierEdit.carrier !== null && (
+      {editState.carrier !== null && (
         <CarrierEditModal
-          open={carrierEdit.open}
-          carrier={carrierEdit.carrier}
-          onCancel={() => setCarrierEdit((prev) => ({ ...prev, open: false }))}
+          open={editState.open}
+          carrier={editState.carrier}
+          onCancel={closeEdit}
           onSuccess={() => {
-            setCarrierEdit((prev) => ({ ...prev, open: false }));
-            carrierEditOnSuccess.current?.();
+            closeEdit();
+            editState.onSuccess?.();
           }}
         />
       )}

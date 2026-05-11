@@ -1,10 +1,11 @@
-import { Button, Form, Input, Modal, message, Select, Space } from "antd";
+import { useRequest } from "ahooks";
+import { App, Button, Form, Input, Modal, Select, Space } from "antd";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { SelectOption } from "@/components/SelectOption";
 import type { User } from "@/features/user/types/user";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { updateBranch } from "../api/branchApi";
-import type { Branch, BranchFormData, UpdateBranchRequest } from "../types/branch";
+import type { Branch, BranchFormData } from "../types/branch";
 
 const { TextArea } = Input;
 
@@ -25,72 +26,47 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
   onCancel,
   onSuccess,
 }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
 
-  // Set form values when modal opens or branch changes
-  useEffect(() => {
-    if (open && branch) {
-      form.setFieldsValue({
-        name: branch.name,
-        contact: branch.contact || undefined,
-        owner: branch.owner?.id,
-      });
-    }
-  }, [open, branch, form]);
-
-  const handleSubmit = async (values: BranchFormData) => {
-    setLoading(true);
-    try {
-      const updateData: UpdateBranchRequest = {
+  const { loading, run: submit } = useRequest(
+    async (values: BranchFormData) => {
+      await updateBranch({
         id: branch.id,
         name: values.name,
         contact: values.contact || undefined,
         owner: values.owner,
-      };
-
-      await updateBranch(updateData);
-      message.success("Branch updated successfully");
-      onSuccess();
-    } catch (error) {
-      // Handle duplicate branch name error
-      const errorMessage = getErrorMessage(error);
-
-      if (
-        errorMessage.includes('duplicate key value violates unique constraint "branch_name_key"') ||
-        errorMessage.includes("branch_name_key")
-      ) {
-        message.error(`Branch name "${values.name}" already exists. Please use a different name.`);
-      } else {
-        message.error(errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    form.resetFields();
-    onCancel();
-  };
+      });
+    },
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("Branch updated successfully");
+        onSuccess();
+      },
+      onError: (error) => {
+        message.error(getErrorMessage(error));
+      },
+    },
+  );
 
   return (
     <Modal
       title="Edit Branch"
       open={open}
-      onCancel={handleCancel}
+      onCancel={onCancel}
       footer={null}
       width={600}
-      forceRender
+      destroyOnHidden
     >
       <Form
         form={form}
         layout="vertical"
-        onFinish={handleSubmit}
+        onFinish={submit}
         initialValues={{
-          name: branch?.name,
-          contact: branch?.contact || undefined,
-          owner: branch?.owner?.id,
+          name: branch.name,
+          contact: branch.contact || undefined,
+          owner: branch.owner?.id,
         }}
       >
         <Form.Item
@@ -107,12 +83,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
         <Form.Item
           name="contact"
           label="Contact Information"
-          rules={[
-            {
-              max: 500,
-              message: "Contact information cannot exceed 500 characters",
-            },
-          ]}
+          rules={[{ max: 500, message: "Contact information cannot exceed 500 characters" }]}
         >
           <TextArea
             placeholder="Enter contact information (phone, email, address, etc.)"
@@ -141,17 +112,14 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
               email: o.email,
             }))}
             optionRender={(option) => (
-              <div>
-                <div style={{ fontWeight: 500 }}>{option.label}</div>
-                <div style={{ fontSize: "12px", color: "#888" }}>{option.data.email}</div>
-              </div>
+              <SelectOption label={option.label} description={option.data.email} />
             )}
           />
         </Form.Item>
 
         <Form.Item>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Button onClick={onCancel}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
               Update Branch
             </Button>

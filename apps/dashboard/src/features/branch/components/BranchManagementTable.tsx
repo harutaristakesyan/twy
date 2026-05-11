@@ -1,8 +1,8 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { useAntdTable, useRequest } from "ahooks";
-import { Button, Card, Flex, message, Table, Typography } from "antd";
+import { App, Button, Card, Flex, Table, Typography } from "antd";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import type { AdvancedFilter } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { getUsers } from "@/features/user/api/userApi";
@@ -17,6 +17,7 @@ const { Title } = Typography;
 type SortField = "name" | "createdAt" | "contact" | undefined;
 
 const BranchManagementTable: React.FC = () => {
+  const { message } = App.useApp();
   const { openBranchCreate } = useBranchModal();
   const { permissions } = useCurrentUser();
   const canAdd = permissions.branches.add;
@@ -57,13 +58,10 @@ const BranchManagementTable: React.FC = () => {
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const handleFilterApply = useCallback(
-    (filter: AdvancedFilter | undefined, query: string | undefined) => {
-      setActiveFilter(filter);
-      setActiveQuery(query ?? "");
-    },
-    [],
-  );
+  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
+    setActiveFilter(filter);
+    setActiveQuery(query ?? "");
+  };
 
   const columns = useBranchColumns(refresh, runDelete, owners, ownersLoading);
 

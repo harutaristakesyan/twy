@@ -1,4 +1,6 @@
+import { useRequest } from "ahooks";
 import {
+  App,
   Button,
   Checkbox,
   Col,
@@ -6,20 +8,14 @@ import {
   Input,
   InputNumber,
   Modal,
-  message,
   Row,
   Select,
   Space,
 } from "antd";
 import type React from "react";
-import { useEffect, useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { updateOutsideBroker } from "../api/brokerApi";
-import type {
-  OutsideBroker,
-  OutsideBrokerFormData,
-  UpdateOutsideBrokerRequest,
-} from "../types/broker";
+import type { OutsideBroker, UpdateOutsideBrokerRequest } from "../types/broker";
 import { BrokerStatus } from "../types/broker";
 
 const { TextArea } = Input;
@@ -31,104 +27,92 @@ interface OutsideBrokerEditModalProps {
   onSuccess: () => void;
 }
 
+type EditFormValues = {
+  brokerName: string;
+  mcNumber: string;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+  status: BrokerStatus;
+  creditLimitUnlimited: boolean;
+  creditLimit: number | null;
+};
+
+const STATUS_OPTIONS = [
+  { value: BrokerStatus.APPROVED, label: "Approved" },
+  { value: BrokerStatus.PENDING, label: "Pending" },
+  { value: BrokerStatus.DENIED, label: "Denied" },
+];
+
 const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
   open,
   broker,
   onCancel,
   onSuccess,
 }) => {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [creditLimitUnlimited, setCreditLimitUnlimited] = useState(true);
-  const [creditLimit, setCreditLimit] = useState<number | null>(null);
+  const { message } = App.useApp();
+  const [form] = Form.useForm<EditFormValues>();
+  const creditLimitUnlimited =
+    Form.useWatch("creditLimitUnlimited", form) ?? broker.creditLimitUnlimited;
 
-  useEffect(() => {
-    if (open && broker) {
-      form.setFieldsValue({
-        brokerName: broker.brokerName,
-        mcNumber: broker.mcNumber,
-        contactName: broker.contactName || "",
-        phone: broker.phone || "",
-        email: broker.email || "",
-        address: broker.address || "",
-        notes: broker.notes || "",
-        status: broker.status,
-      });
-      setCreditLimitUnlimited(broker.creditLimitUnlimited ?? true);
-      setCreditLimit(broker.creditLimit ?? null);
-    }
-  }, [open, broker, form]);
+  const { loading, run: update } = useRequest(
+    async (payload: UpdateOutsideBrokerRequest) => updateOutsideBroker(payload),
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("Outside broker updated successfully");
+        onSuccess();
+      },
+      onError: (error) => message.error(getErrorMessage(error)),
+    },
+  );
 
-  const handleSubmit = async (
-    values: Omit<OutsideBrokerFormData, "creditLimitUnlimited" | "creditLimit">,
-  ) => {
-    if (!creditLimitUnlimited && (creditLimit === null || creditLimit <= 0)) {
+  const handleFinish = (values: EditFormValues) => {
+    if (!values.creditLimitUnlimited && (values.creditLimit === null || values.creditLimit <= 0)) {
       message.error("Please enter a valid credit limit amount");
       return;
     }
-    setLoading(true);
-    try {
-      const updateData: UpdateOutsideBrokerRequest = {
-        id: broker.id,
-        brokerName: values.brokerName,
-        mcNumber: values.mcNumber,
-        contactName: values.contactName,
-        phone: values.phone,
-        email: values.email,
-        address: values.address,
-        notes: values.notes,
-        status: values.status,
-        creditLimitUnlimited,
-        creditLimit: creditLimitUnlimited ? null : creditLimit,
-      };
-
-      await updateOutsideBroker(updateData);
-      message.success("Outside broker updated successfully");
-      onSuccess();
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-
-      if (errorMessage.includes("duplicate") || errorMessage.includes("unique constraint")) {
-        message.error(
-          `MC Number "${values.mcNumber}" already exists. Please use a different MC number.`,
-        );
-      } else {
-        message.error(errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    form.resetFields();
-    setCreditLimitUnlimited(true);
-    setCreditLimit(null);
-    onCancel();
+    update({
+      id: broker.id,
+      brokerName: values.brokerName,
+      mcNumber: values.mcNumber,
+      contactName: values.contactName,
+      phone: values.phone,
+      email: values.email,
+      address: values.address,
+      notes: values.notes,
+      status: values.status,
+      creditLimitUnlimited: values.creditLimitUnlimited,
+      creditLimit: values.creditLimitUnlimited ? null : values.creditLimit,
+    });
   };
 
   return (
     <Modal
       title="Edit Outside Broker"
       open={open}
-      onCancel={handleCancel}
+      onCancel={onCancel}
       footer={null}
       width={600}
-      forceRender
+      destroyOnHidden
     >
       <Form
         form={form}
         layout="vertical"
-        onFinish={handleSubmit}
+        onFinish={handleFinish}
         initialValues={{
-          brokerName: broker?.brokerName,
-          mcNumber: broker?.mcNumber,
-          contactName: broker?.contactName || "",
-          phone: broker?.phone || "",
-          email: broker?.email || "",
-          address: broker?.address || "",
-          notes: broker?.notes || "",
-          status: broker?.status,
+          brokerName: broker.brokerName,
+          mcNumber: broker.mcNumber,
+          contactName: broker.contactName ?? "",
+          phone: broker.phone ?? "",
+          email: broker.email ?? "",
+          address: broker.address ?? "",
+          notes: broker.notes ?? "",
+          status: broker.status,
+          creditLimitUnlimited: broker.creditLimitUnlimited ?? true,
+          creditLimit: broker.creditLimit ?? null,
         }}
       >
         <Row gutter={16}>
@@ -184,14 +168,7 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
               label="Status"
               rules={[{ required: true, message: "Please select a status" }]}
             >
-              <Select
-                placeholder="Select status"
-                options={[
-                  { value: BrokerStatus.APPROVED, label: "Approved" },
-                  { value: BrokerStatus.PENDING, label: "Pending" },
-                  { value: BrokerStatus.DENIED, label: "Denied" },
-                ]}
-              />
+              <Select placeholder="Select status" options={STATUS_OPTIONS} />
             </Form.Item>
           </Col>
         </Row>
@@ -205,31 +182,25 @@ const OutsideBrokerEditModal: React.FC<OutsideBrokerEditModalProps> = ({
         </Form.Item>
 
         <Form.Item label="Credit Limit">
-          <Checkbox
-            checked={creditLimitUnlimited}
-            onChange={(e) => {
-              setCreditLimitUnlimited(e.target.checked);
-              if (e.target.checked) setCreditLimit(null);
-            }}
-          >
-            Unlimited
-          </Checkbox>
+          <Form.Item name="creditLimitUnlimited" valuePropName="checked" noStyle>
+            <Checkbox>Unlimited</Checkbox>
+          </Form.Item>
           {!creditLimitUnlimited && (
-            <InputNumber
-              value={creditLimit}
-              onChange={setCreditLimit}
-              min={0.01}
-              precision={2}
-              prefix="€"
-              style={{ width: "100%", marginTop: 8 }}
-              placeholder="Enter credit limit"
-            />
+            <Form.Item name="creditLimit" noStyle>
+              <InputNumber
+                min={0.01}
+                precision={2}
+                prefix="€"
+                style={{ width: "100%", marginTop: 8 }}
+                placeholder="Enter credit limit"
+              />
+            </Form.Item>
           )}
         </Form.Item>
 
         <Form.Item>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Button onClick={onCancel}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
               Update Broker
             </Button>

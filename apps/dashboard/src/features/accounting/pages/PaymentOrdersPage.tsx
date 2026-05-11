@@ -2,52 +2,34 @@ import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import { useAntdTable, useRequest } from "ahooks";
 import { Button, Card, Flex, Space, Table, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { getBranches } from "@/features/branch/api/branchApi";
+import { renderCurrency, renderDate } from "@/utils/formatters";
 import { paymentOrderApi } from "../api/paymentOrderApi";
 import PaymentStatusTag from "../components/PaymentStatusTag";
 import UpdatePaymentStatusModal from "../components/UpdatePaymentStatusModal";
+import { usePaymentOrderModal } from "../hooks/usePaymentOrderModal";
 import type { PaymentOrder } from "../types/paymentOrder";
-
-type ModalMode = "edit" | "view";
 
 const { Title } = Typography;
 
-const formatCurrency = (value: number | null | undefined): string =>
-  value != null
-    ? `€${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : "—";
-
-const formatDate = (value: string | null | undefined): string =>
-  value
-    ? new Date(value).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-    : "—";
-
 export default function PaymentOrdersPage() {
-  const [selectedOrder, setSelectedOrder] = useState<PaymentOrder | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<ModalMode>("edit");
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
   const [activeQuery, setActiveQuery] = useState("");
+  const { selectedOrder, open, mode, openModal, closeModal } = usePaymentOrderModal();
 
   const { data: branchesData } = useRequest(() => getBranches({ limit: 200 }), {
     cacheKey: "branches-for-filter",
   });
-
-  const branchOptions = branchesData?.branches.map((b) => ({ label: b.name, value: b.id })) ?? [];
 
   const fields: FilterField[] = [
     {
       key: "branchId",
       label: "Branch",
       type: "select",
-      options: branchOptions,
+      options: branchesData?.branches.map((b) => ({ label: b.name, value: b.id })) ?? [],
       placeholder: "All branches",
     },
   ];
@@ -65,27 +47,10 @@ export default function PaymentOrdersPage() {
     { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 20 },
   );
 
-  const openModal = useCallback((record: PaymentOrder, mode: ModalMode) => {
-    setSelectedOrder(record);
-    setModalMode(mode);
-    setModalOpen(true);
-  }, []);
-
-  const closeModal = useCallback(() => {
-    setModalOpen(false);
-  }, []);
-
-  const handleSuccess = useCallback(() => {
-    refresh();
-  }, [refresh]);
-
-  const handleFilterApply = useCallback(
-    (filter: AdvancedFilter | undefined, query: string | undefined) => {
-      setActiveFilter(filter);
-      setActiveQuery(query ?? "");
-    },
-    [],
-  );
+  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
+    setActiveFilter(filter);
+    setActiveQuery(query ?? "");
+  };
 
   const columns: ColumnsType<PaymentOrder> = [
     {
@@ -109,21 +74,21 @@ export default function PaymentOrdersPage() {
       dataIndex: "brokerReceivable",
       key: "brokerReceivable",
       width: 150,
-      render: formatCurrency,
+      render: renderCurrency,
     },
     {
       title: "Carrier Payable",
       dataIndex: "carrierPayable",
       key: "carrierPayable",
       width: 140,
-      render: (v: number) => formatCurrency(v),
+      render: renderCurrency,
     },
     {
       title: "Service Fee",
       dataIndex: "serviceFee",
       key: "serviceFee",
       width: 120,
-      render: (v: number) => formatCurrency(v),
+      render: renderCurrency,
     },
     {
       title: "Income %",
@@ -137,42 +102,42 @@ export default function PaymentOrdersPage() {
       dataIndex: "charges",
       key: "charges",
       width: 110,
-      render: formatCurrency,
+      render: renderCurrency,
     },
     {
       title: "Profit",
       dataIndex: "profit",
       key: "profit",
       width: 120,
-      render: formatCurrency,
+      render: renderCurrency,
     },
     {
       title: "Carrier Paid",
       dataIndex: "carrierPaidAmount",
       key: "carrierPaidAmount",
       width: 130,
-      render: formatCurrency,
+      render: renderCurrency,
     },
     {
       title: "Carrier Paid Date",
       dataIndex: "carrierPaidDate",
       key: "carrierPaidDate",
       width: 140,
-      render: formatDate,
+      render: renderDate,
     },
     {
       title: "Broker Received",
       dataIndex: "brokerReceivedAmount",
       key: "brokerReceivedAmount",
       width: 140,
-      render: formatCurrency,
+      render: renderCurrency,
     },
     {
       title: "Broker Received Date",
       dataIndex: "brokerReceivedDate",
       key: "brokerReceivedDate",
       width: 160,
-      render: formatDate,
+      render: renderDate,
     },
     {
       title: "Invoices",
@@ -197,7 +162,7 @@ export default function PaymentOrdersPage() {
       dataIndex: "createdAt",
       key: "createdAt",
       width: 130,
-      render: formatDate,
+      render: renderDate,
     },
     {
       title: "Actions",
@@ -251,10 +216,10 @@ export default function PaymentOrdersPage() {
 
       <UpdatePaymentStatusModal
         paymentOrder={selectedOrder}
-        open={modalOpen}
-        mode={modalMode}
+        open={open}
+        mode={mode}
         onClose={closeModal}
-        onSuccess={handleSuccess}
+        onSuccess={refresh}
       />
     </>
   );

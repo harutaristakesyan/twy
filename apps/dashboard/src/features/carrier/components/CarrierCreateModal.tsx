@@ -1,13 +1,17 @@
-import { Button, DatePicker, Form, Input, Modal, message, Space } from "antd";
+import { useRequest } from "ahooks";
+import { App, Button, DatePicker, Form, Input, Modal, Space } from "antd";
 import dayjs from "dayjs";
 import type React from "react";
-import { useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { submitCarrierRequest } from "../api/carrierRequestApi";
 import type { CarrierKind } from "../types/carrier";
 import type { SubmitCarrierRequestBody } from "../types/carrierRequest";
 
 const { TextArea } = Input;
+
+type FormValues = Omit<SubmitCarrierRequestBody, "kind" | "insuranceExpiry"> & {
+  insuranceExpiry: dayjs.Dayjs;
+};
 
 interface CarrierCreateModalProps {
   open: boolean;
@@ -22,17 +26,12 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
   onCancel,
   onSuccess,
 }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
 
-  type FormValues = Omit<SubmitCarrierRequestBody, "kind" | "insuranceExpiry"> & {
-    insuranceExpiry: dayjs.Dayjs;
-  };
-
-  const handleSubmit = async (values: FormValues) => {
-    setLoading(true);
-    try {
-      const payload: SubmitCarrierRequestBody = {
+  const { loading, run: submit } = useRequest(
+    async (values: FormValues) => {
+      await submitCarrierRequest({
         kind,
         carrierName: values.carrierName,
         mcDotNumber: values.mcDotNumber,
@@ -41,42 +40,30 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
         phone: values.phone,
         email: values.email,
         notes: values.notes,
-      };
-
-      await submitCarrierRequest(payload);
-      message.success("Carrier request submitted for review");
-      form.resetFields();
-      onSuccess();
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      if (errorMessage.includes("duplicate") || errorMessage.includes("unique constraint")) {
-        Modal.error({
-          title: "Duplicate MC/DOT",
-          content: `MC/DOT number "${values.mcDotNumber}" is already in use. Please use a different number.`,
-        });
-      } else {
-        Modal.error({ title: "Request failed", content: errorMessage });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    form.resetFields();
-    onCancel();
-  };
+      });
+    },
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success("Carrier request submitted for review");
+        onSuccess();
+      },
+      onError: (error) => {
+        message.error(getErrorMessage(error));
+      },
+    },
+  );
 
   return (
     <Modal
       title="Submit carrier request"
       open={open}
-      onCancel={handleCancel}
+      onCancel={onCancel}
       footer={null}
       width={600}
-      forceRender
+      destroyOnHidden
     >
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+      <Form form={form} layout="vertical" onFinish={submit}>
         <Form.Item
           name="carrierName"
           label="Carrier name"
@@ -141,7 +128,7 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
 
         <Form.Item>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Button onClick={onCancel}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
               Submit request
             </Button>

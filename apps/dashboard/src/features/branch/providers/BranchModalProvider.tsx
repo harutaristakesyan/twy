@@ -1,5 +1,5 @@
 import type React from "react";
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import type { User } from "@/features/user/types/user";
 import BranchCreateModal from "../components/BranchCreateModal";
 import BranchEditModal from "../components/BranchEditModal";
@@ -24,69 +24,76 @@ export const useBranchModal = (): BranchModalContextType => {
   return ctx;
 };
 
+type CreateState = {
+  open: boolean;
+  owners: User[];
+  loadingOwners: boolean;
+  onSuccess?: () => void;
+};
+
+type EditState = {
+  open: boolean;
+  branch: Branch | null;
+  owners: User[];
+  loadingOwners: boolean;
+  onSuccess?: () => void;
+};
+
 export const BranchModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [branchCreate, setBranchCreate] = useState<{
-    open: boolean;
-    owners: User[];
-    loadingOwners: boolean;
-  }>({ open: false, owners: [], loadingOwners: false });
+  const [createState, setCreateState] = useState<CreateState>({
+    open: false,
+    owners: [],
+    loadingOwners: false,
+  });
+  const [editState, setEditState] = useState<EditState>({
+    open: false,
+    branch: null,
+    owners: [],
+    loadingOwners: false,
+  });
 
-  const [branchEdit, setBranchEdit] = useState<{
-    open: boolean;
-    branch: Branch | null;
-    owners: User[];
-    loadingOwners: boolean;
-  }>({ open: false, branch: null, owners: [], loadingOwners: false });
+  const openBranchCreate = (
+    data: { owners: User[]; loadingOwners: boolean },
+    onSuccess?: () => void,
+  ) => {
+    setCreateState({ open: true, ...data, onSuccess });
+  };
 
-  const branchCreateOnSuccess = useRef<(() => void) | undefined>(undefined);
-  const branchEditOnSuccess = useRef<(() => void) | undefined>(undefined);
+  const openBranchEdit = (
+    data: { branch: Branch; owners: User[]; loadingOwners: boolean },
+    onSuccess?: () => void,
+  ) => {
+    setEditState({ open: true, ...data, onSuccess });
+  };
 
-  const openBranchCreate = useCallback(
-    (data: { owners: User[]; loadingOwners: boolean }, onSuccess?: () => void) => {
-      branchCreateOnSuccess.current = onSuccess;
-      setBranchCreate({ open: true, ...data });
-    },
-    [],
-  );
-
-  const openBranchEdit = useCallback(
-    (data: { branch: Branch; owners: User[]; loadingOwners: boolean }, onSuccess?: () => void) => {
-      branchEditOnSuccess.current = onSuccess;
-      setBranchEdit({ open: true, ...data });
-    },
-    [],
-  );
-
-  const contextValue = useMemo(
-    () => ({ openBranchCreate, openBranchEdit }),
-    [openBranchCreate, openBranchEdit],
-  );
+  const closeCreate = () => setCreateState((prev) => ({ ...prev, open: false }));
+  const closeEdit = () => setEditState((prev) => ({ ...prev, open: false }));
 
   return (
-    <BranchModalContext.Provider value={contextValue}>
+    <BranchModalContext.Provider value={{ openBranchCreate, openBranchEdit }}>
       {children}
 
       <BranchCreateModal
-        open={branchCreate.open}
-        owners={branchCreate.owners}
-        loadingOwners={branchCreate.loadingOwners}
-        onCancel={() => setBranchCreate((prev) => ({ ...prev, open: false }))}
+        open={createState.open}
+        owners={createState.owners}
+        loadingOwners={createState.loadingOwners}
+        onCancel={closeCreate}
         onSuccess={() => {
-          setBranchCreate((prev) => ({ ...prev, open: false }));
-          branchCreateOnSuccess.current?.();
+          closeCreate();
+          createState.onSuccess?.();
         }}
       />
 
-      {branchEdit.branch !== null && (
+      {editState.branch !== null && (
         <BranchEditModal
-          open={branchEdit.open}
-          branch={branchEdit.branch}
-          owners={branchEdit.owners}
-          loadingOwners={branchEdit.loadingOwners}
-          onCancel={() => setBranchEdit((prev) => ({ ...prev, open: false }))}
+          open={editState.open}
+          branch={editState.branch}
+          owners={editState.owners}
+          loadingOwners={editState.loadingOwners}
+          onCancel={closeEdit}
           onSuccess={() => {
-            setBranchEdit((prev) => ({ ...prev, open: false }));
-            branchEditOnSuccess.current?.();
+            closeEdit();
+            editState.onSuccess?.();
           }}
         />
       )}
