@@ -196,6 +196,8 @@ export const syncPaymentOrderFromLoad = async (
     setPayload.carrierPayable = computed.carrierPayable;
     setPayload.incomePercentage = computed.incomePercentage;
     setPayload.profit = computed.profit;
+    // charges (PO.charges = Load.chargeAmount) is intentionally excluded — it is locked
+    // at the Approved snapshot and not re-synced on subsequent transitions.
   }
 
   await tx.update(paymentOrder).set(setPayload).where(eq(paymentOrder.id, existing.id));
