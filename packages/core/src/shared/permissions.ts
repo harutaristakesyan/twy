@@ -1,6 +1,5 @@
 import createError from "http-errors";
 import { getCachedAuthContext, putAuthContext } from "../auth-context/store.js";
-import type { Action, Resource } from "../team/contracts.js";
 import { getEffectivePermissionsForUser, type UserPermissionsContext } from "../team/repository.js";
 
 export const loadAuthContext = async (userId: string): Promise<UserPermissionsContext> => {
@@ -17,15 +16,39 @@ export const loadAuthContext = async (userId: string): Promise<UserPermissionsCo
   return ctx;
 };
 
+export const hasPermission = (
+  ctx: UserPermissionsContext,
+  entity: string,
+  action: string,
+): boolean =>
+  Boolean((ctx.permissions as Record<string, Record<string, boolean>>)[entity]?.[action]);
+
 export const assertPermission = (
   ctx: UserPermissionsContext,
-  resource: Resource,
-  action: Action,
+  entity: string,
+  action: string,
 ): void => {
-  if (!ctx.permissions[resource]?.[action]) {
-    throw new createError.Forbidden("Forbidden");
+  if (!hasPermission(ctx, entity, action)) {
+    const err = createError(403, "Permission denied") as unknown as NodeJS.ErrnoException & {
+      permissionMissing: unknown;
+    };
+    err.permissionMissing = { entity, action };
+    throw err;
   }
 };
+
+export const assertTransition = (
+  ctx: UserPermissionsContext,
+  entity: string,
+  toStatus: string,
+): void => assertPermission(ctx, entity, `transition:${toStatus}`);
+
+export const getPermittedTransitions = <T extends string>(
+  ctx: UserPermissionsContext,
+  entity: string,
+  allowedByStateMachine: readonly T[],
+): T[] =>
+  allowedByStateMachine.filter((status) => hasPermission(ctx, entity, `transition:${status}`));
 
 export const assertBrokerRequestsView = (ctx: UserPermissionsContext): void =>
   assertPermission(ctx, "brokers_requests", "view");
