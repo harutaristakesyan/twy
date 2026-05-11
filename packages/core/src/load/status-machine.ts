@@ -1,25 +1,40 @@
 import type { LoadStatus } from "@twy/db";
-import createError from "http-errors";
 
 type Transition = [from: LoadStatus, to: LoadStatus];
 
-const VALID_TRANSITIONS: Transition[] = [
+const TRANSITIONS: Transition[] = [
   ["Pending", "Approved"],
   ["Pending", "Hold"],
-  ["Pending", "Denied"],
-  ["Approved", "ApprovedPaid"],
+  ["Pending", "Declined"],
+  ["Pending", "Delivered"],
   ["Approved", "Hold"],
-  ["ApprovedPaid", "Hold"],
-  ["Hold", "Pending"],
+  ["Approved", "Declined"],
+  ["Approved", "Delivered"],
   ["Hold", "Approved"],
-  ["Denied", "Pending"],
+  ["Delivered", "Hold"],
 ];
 
+export class InvalidTransitionError extends Error {
+  readonly code = "invalid_transition" as const;
+
+  constructor(
+    readonly from: LoadStatus,
+    readonly to: LoadStatus,
+    readonly allowed: LoadStatus[],
+  ) {
+    super(`Cannot transition load status from "${from}" to "${to}"`);
+    this.name = "InvalidTransitionError";
+  }
+}
+
 export const isValidTransition = (from: LoadStatus, to: LoadStatus): boolean =>
-  VALID_TRANSITIONS.some(([f, t]) => f === from && t === to);
+  TRANSITIONS.some(([f, t]) => f === from && t === to);
+
+export const getAllowedTransitions = (from: LoadStatus): LoadStatus[] =>
+  TRANSITIONS.filter(([f]) => f === from).map(([, t]) => t);
 
 export const assertValidTransition = (from: LoadStatus, to: LoadStatus): void => {
   if (!isValidTransition(from, to)) {
-    throw new createError.BadRequest(`Cannot transition load status from "${from}" to "${to}"`);
+    throw new InvalidTransitionError(from, to, getAllowedTransitions(from));
   }
 };

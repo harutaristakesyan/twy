@@ -580,7 +580,7 @@ export const changeLoadStatus = async (
         chargeAmount: isChargable && chargeAmount != null ? chargeAmount.toString() : null,
         ...(status === "Hold"
           ? { financialsLockedAt: null }
-          : status === "Approved" || status === "ApprovedPaid"
+          : status === "Approved" || status === "Delivered"
             ? { financialsLockedAt: new Date() }
             : {}),
         updatedAt: new Date(),
