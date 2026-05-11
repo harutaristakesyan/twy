@@ -14,7 +14,7 @@ import {
   Typography,
   theme,
 } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loadApi } from "@/features/load/api/loadApi";
 import type { LoadComment, LoadCommentType } from "@/features/load/types/load";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -124,6 +124,7 @@ const CommentsDialog = ({ open, loadId, referenceNumber, onCancel }: CommentsDia
   const canAddComments = permissions.loads.edit;
   const [form] = Form.useForm<{ body: string }>();
   const [addingComment, setAddingComment] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
 
   // Reset when switching loads or closing/reopening the dialog.
   // biome-ignore lint/correctness/useExhaustiveDependencies: open and loadId intentionally retrigger reset
@@ -153,6 +154,7 @@ const CommentsDialog = ({ open, loadId, referenceNumber, onCancel }: CommentsDia
         form.resetFields();
         setAddingComment(false);
         refresh();
+        if (listRef.current) listRef.current.scrollTop = 0;
       },
       onError: (error) => antMessage.error(getErrorMessage(error)),
     },
@@ -220,6 +222,7 @@ const CommentsDialog = ({ open, loadId, referenceNumber, onCancel }: CommentsDia
     >
       <Flex vertical style={{ minHeight: 320 }}>
         <div
+          ref={listRef}
           style={{
             flex: 1,
             minHeight: 200,
