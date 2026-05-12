@@ -2,7 +2,7 @@ import { useDebounceFn, useInfiniteScroll, useRequest } from "ahooks";
 import { App, Button, Flex, Select } from "antd";
 import type React from "react";
 import { useRef, useState } from "react";
-import { SelectOption } from "@/components/SelectOption";
+import { LabeledOption } from "@/components/LabeledOption";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { createPopupScrollHandler } from "@/utils/selectUtils";
 import { addTeamMember, getUnassignedUsers } from "../api/teamApi";
@@ -75,7 +75,7 @@ const AddMemberPicker: React.FC<AddMemberPickerProps> = ({ teamId, onAdded, onCa
           })) ?? []
         }
         optionRender={(option) => (
-          <SelectOption label={option.label} description={option.data.email} />
+          <LabeledOption label={option.label} description={option.data.email} />
         )}
       />
       <Button type="primary" size="small" onClick={add} loading={adding} disabled={!selectedUserId}>

@@ -1,7 +1,7 @@
 import { useDebounceFn, useInfiniteScroll } from "ahooks";
 import { Select, Spin } from "antd";
 import { useRef, useState } from "react";
-import { SelectOption } from "@/components/SelectOption";
+import { LabeledOption } from "@/components/LabeledOption";
 import { createPopupScrollHandler } from "@/utils/selectUtils";
 import { getBranches } from "../api/branchApi";
 import type { Branch } from "../types/branch";
@@ -67,7 +67,7 @@ const BranchSelect: React.FC<BranchSelectProps> = ({
       notFoundContent={loading ? <Spin size="small" /> : "No branches found"}
       options={options}
       optionRender={(option) => (
-        <SelectOption
+        <LabeledOption
           label={option.label}
           description={
             option.data.owner

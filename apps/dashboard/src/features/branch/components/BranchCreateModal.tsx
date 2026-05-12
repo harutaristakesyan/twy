@@ -1,7 +1,7 @@
 import { useRequest } from "ahooks";
 import { App, Button, Form, Input, Modal, Select, Space } from "antd";
 import type React from "react";
-import { SelectOption } from "@/components/SelectOption";
+import { LabeledOption } from "@/components/LabeledOption";
 import type { User } from "@/features/user/types/user";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { createBranch } from "../api/branchApi";
@@ -97,7 +97,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
               email: o.email,
             }))}
             optionRender={(option) => (
-              <SelectOption label={option.label} description={option.data.email} />
+              <LabeledOption label={option.label} description={option.data.email} />
             )}
           />
         </Form.Item>

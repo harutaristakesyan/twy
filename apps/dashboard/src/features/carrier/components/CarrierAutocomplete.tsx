@@ -2,6 +2,7 @@ import { useDebounceFn, useRequest } from "ahooks";
 import type { AutoCompleteProps } from "antd";
 import { AutoComplete, Spin } from "antd";
 import { useState } from "react";
+import { LabeledOption } from "@/components/LabeledOption";
 import { getCarriers } from "../api/carrierApi";
 
 type CarrierAutocompleteProps = Pick<
@@ -27,7 +28,7 @@ const CarrierAutocomplete: React.FC<CarrierAutocompleteProps> = (props) => {
 
   const options = carriers.map((c) => ({
     value: c.carrierName,
-    label: `${c.carrierName} (${c.mcDotNumber})`,
+    label: <LabeledOption label={c.carrierName} description={c.mcDotNumber} />,
   }));
 
   return (

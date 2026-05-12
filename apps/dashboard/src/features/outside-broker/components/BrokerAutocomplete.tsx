@@ -2,6 +2,7 @@ import { useDebounceFn, useRequest } from "ahooks";
 import type { AutoCompleteProps } from "antd";
 import { AutoComplete, Spin } from "antd";
 import { useState } from "react";
+import { LabeledOption } from "@/components/LabeledOption";
 import { getOutsideBrokers } from "../api/brokerApi";
 
 type BrokerAutocompleteProps = Pick<
@@ -28,7 +29,7 @@ const BrokerAutocomplete: React.FC<BrokerAutocompleteProps> = (props) => {
 
   const options = brokers.map((b) => ({
     value: b.brokerName,
-    label: `${b.brokerName} (${b.mcNumber})`,
+    label: <LabeledOption label={b.brokerName} description={b.mcNumber} />,
   }));
 
   return (
