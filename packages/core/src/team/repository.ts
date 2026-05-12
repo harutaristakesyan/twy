@@ -20,7 +20,7 @@ export interface CreateTeamInput {
   description?: string;
   branchRestricted?: boolean;
   onlyOwnData?: boolean;
-  permissions?: Partial<Record<Resource, Partial<Record<Action, boolean>>>>;
+  permissions?: Partial<Record<Resource, Partial<Record<string, boolean>>>>;
 }
 
 export interface UpdateTeamInput {
@@ -28,7 +28,7 @@ export interface UpdateTeamInput {
   description?: string;
   branchRestricted?: boolean;
   onlyOwnData?: boolean;
-  permissions?: Partial<Record<Resource, Partial<Record<Action, boolean>>>>;
+  permissions?: Partial<Record<Resource, Partial<Record<string, boolean>>>>;
 }
 
 export interface ListTeamsInput {
@@ -54,9 +54,11 @@ function buildPermissionsMap(
   const map = emptyPermissionsMap();
   for (const row of rows) {
     const resource = row.resource as Resource;
-    const action = row.action as Action;
-    if (RESOURCES.includes(resource) && ACTIONS.includes(action)) {
-      map[resource][action] = row.allowed;
+    if (!RESOURCES.includes(resource)) continue;
+    if (ACTIONS.includes(row.action as Action)) {
+      map[resource][row.action as Action] = row.allowed;
+    } else if (row.action.startsWith("transition:")) {
+      (map[resource] as Record<string, boolean>)[row.action] = row.allowed;
     }
   }
   return map;
@@ -83,12 +85,13 @@ function formatTeamRow(
 async function upsertPermissions(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   teamId: string,
-  permissions: Partial<Record<Resource, Partial<Record<Action, boolean>>>>,
+  permissions: Partial<Record<Resource, Partial<Record<string, boolean>>>>,
 ) {
   const rows: { teamId: string; resource: string; action: string; allowed: boolean }[] = [];
   for (const resource of RESOURCES) {
-    for (const action of ACTIONS) {
-      const allowed = permissions[resource]?.[action];
+    const resourcePerms = permissions[resource];
+    if (!resourcePerms) continue;
+    for (const [action, allowed] of Object.entries(resourcePerms)) {
       if (typeof allowed === "boolean") {
         rows.push({ teamId, resource, action, allowed });
       }
@@ -120,13 +123,21 @@ export const createTeam = async (input: CreateTeamInput): Promise<string> => {
 
     const permRows: { teamId: string; resource: string; action: string; allowed: boolean }[] = [];
     for (const resource of RESOURCES) {
+      const resourcePerms = input.permissions?.[resource];
       for (const action of ACTIONS) {
         permRows.push({
           teamId: inserted.id,
           resource,
           action,
-          allowed: input.permissions?.[resource]?.[action] ?? false,
+          allowed: resourcePerms?.[action] ?? false,
         });
+      }
+      if (resourcePerms) {
+        for (const [action, allowed] of Object.entries(resourcePerms)) {
+          if (action.startsWith("transition:") && typeof allowed === "boolean") {
+            permRows.push({ teamId: inserted.id, resource, action, allowed });
+          }
+        }
       }
     }
     await tx.insert(teamPermissions).values(permRows);
