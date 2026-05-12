@@ -15,6 +15,7 @@ const ACTION_LABELS: Record<Action, string> = {
   add: "Add",
   view: "View",
   edit: "Edit",
+  delete: "Delete",
 };
 
 const RESOURCE_LABELS: Record<Resource, string> = {
@@ -32,6 +33,19 @@ const RESOURCE_LABELS: Record<Resource, string> = {
   internal_billing: "Accounting — Internal Billing",
 };
 
+const TRANSITION_MAP: Partial<Record<Resource, string[]>> = {
+  loads: ["Pending", "Approved", "Hold", "Declined", "Delivered"],
+  payment_orders: [
+    "Pending",
+    "Approved",
+    "Paid",
+    "PartialPaid",
+    "Hold",
+    "Declined",
+    "ReadyForInvoice",
+  ],
+};
+
 interface MatrixRow {
   resource: Resource;
 }
@@ -41,7 +55,7 @@ interface PermissionMatrixFieldProps {
   onChange?: (value: PermissionsMap) => void;
 }
 
-// edit → requires add + view; add → requires view.
+// delete → requires edit + add + view; edit → requires add + view; add → requires view.
 // Cascade: checking a permission enables its prerequisites; unchecking disables dependents.
 function cascade(
   action: Action,
@@ -50,6 +64,11 @@ function cascade(
 ): Record<Action, boolean> {
   const r = { ...row, [action]: checked };
   if (checked) {
+    if (action === "delete") {
+      r.edit = true;
+      r.add = true;
+      r.view = true;
+    }
     if (action === "edit") {
       r.add = true;
       r.view = true;
@@ -59,15 +78,22 @@ function cascade(
     }
   } else {
     if (action === "view") {
-      r.edit = false;
       r.add = false;
+      r.edit = false;
+      r.delete = false;
     }
     if (action === "add") {
       r.edit = false;
+      r.delete = false;
+    }
+    if (action === "edit") {
+      r.delete = false;
     }
   }
   return r;
 }
+
+const EMPTY_ROW: Record<Action, boolean> = { add: false, view: false, edit: false, delete: false };
 
 const PermissionMatrixField: React.FC<PermissionMatrixFieldProps> = ({ value, onChange }) => {
   const handleChange = useCallback(
@@ -75,11 +101,7 @@ const PermissionMatrixField: React.FC<PermissionMatrixFieldProps> = ({ value, on
       if (!value || !onChange) return;
       onChange({
         ...value,
-        [resource]: cascade(
-          action,
-          checked,
-          value[resource] ?? { add: false, view: false, edit: false },
-        ),
+        [resource]: cascade(action, checked, value[resource] ?? { ...EMPTY_ROW }),
       });
     },
     [value, onChange],
@@ -89,7 +111,7 @@ const PermissionMatrixField: React.FC<PermissionMatrixFieldProps> = ({ value, on
     (resource: Resource, checked: boolean) => {
       if (!value || !onChange) return;
       const validActions = RESOURCE_ACTIONS[resource];
-      const current = value[resource] ?? { add: false, view: false, edit: false };
+      const current = value[resource] ?? { ...EMPTY_ROW };
       const updated = validActions.reduce((acc, a) => cascade(a, checked, acc), {
         ...current,
       } as Record<Action, boolean>);
@@ -104,11 +126,7 @@ const PermissionMatrixField: React.FC<PermissionMatrixFieldProps> = ({ value, on
       const updated = { ...value };
       for (const resource of RESOURCES) {
         if (!RESOURCE_ACTIONS[resource].includes(action)) continue;
-        updated[resource] = cascade(
-          action,
-          checked,
-          updated[resource] ?? { add: false, view: false, edit: false },
-        );
+        updated[resource] = cascade(action, checked, updated[resource] ?? { ...EMPTY_ROW });
       }
       onChange(updated);
     },
@@ -180,6 +198,44 @@ const PermissionMatrixField: React.FC<PermissionMatrixFieldProps> = ({ value, on
       pagination={false}
       size="small"
       bordered
+      expandable={{
+        rowExpandable: (row) => Boolean(TRANSITION_MAP[row.resource]),
+        expandedRowRender: (row) => {
+          const statuses = TRANSITION_MAP[row.resource];
+          if (!statuses) return null;
+          const rowPerms = (value?.[row.resource] ?? {}) as Record<string, boolean>;
+          return (
+            <div style={{ paddingLeft: 24 }}>
+              <div style={{ marginBottom: 4, fontWeight: 500, color: "#595959" }}>
+                Status Transitions
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {statuses.map((status) => {
+                  const key = `transition:${status}`;
+                  return (
+                    <Checkbox
+                      key={key}
+                      checked={Boolean(rowPerms[key])}
+                      onChange={(e) => {
+                        if (!value || !onChange) return;
+                        onChange({
+                          ...value,
+                          [row.resource]: {
+                            ...value[row.resource],
+                            [key]: e.target.checked,
+                          } as PermissionsMap[Resource],
+                        });
+                      }}
+                    >
+                      {status}
+                    </Checkbox>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        },
+      }}
     />
   );
 };
