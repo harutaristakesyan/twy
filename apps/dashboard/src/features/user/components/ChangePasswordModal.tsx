@@ -1,4 +1,4 @@
-import { Button, Form, Input, Modal, message } from "antd";
+import { App, Button, Form, Input, Modal } from "antd";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -16,6 +16,7 @@ interface FormValues {
 }
 
 const ChangePasswordModal: React.FC<Props> = ({ open, onClose }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm<FormValues>();
   const [saving, setSaving] = useState(false);
 
@@ -40,7 +41,7 @@ const ChangePasswordModal: React.FC<Props> = ({ open, onClose }) => {
         setSaving(false);
       }
     },
-    [handleClose],
+    [handleClose, message],
   );
 
   return (
