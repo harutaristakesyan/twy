@@ -1,4 +1,10 @@
-import { CloseOutlined, EditOutlined, SaveOutlined, UserOutlined } from "@ant-design/icons";
+import {
+  CloseOutlined,
+  EditOutlined,
+  LockOutlined,
+  SaveOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import {
   Alert,
   Avatar,
@@ -19,6 +25,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { selfUpdateUser } from "../api/userApi";
 import type { SelfUpdateRequest } from "../types/user";
+import ChangePasswordModal from "./ChangePasswordModal";
 
 const { Title, Text } = Typography;
 
@@ -27,6 +34,7 @@ const UserSelfUpdate: React.FC = () => {
   const { user, loading: userLoading, refetch, authMe } = useCurrentUser();
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -77,25 +85,30 @@ const UserSelfUpdate: React.FC = () => {
           </Text>
         </Col>
         <Col>
-          {!isEditing ? (
-            <Button type="primary" icon={<EditOutlined />} onClick={() => setIsEditing(true)}>
-              Edit Profile
+          <Space>
+            <Button icon={<LockOutlined />} onClick={() => setIsPasswordModalOpen(true)}>
+              Change Password
             </Button>
-          ) : (
-            <Space>
-              <Button icon={<CloseOutlined />} onClick={handleCancel}>
-                Cancel
+            {!isEditing ? (
+              <Button type="primary" icon={<EditOutlined />} onClick={() => setIsEditing(true)}>
+                Edit Profile
               </Button>
-              <Button
-                type="primary"
-                icon={<SaveOutlined />}
-                onClick={() => form.submit()}
-                loading={saving}
-              >
-                Save Changes
-              </Button>
-            </Space>
-          )}
+            ) : (
+              <Space>
+                <Button icon={<CloseOutlined />} onClick={handleCancel}>
+                  Cancel
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  onClick={() => form.submit()}
+                  loading={saving}
+                >
+                  Save Changes
+                </Button>
+              </Space>
+            )}
+          </Space>
         </Col>
       </Row>
 
@@ -157,6 +170,10 @@ const UserSelfUpdate: React.FC = () => {
           style={{ marginTop: 16 }}
         />
       )}
+      <ChangePasswordModal
+        open={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+      />
     </Card>
   );
 };
