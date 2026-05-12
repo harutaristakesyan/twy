@@ -1,7 +1,7 @@
 import z from "zod";
 import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
-import { ACTIONS, RESOURCES } from "./contracts.js";
+import { RESOURCES } from "./contracts.js";
 
 const uuidField = z.uuid("Value must be a valid UUID");
 
@@ -35,10 +35,7 @@ export const ListTeamsEventSchema = z.object({
 export type ListTeamsEvent = z.infer<typeof ListTeamsEventSchema>;
 
 const PermissionsInputSchema = z
-  .record(
-    z.enum([...RESOURCES] as [string, ...string[]]),
-    z.record(z.enum([...ACTIONS] as [string, ...string[]]), z.boolean()),
-  )
+  .record(z.enum([...RESOURCES] as [string, ...string[]]), z.record(z.string(), z.boolean()))
   .optional();
 
 const TeamBaseSchema = z.object({
