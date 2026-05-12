@@ -191,6 +191,13 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
+  // auth/change-password — authenticated user changes own password
+  {
+    handler: "packages/functions/src/api/auth/changePassword.handler",
+    routeKey: "POST /api/auth/change-password",
+    requiresAuth: true,
+    linkKeys: [],
+  },
   // permissions
   {
     handler: "packages/functions/src/api/permissions/registry.handler",
