@@ -13,6 +13,7 @@ const cognitoClient = new CognitoIdentityProviderClient({});
 const changePasswordHandler = async (
   event: ChangePasswordEvent,
 ): Promise<ChangePasswordResponse> => {
+  // ChangePasswordCommand requires the raw Cognito access token — JWT claims alone aren't sufficient.
   const accessToken = event.headers.authorization.replace(/^Bearer\s+/i, "");
   const { currentPassword, newPassword } = event.body;
 
