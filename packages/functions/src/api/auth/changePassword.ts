@@ -2,25 +2,11 @@ import {
   ChangePasswordCommand,
   CognitoIdentityProviderClient,
 } from "@aws-sdk/client-cognito-identity-provider";
+import type { ChangePasswordEvent } from "@contracts/auth/request";
+import { ChangePasswordEventSchema } from "@contracts/auth/request";
+import type { ChangePasswordResponse } from "@contracts/auth/response";
 import { middyfy, toError } from "@shared/index";
 import errors from "http-errors";
-import z from "zod";
-
-const EventSchema = z.object({
-  headers: z.object({
-    authorization: z.string(),
-  }),
-  body: z.object({
-    currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: z.string().min(1, "New password is required"),
-  }),
-});
-
-type ChangePasswordEvent = z.infer<typeof EventSchema>;
-
-interface ChangePasswordResponse {
-  message: string;
-}
 
 const cognitoClient = new CognitoIdentityProviderClient({});
 
@@ -51,11 +37,11 @@ const changePasswordHandler = async (
     if (error.name === "LimitExceededException") {
       throw new errors.TooManyRequests("Too many attempts, please try again later");
     }
-    throw new errors.BadRequest(error.message);
+    throw new errors.InternalServerError("Failed to change password");
   }
 };
 
 export const handler = middyfy<ChangePasswordEvent, ChangePasswordResponse>(changePasswordHandler, {
-  eventSchema: EventSchema,
+  eventSchema: ChangePasswordEventSchema,
   mode: "parse",
 });

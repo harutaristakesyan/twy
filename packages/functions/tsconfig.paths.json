@@ -2,6 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
+      "@contracts/*": ["./src/contracts/*"],
       "@shared/*": ["./src/shared/*"]
     }
   }
