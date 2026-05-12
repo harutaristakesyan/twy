@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
+import type { UserPermissionsContext } from "../team/repository.js";
 import {
   assertValidTransition,
+  getAllowedAndPermittedTransitions,
   getAllowedTransitions,
   InvalidTransitionError,
   isValidTransition,
 } from "./status-machine.js";
+
+const makeCtx = (perms: Record<string, Record<string, boolean>>) =>
+  ({ permissions: perms }) as unknown as UserPermissionsContext;
 
 describe("isValidTransition — allowed transitions", () => {
   it.each([
@@ -92,5 +97,20 @@ describe("assertValidTransition", () => {
 
   it("does not throw for valid transitions", () => {
     expect(() => assertValidTransition("Pending", "Approved")).not.toThrow();
+  });
+});
+
+describe("getAllowedAndPermittedTransitions", () => {
+  it("returns intersection of state machine and permissions", () => {
+    const ctx = makeCtx({ loads: { "transition:Approved": true, "transition:Hold": true } });
+    const result = getAllowedAndPermittedTransitions(ctx, "Pending");
+    expect(result).toContain("Approved");
+    expect(result).toContain("Hold");
+    expect(result).not.toContain("Declined");
+  });
+
+  it("returns empty when no transitions permitted", () => {
+    const ctx = makeCtx({ loads: {} });
+    expect(getAllowedAndPermittedTransitions(ctx, "Pending")).toEqual([]);
   });
 });
