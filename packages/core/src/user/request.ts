@@ -2,12 +2,6 @@ import z from "zod";
 import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
 
-export const GetUserEventSchema = z.object({
-  requestContext: AuthContext,
-});
-
-export type GetUserEvent = z.infer<typeof GetUserEventSchema>;
-
 export const userSortFieldMap = {
   firstName: "users.firstName",
   lastName: "users.lastName",

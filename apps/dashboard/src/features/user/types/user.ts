@@ -16,19 +16,6 @@ export interface User {
   };
 }
 
-// Current user response from GET /user endpoint
-export interface CurrentUser {
-  email: string;
-  firstName: string;
-  lastName: string;
-  isActive: boolean;
-  branch: {
-    id: string;
-    name: string;
-  } | null;
-  registeredDate: string;
-}
-
 export interface UserFormData {
   firstName: string;
   lastName: string;
