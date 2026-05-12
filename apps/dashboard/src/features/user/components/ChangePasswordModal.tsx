@@ -44,7 +44,7 @@ const ChangePasswordModal: React.FC<Props> = ({ open, onClose }) => {
   );
 
   return (
-    <Modal title="Change Password" open={open} onCancel={handleClose} footer={null} destroyOnClose>
+    <Modal title="Change Password" open={open} onCancel={handleClose} footer={null} destroyOnHidden>
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="currentPassword"
