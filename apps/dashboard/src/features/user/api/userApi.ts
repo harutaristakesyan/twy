@@ -2,7 +2,6 @@ import type { MessageDto } from "@/config/apiMessages.ts";
 import ApiClient from "@/libs/ApiClient.ts";
 import type { ApiResponse } from "@/libs/api-types.ts";
 import type {
-  CurrentUser,
   GetUsersParams,
   PaginatedUsersResponse,
   SelfUpdateRequest,
@@ -53,11 +52,5 @@ export const selfUpdateUser = async (data: SelfUpdateRequest) => {
 // Delete user
 export const deleteUser = async (id: string) => {
   const response = await ApiClient.delete<ApiResponse<MessageDto>>(`/users/${id}`);
-  return response.data;
-};
-
-// Get current user profile
-export const getCurrentUser = async () => {
-  const response = await ApiClient.get<ApiResponse<CurrentUser>>("/user");
   return response.data;
 };

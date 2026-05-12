@@ -32,7 +32,16 @@ export type Action = (typeof ACTIONS)[number];
 export type PermissionsMap = Record<Resource, Record<Action, boolean>>;
 
 export interface AuthMe {
-  user: { id: string; branchId: string | null; teamId: string | null };
+  user: {
+    id: string;
+    branchId: string | null;
+    teamId: string | null;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    isActive: boolean;
+    branch: { id: string; name: string | null } | null;
+  };
   team: { id: string; name: string; branchRestricted: boolean; onlyOwnData: boolean } | null;
   permissions: PermissionsMap;
 }

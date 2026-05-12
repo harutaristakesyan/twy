@@ -2,17 +2,22 @@ import { useAuth } from "@/providers/AuthProvider";
 import { normalizePermissionsMap } from "@/utils/permissions";
 
 export const useCurrentUser = () => {
-  const {
-    currentUser: user,
-    userLoading: loading,
-    refetchUser: refetch,
-    authMe,
-    refetchAuthMe,
-  } = useAuth();
+  const { authMe, userLoading: loading, refetchAuthMe } = useAuth();
+
+  const user = authMe
+    ? {
+        email: authMe.user.email,
+        firstName: authMe.user.firstName,
+        lastName: authMe.user.lastName,
+        isActive: authMe.user.isActive,
+        branch: authMe.user.branch,
+      }
+    : null;
+
   return {
     user,
     loading,
-    refetch,
+    refetch: refetchAuthMe,
     authMe,
     refetchAuthMe,
     permissions: normalizePermissionsMap(authMe?.permissions),

@@ -68,12 +68,6 @@ export const authRoutes: RouteDef[] = [
 export const appRoutes: RouteDef[] = [
   // user
   {
-    handler: "packages/functions/src/api/user/get.handler",
-    routeKey: "GET /api/user",
-    requiresAuth: true,
-    linkKeys: ["cluster", "authContext"],
-  },
-  {
     handler: "packages/functions/src/api/user/self-update.handler",
     routeKey: "PATCH /api/user",
     requiresAuth: true,
