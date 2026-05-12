@@ -22,9 +22,11 @@ import type { NamePath } from "antd/es/form/interface";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import CarrierAutocomplete from "@/features/carrier/components/CarrierAutocomplete";
 import { loadApi } from "@/features/load/api/loadApi";
 import { LoadStopsFormList } from "@/features/load/components/LoadStopsFormList";
 import type { CreateLoadDto, LoadFile, Location } from "@/features/load/types/load";
+import BrokerAutocomplete from "@/features/outside-broker/components/BrokerAutocomplete";
 import { fileApi } from "@/libs/fileApi";
 import { getErrorMessage } from "@/utils/errorUtils";
 
@@ -258,7 +260,7 @@ const CreateLoadPage: React.FC = () => {
                   name="customer"
                   rules={[{ required: true, message: "Please enter customer name" }]}
                 >
-                  <Input placeholder="Enter customer name" size="large" />
+                  <BrokerAutocomplete placeholder="Enter customer name" size="large" />
                 </Form.Item>
               </Col>
               <Col {...FORM_COL}>
@@ -333,7 +335,7 @@ const CreateLoadPage: React.FC = () => {
             <Row gutter={[16, 16]}>
               <Col {...FORM_COL}>
                 <Form.Item label="Carrier" name="carrier">
-                  <Input placeholder="Enter carrier" size="large" />
+                  <CarrierAutocomplete placeholder="Enter carrier" size="large" />
                 </Form.Item>
               </Col>
               <Col {...FORM_COL}>
