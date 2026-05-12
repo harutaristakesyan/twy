@@ -15,6 +15,7 @@ import {
 import { loadApi } from "@/features/load/api/loadApi";
 import type { Load, LoadStatus } from "@/features/load/types/load";
 import { getAllowedTransitions } from "@/features/load/utils/statusMachine";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
 
 interface StatusUpdateModalProps {
@@ -51,6 +52,7 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
   const [form] = Form.useForm<StatusFormValues>();
   const selectedStatus = Form.useWatch("status", form);
   const isChargable = Form.useWatch("isChargable", form);
+  const { permissions } = useCurrentUser();
 
   const { loading, run: submit } = useRequest(
     async (
@@ -99,7 +101,9 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
 
   if (!load) return null;
 
-  const allowedStatuses = getAllowedTransitions(load.status);
+  const allowedStatuses = getAllowedTransitions(load.status).filter((s) =>
+    Boolean((permissions as Record<string, Record<string, boolean>>).loads?.[`transition:${s}`]),
+  );
   const statusOptions = allowedStatuses.map((s) => ({ value: s, label: s }));
   const isTerminal = allowedStatuses.length === 0;
   const commentFieldLabel = commentLabel(selectedStatus, isChargable ?? false);
