@@ -54,3 +54,11 @@ export const deleteUser = async (id: string) => {
   const response = await ApiClient.delete<ApiResponse<MessageDto>>(`/users/${id}`);
   return response.data;
 };
+
+export const changePassword = async (data: { currentPassword: string; newPassword: string }) => {
+  const response = await ApiClient.post<ApiResponse<{ message: string }>>(
+    "/auth/change-password",
+    data,
+  );
+  return response.data;
+};
