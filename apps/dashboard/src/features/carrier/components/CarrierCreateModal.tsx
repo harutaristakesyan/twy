@@ -1,5 +1,5 @@
 import { useRequest } from "ahooks";
-import { App, Button, DatePicker, Form, Input, Modal, Space } from "antd";
+import { App, Button, Col, DatePicker, Form, Input, Modal, Row, Space } from "antd";
 import dayjs from "dayjs";
 import type React from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -64,66 +64,81 @@ const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
       destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={submit}>
-        <Form.Item
-          name="carrierName"
-          label="Carrier name"
-          rules={[
-            { required: true, message: "Please enter carrier name" },
-            { min: 2, message: "Carrier name must be at least 2 characters" },
-          ]}
-        >
-          <Input placeholder="Enter carrier name" />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              name="carrierName"
+              label="Carrier Name"
+              rules={[
+                { required: true, message: "Please enter carrier name" },
+                { min: 2, message: "Carrier name must be at least 2 characters" },
+              ]}
+            >
+              <Input placeholder="Enter carrier name" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              name="mcDotNumber"
+              label="MC / DOT Number"
+              rules={[{ required: true, message: "Please enter MC/DOT number" }]}
+            >
+              <Input placeholder="Enter MC/DOT number" />
+            </Form.Item>
+          </Col>
+        </Row>
 
-        <Form.Item
-          name="mcDotNumber"
-          label="MC / DOT number"
-          rules={[{ required: true, message: "Please enter MC/DOT number" }]}
-        >
-          <Input placeholder="Enter MC/DOT number" />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              name="equipmentType"
+              label="Equipment Type"
+              rules={[{ required: true, message: "Please enter equipment type" }]}
+            >
+              <Input placeholder="e.g. Flatbed, Dry Van, Refrigerated" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              name="insuranceExpiry"
+              label="Insurance Expiry"
+              rules={[{ required: true, message: "Please select insurance expiry date" }]}
+            >
+              <DatePicker
+                style={{ width: "100%" }}
+                placeholder="Select insurance expiry date"
+                format="YYYY-MM-DD"
+              />
+            </Form.Item>
+          </Col>
+        </Row>
 
-        <Form.Item
-          name="equipmentType"
-          label="Equipment type"
-          rules={[{ required: true, message: "Please enter equipment type" }]}
-        >
-          <Input placeholder="e.g. Flatbed, Dry Van, Refrigerated" />
-        </Form.Item>
-
-        <Form.Item
-          name="insuranceExpiry"
-          label="Insurance expiry"
-          rules={[{ required: true, message: "Please select insurance expiry date" }]}
-        >
-          <DatePicker
-            style={{ width: "100%" }}
-            placeholder="Select insurance expiry date"
-            format="YYYY-MM-DD"
-          />
-        </Form.Item>
-
-        <Form.Item
-          name="phone"
-          label="Phone"
-          rules={[{ required: true, message: "Please enter phone number" }]}
-        >
-          <Input placeholder="Enter phone number" />
-        </Form.Item>
-
-        <Form.Item
-          name="email"
-          label="Email"
-          rules={[
-            { required: true, message: "Please enter email address" },
-            { type: "email", message: "Please enter a valid email address" },
-          ]}
-        >
-          <Input placeholder="Enter email address" />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              name="phone"
+              label="Phone"
+              rules={[{ required: true, message: "Please enter phone number" }]}
+            >
+              <Input placeholder="Enter phone number" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[
+                { required: true, message: "Please enter email address" },
+                { type: "email", message: "Please enter a valid email address" },
+              ]}
+            >
+              <Input placeholder="Enter email address" />
+            </Form.Item>
+          </Col>
+        </Row>
 
         <Form.Item name="notes" label="Notes">
-          <TextArea placeholder="Enter notes" rows={3} />
+          <TextArea placeholder="Enter notes" rows={2} />
         </Form.Item>
 
         <Form.Item>
