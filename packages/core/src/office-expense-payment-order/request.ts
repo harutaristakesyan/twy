@@ -6,6 +6,7 @@ import {
 import z from "zod";
 import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
+import { MAX_FILE_IDS_PER_OFFICE_EXPENSE_CREATE } from "./constants.js";
 
 export const officeExpenseServiceSchema = z.enum([...officeExpenseServiceValues] as [
   (typeof officeExpenseServiceValues)[number],
@@ -31,6 +32,10 @@ export const CreateOfficeExpenseEventSchema = z.object({
     periodEnd: z.string().date(),
     amount: z.number().positive(),
     currency: currencySchema.default("USD"),
+    fileIds: z
+      .array(z.uuid("Value must be a valid UUID"))
+      .max(MAX_FILE_IDS_PER_OFFICE_EXPENSE_CREATE)
+      .optional(),
   }),
 });
 export type CreateOfficeExpenseEvent = z.infer<typeof CreateOfficeExpenseEventSchema>;

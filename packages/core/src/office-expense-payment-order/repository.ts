@@ -15,7 +15,11 @@ import { and, count, eq, gte, ilike, inArray, lte, ne } from "drizzle-orm";
 import createError from "http-errors";
 import { deleteFile as deleteFileObjectFromS3 } from "../file/service.js";
 import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
+import { MAX_FILE_IDS_PER_OFFICE_EXPENSE_CREATE } from "./constants.js";
 import type { OfficeExpenseFile, OfficeExpensePaymentOrderResponse } from "./response.js";
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type Executor = typeof db | Tx;
 
 const mapRow = (
   row: typeof officeExpensePaymentOrder.$inferSelect,
@@ -66,26 +70,48 @@ export interface CreateOfficeExpenseInput {
   amount: number;
   currency: Currency;
   createdBy: string;
+  /** Optional file IDs to attach in the same transaction as insert (same rules as add-file). */
+  fileIds?: string[];
 }
 
 export const createOfficeExpensePaymentOrder = async (
   input: CreateOfficeExpenseInput,
 ): Promise<OfficeExpensePaymentOrderResponse> => {
-  const [row] = await db
-    .insert(officeExpensePaymentOrder)
-    .values({
-      id: randomUUID(),
-      serviceName: input.serviceName,
-      paymentPurpose: input.paymentPurpose,
-      periodStart: input.periodStart,
-      periodEnd: input.periodEnd,
-      amount: input.amount.toString(),
-      currency: input.currency,
-      createdBy: input.createdBy,
-    })
-    .returning();
+  const uniqueFileIds =
+    input.fileIds && input.fileIds.length > 0 ? [...new Set(input.fileIds)] : [];
+  if (uniqueFileIds.length > MAX_FILE_IDS_PER_OFFICE_EXPENSE_CREATE) {
+    throw createError(400, `At most ${MAX_FILE_IDS_PER_OFFICE_EXPENSE_CREATE} files per order`);
+  }
+  const orderId = randomUUID();
+  const linkAuth: AddOfficeExpenseFileAuth = {
+    actorUserId: input.createdBy,
+    orderCreatedBy: input.createdBy,
+  };
 
-  return mapRow(row, []);
+  const { inserted, linkedFiles } = await db.transaction(async (tx) => {
+    const [inserted] = await tx
+      .insert(officeExpensePaymentOrder)
+      .values({
+        id: orderId,
+        serviceName: input.serviceName,
+        paymentPurpose: input.paymentPurpose,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        amount: input.amount.toString(),
+        currency: input.currency,
+        createdBy: input.createdBy,
+      })
+      .returning();
+
+    const linkedFiles =
+      uniqueFileIds.length > 0
+        ? await linkOfficeExpenseFilesToOrder(tx, orderId, uniqueFileIds, linkAuth)
+        : [];
+
+    return { inserted, linkedFiles };
+  });
+
+  return mapRow(inserted, linkedFiles);
 };
 
 function buildOfficeExpenseFilterConditions(filter: AdvancedFilter): SQL<unknown>[] {
@@ -180,6 +206,17 @@ export const updateOfficeExpensePaymentOrder = async (
   id: string,
   input: UpdateOfficeExpenseInput,
 ): Promise<boolean> => {
+  const [existing] = await db
+    .select({
+      id: officeExpensePaymentOrder.id,
+      paymentStatus: officeExpensePaymentOrder.paymentStatus,
+      paymentMadeOn: officeExpensePaymentOrder.paymentMadeOn,
+    })
+    .from(officeExpensePaymentOrder)
+    .where(eq(officeExpensePaymentOrder.id, id));
+
+  if (!existing) return false;
+
   const set: Record<string, unknown> = { updatedAt: new Date() };
   if (input.serviceName !== undefined) set.serviceName = input.serviceName;
   if (input.paymentPurpose !== undefined) set.paymentPurpose = input.paymentPurpose;
@@ -189,10 +226,12 @@ export const updateOfficeExpensePaymentOrder = async (
   if (input.currency !== undefined) set.currency = input.currency;
   if (input.paymentStatus !== undefined) {
     set.paymentStatus = input.paymentStatus;
-    if (input.paymentStatus === "Paid" && input.paymentMadeOn === undefined) {
-      set.paymentMadeOn = new Date().toISOString().slice(0, 10);
-    } else if (input.paymentStatus !== "Paid" && input.paymentMadeOn === undefined) {
-      set.paymentMadeOn = null;
+    if (input.paymentMadeOn === undefined) {
+      if (input.paymentStatus === "Paid" && existing.paymentStatus !== "Paid") {
+        set.paymentMadeOn = new Date().toISOString().slice(0, 10);
+      } else if (input.paymentStatus !== "Paid" && existing.paymentStatus === "Paid") {
+        set.paymentMadeOn = null;
+      }
     }
   }
   if (input.paymentMadeOn !== undefined) set.paymentMadeOn = input.paymentMadeOn ?? null;
@@ -207,9 +246,73 @@ export const updateOfficeExpensePaymentOrder = async (
 };
 
 export interface AddOfficeExpenseFileAuth {
+  /** User performing the link (must match file upload owner unless order creator uploaded). */
   actorUserId: string;
+  /** Office expense order `createdBy` — used when linking files uploaded by the order owner. */
   orderCreatedBy: string;
 }
+
+/** Validates and links one or more files in one round-trip (batch insert). */
+const linkOfficeExpenseFilesToOrder = async (
+  executor: Executor,
+  orderId: string,
+  fileIds: string[],
+  auth: AddOfficeExpenseFileAuth,
+): Promise<OfficeExpenseFile[]> => {
+  if (fileIds.length === 0) return [];
+
+  const fileRows = await executor.select().from(file).where(inArray(file.id, fileIds));
+  if (fileRows.length !== fileIds.length) {
+    throw createError(404, "File not found");
+  }
+
+  for (const fileRow of fileRows) {
+    if (!fileRow.createdBy) {
+      throw createError(403, "File cannot be linked without an upload owner");
+    }
+    const ownerOk =
+      fileRow.createdBy === auth.actorUserId || fileRow.createdBy === auth.orderCreatedBy;
+    if (!ownerOk) {
+      throw createError(403, "File cannot be linked to this order");
+    }
+  }
+
+  const [loadHit] = await executor
+    .select({ c: count() })
+    .from(loadFiles)
+    .where(inArray(loadFiles.fileId, fileIds));
+  if (Number(loadHit?.c ?? 0) > 0) {
+    throw createError(403, "File is already attached to a load");
+  }
+
+  const [paymentHit] = await executor
+    .select({ c: count() })
+    .from(paymentOrderFiles)
+    .where(inArray(paymentOrderFiles.fileId, fileIds));
+  if (Number(paymentHit?.c ?? 0) > 0) {
+    throw createError(403, "File is already attached to a payment order");
+  }
+
+  const [otherOeHit] = await executor
+    .select({ c: count() })
+    .from(officeExpensePaymentOrderFiles)
+    .where(
+      and(
+        inArray(officeExpensePaymentOrderFiles.fileId, fileIds),
+        ne(officeExpensePaymentOrderFiles.officeExpensePaymentOrderId, orderId),
+      ),
+    );
+  if (Number(otherOeHit?.c ?? 0) > 0) {
+    throw createError(403, "File is already attached to another office expense order");
+  }
+
+  await executor
+    .insert(officeExpensePaymentOrderFiles)
+    .values(fileIds.map((fid) => ({ officeExpensePaymentOrderId: orderId, fileId: fid })))
+    .onConflictDoNothing();
+
+  return fileRows.map((r) => ({ fileId: r.id, fileName: r.fileName }));
+};
 
 const countGlobalFileReferences = async (fileId: string): Promise<number> => {
   const [loadRefs, paymentRefs, officeExpenseRefs] = await Promise.all([
@@ -232,52 +335,7 @@ export const addOfficeExpenseFile = async (
   fileId: string,
   auth: AddOfficeExpenseFileAuth,
 ): Promise<void> => {
-  const [fileRow] = await db.select().from(file).where(eq(file.id, fileId));
-  if (!fileRow) {
-    throw createError(404, "File not found");
-  }
-  if (!fileRow.createdBy) {
-    throw createError(403, "File cannot be linked without an upload owner");
-  }
-  const ownerOk =
-    fileRow.createdBy === auth.actorUserId || fileRow.createdBy === auth.orderCreatedBy;
-  if (!ownerOk) {
-    throw createError(403, "File cannot be linked to this order");
-  }
-
-  const [loadRef] = await db
-    .select({ c: count() })
-    .from(loadFiles)
-    .where(eq(loadFiles.fileId, fileId));
-  if (Number(loadRef?.c ?? 0) > 0) {
-    throw createError(403, "File is already attached to a load");
-  }
-
-  const [paymentRef] = await db
-    .select({ c: count() })
-    .from(paymentOrderFiles)
-    .where(eq(paymentOrderFiles.fileId, fileId));
-  if (Number(paymentRef?.c ?? 0) > 0) {
-    throw createError(403, "File is already attached to a payment order");
-  }
-
-  const [otherOfficeExpenseRef] = await db
-    .select({ c: count() })
-    .from(officeExpensePaymentOrderFiles)
-    .where(
-      and(
-        eq(officeExpensePaymentOrderFiles.fileId, fileId),
-        ne(officeExpensePaymentOrderFiles.officeExpensePaymentOrderId, orderId),
-      ),
-    );
-  if (Number(otherOfficeExpenseRef?.c ?? 0) > 0) {
-    throw createError(403, "File is already attached to another office expense order");
-  }
-
-  await db
-    .insert(officeExpensePaymentOrderFiles)
-    .values({ officeExpensePaymentOrderId: orderId, fileId })
-    .onConflictDoNothing();
+  await linkOfficeExpenseFilesToOrder(db, orderId, [fileId], auth);
 };
 
 export const removeOfficeExpenseFile = async (id: string, fileId: string): Promise<boolean> => {
