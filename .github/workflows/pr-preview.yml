@@ -70,8 +70,8 @@ jobs:
         run: pnpm sst deploy --stage "$STAGE"
       - name: Run DB migrations
         run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @twy/db migrate
-      - name: Seed billing permissions
-        run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @twy/db seed:billing-permissions
+      - name: Seed team permissions
+        run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @twy/db seed:permissions
       - name: Comment deployment URL on PR
         uses: actions/github-script@v7
         with:
