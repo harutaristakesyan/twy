@@ -15,7 +15,7 @@ const listPaymentOrdersHandler = async (
 ): Promise<PaymentOrderListResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "payment_orders", "view");
+  assertPermission(ctx, "load_payment_order", "view");
   const scope = buildScope(ctx);
   if (scope.denyAll) return { paymentOrders: [], total: 0 };
 

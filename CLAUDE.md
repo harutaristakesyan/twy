@@ -108,7 +108,7 @@ All Lambdas wrap their handlers with helpers from `@shared/index` (path alias in
 - `jsonErrorHandler` — converts `http-errors` and unknown throws into JSON.
 - `toError` — narrows `unknown` from catch blocks (use this; do not type catches as `any`).
 
-Handlers read configuration via `Resource.X` (the SST SDK), **not** `process.env.X` and **not** `requireEnv("X")`. The `requireEnv` helper still exists in `@shared/index` but should not be used in new code — it's a holdover.
+Handlers read configuration via `Resource.X` (the SST SDK), **not** `process.env.X`.
 
 ### DB / migrations
 

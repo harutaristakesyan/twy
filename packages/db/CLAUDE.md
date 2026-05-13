@@ -10,15 +10,12 @@ ESM-only package providing the Drizzle ORM client, schema, query operations, and
 export { db, type DB } from "./client.js";
 export { runMigrations } from "./migration.js";
 export * from "./schema/index.js";
-export * from "./operations/userOperations.js";
-export * from "./operations/branchOperations.js";
-export * from "./operations/loadOperations.js";
 ```
 
-Single entrypoint — consumers import everything from `"@twy/db"`:
+`schema/index.js` re-exports all tables, enums, and the `PERMISSION_REGISTRY` (defined in `schema/team.ts`). Single entrypoint — consumers import everything from `"@twy/db"`:
 
 ```typescript
-import { db, users, listLoads, Roles, type LoadStatus } from "@twy/db";
+import { db, users, listLoads, Roles, type LoadStatus, PERMISSION_REGISTRY } from "@twy/db";
 ```
 
 ## Layout
@@ -36,14 +33,35 @@ packages/db/
     │   ├── branch.ts
     │   ├── file.ts
     │   ├── load.ts
+    │   ├── team.ts            # teamPermissions table + PERMISSION_REGISTRY (source of truth)
+    │   ├── team.test.ts       # Vitest tests for PERMISSION_REGISTRY (excluded from tsc via tsconfig)
     │   └── index.ts           # barrel + `Roles` enum + `OrderDirection`
     ├── operations/
     │   ├── userOperations.ts  # createUser, listUsers, getFullUserInfoById, …
     │   ├── branchOperations.ts
     │   └── loadOperations.ts
+    ├── seed/
+    │   └── seedPermissions.ts # generic permission seeder — see "Seeding permissions" below
     └── migration/
         └── run-migrations.ts  # tsx-launched runner; uses Resource.Cluster.*
 ```
+
+## Seeding permissions
+
+`src/seed/seedPermissions.ts` is the single generic seeder for the `team_permissions` table. Run it after schema or registry changes:
+
+```bash
+pnpm sst shell --stage dev -- pnpm --filter @twy/db seed:permissions
+```
+
+Three phases in order:
+1. Insert missing `(teamId, resource, action)` rows with `onConflictDoNothing` (default `allowed = false`).
+2. Apply `SPLITS` derivations — when a resource is renamed/split, copy `allowed = true` from the old resource to each new one.
+3. Delete rows whose resource is no longer in `PERMISSION_REGISTRY` using `notInArray`.
+
+Safe to run repeatedly. CI runs this step after `sst deploy` (see `.github/workflows/ci-cd.yml`).
+
+`PERMISSION_REGISTRY` is the single source of truth — defined in `packages/db/src/schema/team.ts`, re-exported from `@twy/db` and from `@twy/core`. Any resource/action change starts there.
 
 ## Schema → migration workflow
 
@@ -61,6 +79,7 @@ Both commands need `Resource.Cluster.*` resolved. `db:generate` doesn't strictly
 ## Conventions
 
 - This package is `"type": "module"`. Internal imports use the `.js` extension (NodeNext ESM convention).
+- `*.test.ts` files (e.g. `schema/team.test.ts`) are excluded from the production `tsconfig.json` and only compiled by Vitest.
 - Use `Resource.Cluster.{clusterArn,secretArn,database}` — never `process.env.X`. Resource bindings come from `link: [db.cluster]` declared in `infra/api.ts` / `infra/auth.ts`.
 - Column names are snake_case in Postgres; TS keys are camelCase. Drizzle's `casing: "snake_case"` does the mapping — don't add `name:` overrides per column.
 - Operation functions own SQL composition; handlers should not import `drizzle-orm` operators. If a handler reaches for `eq`, factor the query into an operation here.

@@ -1,4 +1,36 @@
 import { boolean, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { loadStatusValues } from "./load.js";
+import { paymentStatusValues } from "./paymentOrder.js";
+
+export const PERMISSION_REGISTRY = {
+  branches: { actions: ["add", "view", "edit", "delete"] as const },
+  brokers: { actions: ["add", "view", "edit", "delete"] as const },
+  brokers_requests: { actions: ["view", "edit"] as const },
+  carriers_twy: { actions: ["add", "view", "edit", "delete"] as const },
+  carriers_outside: { actions: ["add", "view", "edit", "delete"] as const },
+  carriers_requests: { actions: ["view", "edit"] as const },
+  teams: { actions: ["add", "view", "edit", "delete"] as const },
+  users: { actions: ["add", "view", "edit", "delete"] as const },
+  loads: {
+    actions: ["add", "view", "edit", "delete"] as const,
+    transitions: loadStatusValues,
+  },
+  load_payment_order: {
+    actions: ["add", "view", "edit", "delete"] as const,
+    transitions: paymentStatusValues,
+  },
+  office_expense_payment_order: {
+    actions: ["add", "view", "edit", "delete"] as const,
+    transitions: paymentStatusValues.filter((s) => s !== "ReadyForInvoice") as readonly string[],
+  },
+  external_billing: { actions: ["view"] as const },
+  internal_billing: { actions: ["view"] as const },
+} as const;
+
+export type PermissionEntity = keyof typeof PERMISSION_REGISTRY;
+export type BaseAction = "add" | "view" | "edit" | "delete";
+export type TransitionAction = `transition:${string}`;
+export type PermissionAction = BaseAction | TransitionAction;
 
 export const team = pgTable("team", {
   id: uuid().primaryKey().defaultRandom(),

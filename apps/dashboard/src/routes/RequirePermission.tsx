@@ -6,7 +6,8 @@ import type { Action, Resource } from "@/utils/permissions";
 
 interface RequirePermissionProps {
   children: React.ReactNode;
-  resource: Resource;
+  /** Single resource or array of resources — access is granted if ANY resource passes. */
+  resource: Resource | Resource[];
   action: Action;
 }
 
@@ -28,7 +29,10 @@ const RequirePermission: React.FC<RequirePermissionProps> = ({ children, resourc
     );
   }
 
-  if (!permissions[resource]?.[action]) {
+  const resources = Array.isArray(resource) ? resource : [resource];
+  const allowed = resources.some((r) => permissions[r]?.[action]);
+
+  if (!allowed) {
     return <Navigate to="/profile" replace />;
   }
 

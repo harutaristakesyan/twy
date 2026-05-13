@@ -28,14 +28,15 @@ const RESOURCE_LABELS: Record<Resource, string> = {
   teams: "Teams",
   users: "Users",
   loads: "Loads",
-  payment_orders: "Accounting — Payment Orders",
+  load_payment_order: "Accounting — Load Payment Orders",
+  office_expense_payment_order: "Accounting — Office Expense Payment Orders",
   external_billing: "Accounting — External Billing",
   internal_billing: "Accounting — Internal Billing",
 };
 
 const TRANSITION_MAP: Partial<Record<Resource, string[]>> = {
   loads: ["Pending", "Approved", "Hold", "Declined", "Delivered"],
-  payment_orders: [
+  load_payment_order: [
     "Pending",
     "Approved",
     "Paid",
@@ -44,6 +45,7 @@ const TRANSITION_MAP: Partial<Record<Resource, string[]>> = {
     "Declined",
     "ReadyForInvoice",
   ],
+  office_expense_payment_order: ["Pending", "Approved", "Paid", "PartialPaid", "Hold", "Declined"],
 };
 
 interface MatrixRow {

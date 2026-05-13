@@ -8,7 +8,6 @@ export * from "./loadComment.js";
 export * from "./loadStop.js";
 export * from "./outsideBroker.js";
 export * from "./paymentOrder.js";
-export * from "./permissionAudit.js";
 export * from "./team.js";
 export * from "./users.js";
 

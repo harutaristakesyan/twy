@@ -1,6 +1,7 @@
 import { middyfy } from "@shared/index";
 import {
   assertPermission,
+  assertTransition,
   loadAuthContext,
   type MessageResponse,
   type UpdatePaymentOrderEvent,
@@ -15,7 +16,7 @@ const updatePaymentOrderHandler = async (
 ): Promise<MessageResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "payment_orders", "edit");
+  assertPermission(ctx, "load_payment_order", "edit");
 
   const { paymentOrderId } = event.pathParameters;
   const {
@@ -25,6 +26,8 @@ const updatePaymentOrderHandler = async (
     brokerReceivedAmount,
     brokerReceivedDate,
   } = event.body;
+
+  if (paymentStatus) assertTransition(ctx, "load_payment_order", paymentStatus);
 
   const updated = await updatePaymentOrder(paymentOrderId, {
     paymentStatus,

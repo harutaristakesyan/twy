@@ -18,8 +18,8 @@ packages/functions/
 │   ├── events/                                  # Non-HTTP Lambda triggers
 │   │   └── postConfirmation.ts                  # Cognito post-confirmation (wired in infra/auth.ts)
 │   ├── shared/                                  # Lambda-runtime middleware & helpers
-│   │   ├── env.ts errors.ts lambda.ts index.ts
-│   │   └── middy/{addAwsRequestId,httpJwtExtractor,httpZodHandler,jsonErrorHandler,serializeResponse}.ts
+│   │   ├── errors.ts lambda.ts index.ts
+│   │   └── middy/{addAwsRequestId,httpJwtExtractor,httpZodHandler,jsonErrorHandler}.ts
 │   ├── contracts/<domain>/{request,response}.ts # Zod schemas + TS types (move to @twy/core in a later pass)
 │   ├── libs/s3/                                 # Presigned-URL helpers (move to @twy/core)
 │   └── utils/                                   # Misc utilities (move to @twy/core)
@@ -45,7 +45,7 @@ Use `/new-handler <METHOD> <PATH>` or the `lambda-handler-author` subagent. Shap
 
 1. Add the Zod schema to `src/contracts/<domain>/request.ts`.
 2. Add the response type to `src/contracts/<domain>/response.ts`.
-3. Write the handler in `src/api/<domain>/<verb>.ts` (or `src/api/auth/` for Cognito flows). Wrap with `middyfy` from `@shared/index`. Read configuration from `Resource.X` — never `process.env` or `requireEnv`.
+3. Write the handler in `src/api/<domain>/<verb>.ts` (or `src/api/auth/` for Cognito flows). Wrap with `middyfy` from `@shared/index`. Read configuration from `Resource.X` — never `process.env`.
 4. Append a `RouteDef` to `infra/routes.ts` (`authRoutes` for public Cognito flows, `appRoutes` for JWT-protected) with `linkKeys` listing the resources the handler needs.
 5. If the handler needs a new DB query, add it to `packages/db/src/operations/<domain>Operations.ts` and re-export it via `packages/db/src/index.ts`. Handlers import the operation from `@twy/db`, not raw Drizzle.
 
@@ -90,7 +90,6 @@ Never return raw Cognito error messages to the client — they leak internal inf
 ## `@shared/index` — public surface
 
 ```typescript
-export { requireEnv } from "./env.js";
 export { toError } from "./errors.js";
 export { type MiddyOptions, middyfy, wrapHandler } from "./lambda.js";
 export { addAwsRequestId } from "./middy/addAwsRequestId.js";
@@ -101,12 +100,9 @@ export {
   httpZodHandler,
 } from "./middy/httpZodHandler.js";
 export { jsonErrorHandler } from "./middy/jsonErrorHandler.js";
-export { generateJSONResponse, serializeResponse } from "./middy/serializeResponse.js";
 ```
 
 `middyfy` is the composed Middy stack (jsonErrorHandler → middyJsonBodyParser → httpJwtExtractor → addAwsRequestId → optional httpZodHandler → handler). `mode: "parse"` *replaces* `event` with the parsed shape; `mode: "validate"` only checks. Mismatching `mode` and the typed handler parameter is a silent bug source.
-
-`requireEnv` is kept for back-compat but new code should read configuration from `Resource.X` (the SST SDK).
 
 ## Resource SDK reads
 

@@ -13,7 +13,7 @@ import errors from "http-errors";
 const removeFileHandler = async (event: RemovePaymentOrderFileEvent): Promise<MessageResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "payment_orders", "edit");
+  assertPermission(ctx, "load_payment_order", "edit");
 
   const { paymentOrderId, fileId } = event.pathParameters;
 

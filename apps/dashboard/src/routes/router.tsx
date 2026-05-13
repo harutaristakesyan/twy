@@ -156,7 +156,10 @@ export const router = createBrowserRouter([
               {
                 path: "payment-orders",
                 element: (
-                  <RequirePermission resource="payment_orders" action="view">
+                  <RequirePermission
+                    resource={["load_payment_order", "office_expense_payment_order"]}
+                    action="view"
+                  >
                     <PaymentOrdersPage />
                   </RequirePermission>
                 ),

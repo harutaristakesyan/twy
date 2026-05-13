@@ -8,7 +8,8 @@ export const RESOURCES = [
   "teams",
   "users",
   "loads",
-  "payment_orders",
+  "load_payment_order",
+  "office_expense_payment_order",
   "external_billing",
   "internal_billing",
 ] as const;
@@ -19,7 +20,7 @@ export type Resource = (typeof RESOURCES)[number];
 export type Action = (typeof ACTIONS)[number];
 export type PermissionsMap = Record<Resource, Record<Action, boolean>>;
 
-export type { Entity } from "../permissions/registry.js";
+export type { PermissionEntity as Entity } from "@twy/db";
 
 export const TWY_TEAM_ID = "00000000-0000-8000-8000-000000000001";
 

@@ -109,9 +109,18 @@ const allMenuItems: SidebarMenuItem[] = [
     key: "/accounting",
     icon: <AccountBookOutlined />,
     label: "Accounting",
-    resources: ["payment_orders", "external_billing", "internal_billing"],
+    resources: [
+      "load_payment_order",
+      "office_expense_payment_order",
+      "external_billing",
+      "internal_billing",
+    ],
     children: [
-      { key: "/accounting/payment-orders", label: "Payment Orders", resources: ["payment_orders"] },
+      {
+        key: "/accounting/payment-orders",
+        label: "Payment Orders",
+        resources: ["load_payment_order", "office_expense_payment_order"],
+      },
       {
         key: "/accounting/external-billing",
         label: "External Billing",

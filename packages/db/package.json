@@ -24,7 +24,7 @@
     "clean": "rm -rf dist",
     "migrate": "tsx ./src/migration/run-migrations.ts",
     "db:generate": "drizzle-kit generate",
-    "seed:billing-permissions": "tsx ./src/seed/seedBillingPermissions.ts",
+    "seed:permissions": "tsx ./src/seed/seedPermissions.ts",
     "db:studio": "drizzle-kit studio",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",

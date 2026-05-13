@@ -64,7 +64,7 @@ import {
 } from "@twy/core";
 ```
 
-The schema enums (`Roles`, `LoadStatus`, `OrderDirection`, `loadStatusValues`) live in `@twy/db`'s schema and are re-exported here for ergonomics — callers never need to know which package owns them.
+The schema enums (`Roles`, `LoadStatus`, `OrderDirection`, `loadStatusValues`) and `PERMISSION_REGISTRY` (plus `PermissionEntity`, `PermissionAction` types) live in `@twy/db`'s schema and are re-exported here for ergonomics — callers never need to know which package owns them.
 
 ## Adding a new domain
 

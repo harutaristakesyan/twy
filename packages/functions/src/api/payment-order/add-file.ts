@@ -12,7 +12,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 const addFileHandler = async (event: AddPaymentOrderFileEvent): Promise<MessageResponse> => {
   const { userId } = event.requestContext.authUser;
   const ctx = await loadAuthContext(userId);
-  assertPermission(ctx, "payment_orders", "edit");
+  assertPermission(ctx, "load_payment_order", "edit");
 
   const { paymentOrderId } = event.pathParameters;
   const { fileId } = event.body;

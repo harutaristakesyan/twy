@@ -8,7 +8,8 @@ export const RESOURCES = [
   "teams",
   "users",
   "loads",
-  "payment_orders",
+  "load_payment_order",
+  "office_expense_payment_order",
   "external_billing",
   "internal_billing",
 ] as const;
@@ -23,7 +24,8 @@ export const RESOURCE_ACTIONS: Record<Resource, readonly Action[]> = {
   teams: ["add", "view", "edit", "delete"],
   users: ["add", "view", "edit", "delete"],
   loads: ["add", "view", "edit", "delete"],
-  payment_orders: ["view", "edit", "delete"],
+  load_payment_order: ["add", "view", "edit", "delete"],
+  office_expense_payment_order: ["add", "view", "edit", "delete"],
   external_billing: ["view"],
   internal_billing: ["view"],
 };

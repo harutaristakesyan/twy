@@ -198,13 +198,6 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: [],
   },
-  // permissions
-  {
-    handler: "packages/functions/src/api/permissions/registry.handler",
-    routeKey: "GET /api/permissions/registry",
-    requiresAuth: true,
-    linkKeys: ["cluster", "authContext"],
-  },
   // team
   {
     handler: "packages/functions/src/api/team/list.handler",
