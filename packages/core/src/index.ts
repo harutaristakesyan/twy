@@ -15,9 +15,11 @@ export {
   type CarrierKind,
   type CarrierRequestStatus,
   type CarrierStatus,
+  type Currency,
   carrierKindValues,
   carrierRequestStatusValues,
   carrierStatusValues,
+  currencyValues,
   type DocumentCategory,
   documentCategoryValues,
   type InsuranceStatus,
@@ -26,7 +28,11 @@ export {
   type LoadStatus,
   loadCommentTypeValues,
   loadStatusValues,
+  type OfficeExpensePaymentStatus,
+  type OfficeExpenseService,
   type OrderDirection,
+  officeExpensePaymentStatusValues,
+  officeExpenseServiceValues,
   type PaymentStatus,
   PERMISSION_REGISTRY,
   paymentStatusValues,
@@ -39,6 +45,7 @@ export * from "./carrier/index.js";
 export * from "./carrier-request/index.js";
 export * from "./file/index.js";
 export * from "./load/index.js";
+export * from "./office-expense-payment-order/index.js";
 export * from "./outside-broker/index.js";
 export * from "./payment-order/index.js";
 export * from "./shared/index.js";
