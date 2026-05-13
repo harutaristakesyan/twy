@@ -6,6 +6,7 @@ import {
   DatePicker,
   Form,
   type FormInstance,
+  type FormProps,
   Input,
   InputNumber,
   Row,
@@ -52,6 +53,7 @@ interface Props {
   onFinish: (values: OfficeExpenseFormValues) => void;
   onFilesChanged: () => void;
   onUploadingChange: (uploading: boolean) => void;
+  onValuesChange?: FormProps<OfficeExpenseFormValues>["onValuesChange"];
 }
 
 const toFileList = (files: OfficeExpenseFile[]): UploadFile[] =>
@@ -77,6 +79,7 @@ export default function OfficeExpensePaymentOrderForm({
   onFinish,
   onFilesChanged,
   onUploadingChange,
+  onValuesChange,
 }: Props) {
   const { message } = App.useApp();
   const [isRange, setIsRange] = useState(() => order.periodStart !== order.periodEnd);
@@ -140,6 +143,7 @@ export default function OfficeExpensePaymentOrderForm({
         if (readOnly) return;
         onFinish(values);
       }}
+      onValuesChange={onValuesChange}
       style={{ marginTop: 16 }}
     >
       <Form.Item

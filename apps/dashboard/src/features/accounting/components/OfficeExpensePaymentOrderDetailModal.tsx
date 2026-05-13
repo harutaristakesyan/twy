@@ -1,7 +1,8 @@
 import { useRequest } from "ahooks";
 import { App, Button, Form, Modal, Space } from "antd";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
+import { getDirtyFields } from "@/utils/getDirtyFields";
 import { officeExpenseApi } from "../api/officeExpensePaymentOrderApi";
 import {
   type OfficeExpensePaymentOrder,
@@ -26,6 +27,16 @@ const titleSuffix = (svc: OfficeExpenseService, purpose: string) => {
   const short = trimmed.length > 50 ? `${trimmed.slice(0, 50)}…` : trimmed;
   return `${SERVICE_LABELS[svc]} — ${short}`;
 };
+
+const buildOriginalDto = (order: OfficeExpensePaymentOrder): UpdateOfficeExpenseDto => ({
+  serviceName: order.serviceName,
+  paymentPurpose: order.paymentPurpose,
+  periodStart: order.periodStart,
+  periodEnd: order.periodEnd,
+  amount: order.amount,
+  currency: order.currency,
+  paymentStatus: order.paymentStatus,
+});
 
 const buildUpdateDto = (values: OfficeExpenseFormValues): UpdateOfficeExpenseDto | null => {
   let periodStart: string;
@@ -61,19 +72,43 @@ export default function OfficeExpensePaymentOrderDetailModal({
   const { message } = App.useApp();
   const [form] = Form.useForm<OfficeExpenseFormValues>();
   const [uploading, setUploading] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+
+  const handleClose = () => {
+    setIsDirty(false);
+    onClose();
+  };
+
+  const handleValuesChange = useCallback(
+    (_changed: Partial<OfficeExpenseFormValues>, allValues: OfficeExpenseFormValues) => {
+      if (!order) return;
+      const currentDto = buildUpdateDto(allValues);
+      if (!currentDto) {
+        setIsDirty(false);
+        return;
+      }
+      setIsDirty(Object.keys(getDirtyFields(buildOriginalDto(order), currentDto)).length > 0);
+    },
+    [order],
+  );
 
   const { loading: saving, run: save } = useRequest(
     async (values: OfficeExpenseFormValues) => {
-      if (!order) return;
-      const dto = buildUpdateDto(values);
-      if (!dto) return;
-      await officeExpenseApi.update(order.id, dto);
+      if (!order) return false;
+      const currentDto = buildUpdateDto(values);
+      if (!currentDto) return false;
+      const dirty = getDirtyFields(buildOriginalDto(order), currentDto);
+      if (Object.keys(dirty).length === 0) return false;
+      await officeExpenseApi.update(order.id, dirty);
+      return true;
     },
     {
       manual: true,
-      onSuccess: () => {
+      onSuccess: (saved) => {
+        if (!saved) return;
         message.success("Office expense payment order updated");
         onSuccess();
+        handleClose();
       },
       onError: (err) => message.error(getErrorMessage(err)),
     },
@@ -87,19 +122,19 @@ export default function OfficeExpensePaymentOrderDetailModal({
     <Modal
       title={modalTitle}
       open={open}
-      onCancel={onClose}
+      onCancel={handleClose}
       width={640}
       destroyOnHidden
       footer={
         readOnly ? (
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={handleClose}>Close</Button>
         ) : (
           <Space>
-            <Button onClick={onClose}>Cancel</Button>
+            <Button onClick={handleClose}>Cancel</Button>
             <Button
               type="primary"
               loading={saving}
-              disabled={uploading}
+              disabled={!isDirty || uploading}
               onClick={() => form.submit()}
             >
               Save
@@ -117,6 +152,7 @@ export default function OfficeExpensePaymentOrderDetailModal({
           onFinish={save}
           onFilesChanged={onSuccess}
           onUploadingChange={setUploading}
+          onValuesChange={readOnly ? undefined : handleValuesChange}
         />
       )}
     </Modal>
