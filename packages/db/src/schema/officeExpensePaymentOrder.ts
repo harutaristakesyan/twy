@@ -79,7 +79,7 @@ export const officeExpensePaymentOrderFiles = pgTable(
       name: "oepo_files_order_fk",
       columns: [t.officeExpensePaymentOrderId],
       foreignColumns: [officeExpensePaymentOrder.id],
-    }).onDelete("restrict"),
+    }).onDelete("cascade"),
     foreignKey({
       name: "oepo_files_file_fk",
       columns: [t.fileId],

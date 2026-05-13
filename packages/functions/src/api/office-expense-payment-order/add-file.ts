@@ -26,7 +26,10 @@ const addFileHandler = async (event: AddOfficeExpenseFileEvent): Promise<Message
   if (scope.ownerId && order.createdBy !== scope.ownerId)
     throw new errors.NotFound(`Office expense payment order ${id} not found`);
 
-  await addOfficeExpenseFile(id, fileId);
+  await addOfficeExpenseFile(id, fileId, {
+    actorUserId: userId,
+    orderCreatedBy: order.createdBy,
+  });
 
   return { message: "File added to office expense payment order" };
 };

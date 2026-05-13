@@ -57,7 +57,6 @@ export const officeExpenseApi = {
     await ApiClient.delete<ApiResponse<{ message: string }>>(
       `/office-expense-payment-orders/${id}/files/${fileId}`,
     );
-    await fileApi.deleteFile(fileId);
   },
 
   downloadFile: (fileId: string, fileName: string) => fileApi.downloadFile(fileId, fileName),
