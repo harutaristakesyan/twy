@@ -354,6 +354,12 @@ export const appRoutes: RouteDef[] = [
     linkKeys: ["cluster", "authContext"],
   },
   {
+    handler: "packages/functions/src/api/payment-order/create.handler",
+    routeKey: "POST /api/payment-orders",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
     handler: "packages/functions/src/api/payment-order/update.handler",
     routeKey: "PATCH /api/payment-orders/{paymentOrderId}",
     requiresAuth: true,

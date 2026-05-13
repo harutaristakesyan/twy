@@ -28,6 +28,15 @@ export const ListPaymentOrdersEventSchema = z.object({
 
 export type ListPaymentOrdersEvent = z.infer<typeof ListPaymentOrdersEventSchema>;
 
+export const CreatePaymentOrderEventSchema = z.object({
+  requestContext: AuthContext,
+  body: z.object({
+    loadId: z.uuid("Value must be a valid UUID"),
+  }),
+});
+
+export type CreatePaymentOrderEvent = z.infer<typeof CreatePaymentOrderEventSchema>;
+
 export const UpdatePaymentOrderEventSchema = z.object({
   requestContext: AuthContext,
   pathParameters: z.object({

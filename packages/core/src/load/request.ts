@@ -99,6 +99,10 @@ export const ListLoadsEventSchema = z.object({
       .transform((val) => loadSortOrderMap[val as keyof typeof loadSortOrderMap]),
     query: z.string().optional(),
     filters: filtersQueryParamSchema,
+    excludeWithExistingPO: z
+      .union([z.literal("true"), z.literal("false")])
+      .optional()
+      .transform((v) => v === "true"),
   }),
 });
 

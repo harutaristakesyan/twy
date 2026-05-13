@@ -15,7 +15,7 @@ import {
   paymentOrder,
   users,
 } from "@twy/db";
-import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, notInArray, or } from "drizzle-orm";
 import createError from "http-errors";
 import {
   createPaymentOrderForLoad,
@@ -135,6 +135,8 @@ export interface ListLoadsInput {
   branchId?: string;
   ownerId?: string;
   advancedFilter?: AdvancedFilter;
+  /** When true, exclude loads that already have a payment order. */
+  excludeWithExistingPO?: boolean;
 }
 
 const normalizeLoadFiles = (files: LoadFileInput[]): LoadFileInput[] => {
@@ -361,7 +363,10 @@ export const listLoads = async (input: ListLoadsInput) => {
   const branchClause = input.branchId ? eq(load.branchId, input.branchId) : undefined;
   const ownerClause = input.ownerId ? eq(load.createdBy, input.ownerId) : undefined;
   const filterClause = buildLoadAdvancedFilterClause(input.advancedFilter);
-  const whereClause = and(searchClause, branchClause, ownerClause, filterClause);
+  const excludePOClause = input.excludeWithExistingPO
+    ? notInArray(load.id, db.select({ id: paymentOrder.loadId }).from(paymentOrder))
+    : undefined;
+  const whereClause = and(searchClause, branchClause, ownerClause, filterClause, excludePOClause);
 
   const [rows, totalRows] = await Promise.all([
     db

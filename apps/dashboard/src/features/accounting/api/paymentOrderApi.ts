@@ -17,6 +17,14 @@ export const paymentOrderApi = {
     return res.data;
   },
 
+  create: async (loadId: string): Promise<{ id: string; loadId: string }> => {
+    const res = await ApiClient.post<ApiResponse<{ id: string; loadId: string }>>(
+      "/payment-orders",
+      { loadId },
+    );
+    return res.data;
+  },
+
   update: async (paymentOrderId: string, dto: UpdatePaymentOrderDto): Promise<void> => {
     await ApiClient.patch<ApiResponse<{ message: string }>>(
       `/payment-orders/${paymentOrderId}`,

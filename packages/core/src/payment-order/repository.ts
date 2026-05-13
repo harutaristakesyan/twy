@@ -23,6 +23,30 @@ export class PaymentOrderRequiredError extends Error {
   }
 }
 
+export class PaymentOrderAlreadyExistsError extends Error {
+  readonly code = "payment_order_already_exists";
+  constructor(public readonly loadId: string) {
+    super(`A payment order already exists for load ${loadId}`);
+    this.name = "PaymentOrderAlreadyExistsError";
+  }
+}
+
+export class PaymentOrderFinancialsMissingError extends Error {
+  readonly code = "payment_order_financials_missing";
+  constructor(public readonly missing: string[]) {
+    super(`Cannot create payment order — missing fields: ${missing.join(", ")}`);
+    this.name = "PaymentOrderFinancialsMissingError";
+  }
+}
+
+export class LoadNotFoundError extends Error {
+  readonly code = "load_not_found";
+  constructor(public readonly loadId: string) {
+    super(`Load ${loadId} not found`);
+    this.name = "LoadNotFoundError";
+  }
+}
+
 export const computePaymentOrderFinancials = (financials: {
   customerRate: string | null;
   carrierRate: string;
@@ -108,11 +132,17 @@ const fetchInvoicesForPaymentOrders = async (
   return map;
 };
 
+export interface CreatePaymentOrderForLoadOptions {
+  /** When true, throws on missing load, existing PO, or missing financials. Default: silent no-op (auto-flow). */
+  strict?: boolean;
+}
+
 export const createPaymentOrderForLoad = async (
   tx: Tx,
   loadId: string,
   userId: string,
-): Promise<void> => {
+  options: CreatePaymentOrderForLoadOptions = {},
+): Promise<{ id: string } | null> => {
   const [loadRow] = await tx
     .select({
       branchId: load.branchId,
@@ -125,7 +155,22 @@ export const createPaymentOrderForLoad = async (
     .from(load)
     .where(eq(load.id, loadId));
 
-  if (!loadRow) return;
+  if (!loadRow) {
+    if (options.strict) throw new LoadNotFoundError(loadId);
+    return null;
+  }
+
+  if (options.strict) {
+    const missing: string[] = [];
+    if (loadRow.carrierRate == null) missing.push("carrierRate");
+    if (missing.length > 0) throw new PaymentOrderFinancialsMissingError(missing);
+
+    const [existing] = await tx
+      .select({ id: paymentOrder.id })
+      .from(paymentOrder)
+      .where(eq(paymentOrder.loadId, loadId));
+    if (existing) throw new PaymentOrderAlreadyExistsError(loadId);
+  }
 
   const customerRate = numericToNumber(loadRow.customerRate);
   const carrierRate = Number(loadRow.carrierRate);
@@ -137,10 +182,11 @@ export const createPaymentOrderForLoad = async (
       : null;
   const profit = income != null ? income + serviceFee : null;
 
-  await tx
+  const id = randomUUID();
+  const inserted = await tx
     .insert(paymentOrder)
     .values({
-      id: randomUUID(),
+      id,
       loadId,
       branchId: loadRow.branchId,
       carrierId: loadRow.carrierId ?? null,
@@ -152,7 +198,14 @@ export const createPaymentOrderForLoad = async (
       profit: profit != null ? profit.toString() : null,
       createdBy: userId,
     })
-    .onConflictDoNothing({ target: paymentOrder.loadId });
+    .onConflictDoNothing({ target: paymentOrder.loadId })
+    .returning({ id: paymentOrder.id });
+
+  if (inserted.length === 0) {
+    if (options.strict) throw new PaymentOrderAlreadyExistsError(loadId);
+    return null;
+  }
+  return { id };
 };
 
 const LOAD_STATUS_TO_PAYMENT_STATUS: Partial<Record<LoadStatus, PaymentStatus>> = {

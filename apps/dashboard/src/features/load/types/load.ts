@@ -108,6 +108,7 @@ export interface GetLoadsParams {
   sortOrder?: "ascend" | "descend";
   query?: string;
   filters?: string;
+  excludeWithExistingPO?: boolean;
 }
 
 export interface PaginatedLoadsResponse {

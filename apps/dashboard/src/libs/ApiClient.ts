@@ -87,7 +87,7 @@ async function request<T>(
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   body?: object,
-  params?: Record<string, string | number | boolean>,
+  params?: object,
   skipAuth = false,
 ): Promise<T> {
   const config: AxiosRequestConfig = {
@@ -147,7 +147,7 @@ async function request<T>(
 
 const ApiClient = {
   refreshAccessToken,
-  get<T>(path: string, params?: Record<string, string | number | boolean>, skipAuth = false) {
+  get<T>(path: string, params?: object, skipAuth = false) {
     return request<T>("GET", path, undefined, params, skipAuth);
   },
   post<T>(path: string, body: object, skipAuth = false) {

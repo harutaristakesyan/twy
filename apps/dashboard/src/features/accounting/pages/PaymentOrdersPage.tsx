@@ -1,14 +1,16 @@
-import { EditOutlined, EyeOutlined } from "@ant-design/icons";
+import { EditOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import { useAntdTable, useRequest } from "ahooks";
 import { Button, Card, Flex, Space, Table, Tabs, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { getBranches } from "@/features/branch/api/branchApi";
 import { usePermission } from "@/hooks/usePermission";
 import { renderCurrency, renderDate } from "@/utils/formatters";
 import { paymentOrderApi } from "../api/paymentOrderApi";
+import CreateLoadPaymentOrderModal from "../components/CreateLoadPaymentOrderModal";
 import OfficeExpensePOTab from "../components/OfficeExpensePOTab";
 import PaymentStatusTag from "../components/PaymentStatusTag";
 import UpdatePaymentStatusModal from "../components/UpdatePaymentStatusModal";
@@ -20,6 +22,8 @@ const { Title } = Typography;
 function LoadPaymentOrdersTab() {
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
   const [activeQuery, setActiveQuery] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const canCreate = usePermission("load_payment_order", "add");
   const { selectedOrder, open, mode, openModal, closeModal } = usePaymentOrderModal();
 
   const { data: branchesData } = useRequest(() => getBranches({ limit: 200 }), {
@@ -191,12 +195,19 @@ function LoadPaymentOrdersTab() {
           Load Payment Orders (
           {tableProps.pagination ? ((tableProps.pagination as { total?: number }).total ?? 0) : 0})
         </Title>
-        <AdvancedFilterPopover
-          fields={fields}
-          initialFilter={activeFilter}
-          initialQuery={activeQuery}
-          onApply={handleFilterApply}
-        />
+        <Space>
+          {canCreate && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+              Create
+            </Button>
+          )}
+          <AdvancedFilterPopover
+            fields={fields}
+            initialFilter={activeFilter}
+            initialQuery={activeQuery}
+            onApply={handleFilterApply}
+          />
+        </Space>
       </Flex>
 
       <ActiveFilterChips
@@ -222,6 +233,12 @@ function LoadPaymentOrdersTab() {
         onClose={closeModal}
         onSuccess={refresh}
       />
+
+      <CreateLoadPaymentOrderModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={refresh}
+      />
     </>
   );
 }
@@ -229,6 +246,7 @@ function LoadPaymentOrdersTab() {
 export default function PaymentOrdersPage() {
   const canViewLoad = usePermission("load_payment_order", "view");
   const canViewOfficeExpense = usePermission("office_expense_payment_order", "view");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const tabItems = [
     ...(canViewLoad
@@ -256,10 +274,18 @@ export default function PaymentOrdersPage() {
   }
 
   const defaultActiveKey = canViewLoad ? "load" : "office-expense";
+  const urlTab = searchParams.get("tab");
+  const activeKey = urlTab && tabItems.some((t) => t.key === urlTab) ? urlTab : defaultActiveKey;
+
+  const handleTabChange = (key: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", key);
+    setSearchParams(next, { replace: true });
+  };
 
   return (
     <Card>
-      <Tabs items={tabItems} defaultActiveKey={defaultActiveKey} />
+      <Tabs items={tabItems} activeKey={activeKey} onChange={handleTabChange} />
     </Card>
   );
 }
