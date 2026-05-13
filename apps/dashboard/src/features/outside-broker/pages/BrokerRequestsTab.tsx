@@ -1,19 +1,6 @@
-import { CheckOutlined, CloseOutlined, EyeOutlined } from "@ant-design/icons";
+import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import { useAntdTable, useRequest } from "ahooks";
-import {
-  App,
-  Button,
-  Card,
-  Descriptions,
-  Drawer,
-  Empty,
-  Flex,
-  Input,
-  Table,
-  Tag,
-  Typography,
-} from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { App, Button, Card, Drawer, Empty, Flex, Input, Table, Typography } from "antd";
 import type React from "react";
 import { useState } from "react";
 import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
@@ -26,10 +13,14 @@ import {
   listBrokerRequests,
   rejectBrokerRequest,
 } from "../api/brokerRequestApi";
+import {
+  BrokerRequestDetails,
+  BrokerRequestReviewSummary,
+} from "../components/BrokerRequestDetails";
+import { useBrokerRequestColumns } from "../components/useBrokerRequestColumns";
 import { useBrokerRequestDrawer } from "../hooks/useBrokerRequestDrawer";
-import type { BrokerRequest } from "../types/brokerRequest";
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 const BOOL_OPTIONS = [
   { label: "Yes", value: "true" },
@@ -50,12 +41,6 @@ const FILTER_FIELDS: FilterField[] = [
   { key: "creditLimitUnlimited", label: "Credit unlimited", type: "select", options: BOOL_OPTIONS },
   { key: "creditLimit", label: "Credit limit", type: "numberRange" },
 ];
-
-const statusColors: Record<string, string> = {
-  pending: "processing",
-  approved: "success",
-  rejected: "error",
-};
 
 const BrokerRequestsTab: React.FC = () => {
   const { message } = App.useApp();
@@ -93,6 +78,8 @@ const BrokerRequestsTab: React.FC = () => {
     { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 10 },
   );
 
+  const columns = useBrokerRequestColumns(openView, canView);
+
   const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
     setActiveFilter(filter);
     setActiveQuery(query ?? "");
@@ -124,51 +111,47 @@ const BrokerRequestsTab: React.FC = () => {
     },
   );
 
-  const columns: ColumnsType<BrokerRequest> = [
-    { title: "Broker name", dataIndex: "brokerName", key: "brokerName", sorter: true },
-    {
-      title: "MC number",
-      dataIndex: "mcNumber",
-      key: "mcNumber",
-      render: (v: string) => <Text code>{v}</Text>,
-      sorter: true,
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      width: 110,
-      render: (st: string) => <Tag color={statusColors[st] ?? "default"}>{st}</Tag>,
-      sorter: true,
-    },
-    {
-      title: "Submitted",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      width: 120,
-      render: (d: string) => (d ? new Date(d).toLocaleDateString() : "—"),
-      sorter: true,
-    },
-    {
-      title: "Reviewed by",
-      key: "reviewedBy",
-      width: 140,
-      render: (_, r) =>
-        r.reviewedByName ? <Text>{r.reviewedByName}</Text> : <Text type="secondary">—</Text>,
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 90,
-      fixed: "right",
-      render: (_, row) =>
-        canView ? (
-          <Button size="small" icon={<EyeOutlined />} onClick={() => openView(row)}>
-            View
-          </Button>
-        ) : null,
-    },
-  ];
+  const renderDrawerFooter = () => {
+    if (!record || record.status !== "pending" || !canReview) return null;
+    if (showRejectInput) {
+      return (
+        <Flex vertical gap="small">
+          <Input.TextArea
+            rows={3}
+            placeholder="Rejection reason"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            autoFocus
+          />
+          <Flex gap="small" justify="flex-end">
+            <Button onClick={() => setShowRejectInput(false)}>Cancel</Button>
+            <Button
+              danger
+              loading={rejecting}
+              onClick={() => reject(record.id, rejectReason || undefined)}
+            >
+              Confirm reject
+            </Button>
+          </Flex>
+        </Flex>
+      );
+    }
+    return (
+      <Flex gap="small" justify="flex-end">
+        <Button danger icon={<CloseOutlined />} onClick={() => setShowRejectInput(true)}>
+          Reject
+        </Button>
+        <Button
+          type="primary"
+          icon={<CheckOutlined />}
+          loading={approving}
+          onClick={() => approve(record.id)}
+        >
+          Approve
+        </Button>
+      </Flex>
+    );
+  };
 
   const drawerTitle = record ? `${record.brokerName} — ${record.mcNumber}` : "Broker request";
 
@@ -195,10 +178,10 @@ const BrokerRequestsTab: React.FC = () => {
           onClearQuery={() => setActiveQuery("")}
         />
 
-        <Table<BrokerRequest>
+        <Table
           rowKey="id"
           columns={columns}
-          scroll={{ x: 900 }}
+          scroll={{ x: "max-content" }}
           {...tableProps}
           locale={{ emptyText: <Empty description="No broker requests yet" /> }}
         />
@@ -209,108 +192,12 @@ const BrokerRequestsTab: React.FC = () => {
         open={open}
         onClose={closeDrawer}
         size="large"
-        footer={
-          record?.status === "pending" && canReview ? (
-            showRejectInput ? (
-              <Flex vertical gap="small">
-                <Input.TextArea
-                  rows={3}
-                  placeholder="Rejection reason"
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  autoFocus
-                />
-                <Flex gap="small" justify="flex-end">
-                  <Button onClick={() => setShowRejectInput(false)}>Cancel</Button>
-                  <Button
-                    danger
-                    loading={rejecting}
-                    onClick={() => reject(record.id, rejectReason || undefined)}
-                  >
-                    Confirm reject
-                  </Button>
-                </Flex>
-              </Flex>
-            ) : (
-              <Flex gap="small" justify="flex-end">
-                <Button danger icon={<CloseOutlined />} onClick={() => setShowRejectInput(true)}>
-                  Reject
-                </Button>
-                <Button
-                  type="primary"
-                  icon={<CheckOutlined />}
-                  loading={approving}
-                  onClick={() => approve(record.id)}
-                >
-                  Approve
-                </Button>
-              </Flex>
-            )
-          ) : null
-        }
+        footer={renderDrawerFooter()}
       >
         {record && (
           <Flex vertical gap="large">
-            <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="Broker name">{record.brokerName}</Descriptions.Item>
-              <Descriptions.Item label="MC number">
-                <Text code>{record.mcNumber}</Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="Contact name">
-                {record.contactName ?? <Text type="secondary">—</Text>}
-              </Descriptions.Item>
-              <Descriptions.Item label="Phone">
-                {record.phone ?? <Text type="secondary">—</Text>}
-              </Descriptions.Item>
-              <Descriptions.Item label="Email">
-                {record.email ?? <Text type="secondary">—</Text>}
-              </Descriptions.Item>
-              <Descriptions.Item label="Address">
-                {record.address ?? <Text type="secondary">—</Text>}
-              </Descriptions.Item>
-              <Descriptions.Item label="Credit limit">
-                {record.creditLimitUnlimited ? (
-                  <Tag color="blue">Unlimited</Tag>
-                ) : record.creditLimit !== null ? (
-                  new Intl.NumberFormat(undefined, { style: "currency", currency: "EUR" }).format(
-                    record.creditLimit,
-                  )
-                ) : (
-                  <Text type="secondary">—</Text>
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="Notes">
-                {record.notes ?? <Text type="secondary">—</Text>}
-              </Descriptions.Item>
-              <Descriptions.Item label="Status">
-                <Tag color={statusColors[record.status] ?? "default"}>{record.status}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Submitted">
-                {new Date(record.createdAt).toLocaleString()}
-                {record.submittedByName && (
-                  <Text type="secondary"> by {record.submittedByName}</Text>
-                )}
-              </Descriptions.Item>
-            </Descriptions>
-
-            {(record.status === "approved" || record.status === "rejected") &&
-              record.reviewedAt && (
-                <Card size="small">
-                  <Flex vertical gap={4}>
-                    <Text strong>
-                      {record.status === "approved" ? "Approved" : "Rejected"}
-                      {record.reviewedByName && <Text> by {record.reviewedByName}</Text>}
-                    </Text>
-                    <Text type="secondary">{new Date(record.reviewedAt).toLocaleString()}</Text>
-                    {record.status === "rejected" && record.rejectionReason && (
-                      <Flex vertical gap={4} style={{ marginTop: 8 }}>
-                        <Text type="secondary">Reason:</Text>
-                        <Text>{record.rejectionReason}</Text>
-                      </Flex>
-                    )}
-                  </Flex>
-                </Card>
-              )}
+            <BrokerRequestDetails record={record} />
+            <BrokerRequestReviewSummary record={record} />
           </Flex>
         )}
       </Drawer>

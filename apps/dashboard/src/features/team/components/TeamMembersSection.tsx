@@ -1,13 +1,13 @@
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined } from "@ant-design/icons";
 import { useAntdTable, useRequest } from "ahooks";
-import { App, Button, Flex, Popconfirm, Table, Tag, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { App, Button, Flex, Table, Typography } from "antd";
 import type React from "react";
 import { useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { getTeamMembers, removeTeamMember } from "../api/teamApi";
 import type { TeamMember } from "../types/team";
 import AddMemberPicker from "./AddMemberPicker";
+import { useTeamMemberColumns } from "./useTeamMemberColumns";
 
 const { Text } = Typography;
 
@@ -39,51 +39,12 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
     },
   );
 
+  const columns = useTeamMemberColumns(removeMember);
+
   const handleAdded = () => {
     setShowPicker(false);
     refresh();
   };
-
-  const columns: ColumnsType<TeamMember> = [
-    {
-      title: "Name",
-      key: "name",
-      render: (_, r) => (
-        <Text>
-          {r.firstName} {r.lastName}
-        </Text>
-      ),
-    },
-    {
-      title: "Email",
-      dataIndex: "email",
-      key: "email",
-    },
-    {
-      title: "Status",
-      dataIndex: "isActive",
-      key: "isActive",
-      render: (active: boolean) => (
-        <Tag color={active ? "green" : "red"}>{active ? "Active" : "Inactive"}</Tag>
-      ),
-    },
-    {
-      title: "",
-      key: "actions",
-      width: 60,
-      render: (_, r) => (
-        <Popconfirm
-          title="Remove member?"
-          description="This will unassign the user from this team."
-          onConfirm={() => removeMember(r.id)}
-          okText="Remove"
-          cancelText="Cancel"
-        >
-          <Button type="text" danger size="small" icon={<DeleteOutlined />} />
-        </Popconfirm>
-      ),
-    },
-  ];
 
   return (
     <>
