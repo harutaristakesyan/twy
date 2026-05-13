@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   check,
   date,
+  foreignKey,
   numeric,
   pgTable,
   primaryKey,
@@ -69,12 +70,20 @@ export type NewOfficeExpensePaymentOrder = typeof officeExpensePaymentOrder.$inf
 export const officeExpensePaymentOrderFiles = pgTable(
   "office_expense_payment_order_files",
   {
-    officeExpensePaymentOrderId: uuid()
-      .notNull()
-      .references(() => officeExpensePaymentOrder.id, { onDelete: "restrict" }),
-    fileId: uuid()
-      .notNull()
-      .references(() => file.id, { onDelete: "restrict" }),
+    officeExpensePaymentOrderId: uuid().notNull(),
+    fileId: uuid().notNull(),
   },
-  (t) => [primaryKey({ columns: [t.officeExpensePaymentOrderId, t.fileId] })],
+  (t) => [
+    primaryKey({ name: "oepo_files_pk", columns: [t.officeExpensePaymentOrderId, t.fileId] }),
+    foreignKey({
+      name: "oepo_files_order_fk",
+      columns: [t.officeExpensePaymentOrderId],
+      foreignColumns: [officeExpensePaymentOrder.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "oepo_files_file_fk",
+      columns: [t.fileId],
+      foreignColumns: [file.id],
+    }).onDelete("restrict"),
+  ],
 );

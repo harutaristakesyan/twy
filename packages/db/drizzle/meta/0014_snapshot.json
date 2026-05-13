@@ -1219,8 +1219,8 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "office_expense_payment_order_files_office_expense_payment_order_id_office_expense_payment_order_id_fk": {
-          "name": "office_expense_payment_order_files_office_expense_payment_order_id_office_expense_payment_order_id_fk",
+        "oepo_files_order_fk": {
+          "name": "oepo_files_order_fk",
           "tableFrom": "office_expense_payment_order_files",
           "tableTo": "office_expense_payment_order",
           "columnsFrom": ["office_expense_payment_order_id"],
@@ -1228,8 +1228,8 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "office_expense_payment_order_files_file_id_file_id_fk": {
-          "name": "office_expense_payment_order_files_file_id_file_id_fk",
+        "oepo_files_file_fk": {
+          "name": "oepo_files_file_fk",
           "tableFrom": "office_expense_payment_order_files",
           "tableTo": "file",
           "columnsFrom": ["file_id"],
@@ -1239,8 +1239,8 @@
         }
       },
       "compositePrimaryKeys": {
-        "office_expense_payment_order_files_office_expense_payment_order_id_file_id_pk": {
-          "name": "office_expense_payment_order_files_office_expense_payment_order_id_file_id_pk",
+        "oepo_files_pk": {
+          "name": "oepo_files_pk",
           "columns": ["office_expense_payment_order_id", "file_id"]
         }
       },
