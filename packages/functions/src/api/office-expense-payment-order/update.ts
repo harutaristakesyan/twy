@@ -36,10 +36,13 @@ const updateHandler = async (event: UpdateOfficeExpenseEvent): Promise<MessageRe
   if (scope.ownerId && existing.createdBy !== scope.ownerId)
     throw new errors.NotFound(`Office expense payment order ${id} not found`);
 
-  if (paymentStatus) assertTransition(ctx, "office_expense_payment_order", paymentStatus);
-  // paymentMadeOn without a status change still requires the Paid transition permission
-  if (paymentMadeOn !== undefined && !paymentStatus)
+  if (paymentStatus !== undefined && paymentStatus !== existing.paymentStatus) {
+    assertTransition(ctx, "office_expense_payment_order", paymentStatus);
+  }
+  // paymentMadeOn without a status field in this request still requires the Paid transition permission
+  if (paymentMadeOn !== undefined && paymentStatus === undefined) {
     assertTransition(ctx, "office_expense_payment_order", "Paid");
+  }
 
   const updated = await updateOfficeExpensePaymentOrder(id, {
     serviceName,
