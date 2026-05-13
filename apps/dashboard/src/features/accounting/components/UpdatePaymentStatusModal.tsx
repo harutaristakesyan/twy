@@ -15,12 +15,38 @@ import {
   Upload,
 } from "antd";
 import dayjs from "dayjs";
+import { useCallback, useState } from "react";
 
 import { getErrorMessage } from "@/utils/errorUtils";
+import { getDirtyFields } from "@/utils/getDirtyFields";
 import { paymentOrderApi } from "../api/paymentOrderApi";
 import { useInvoiceHandlers } from "../hooks/useInvoiceHandlers";
 import type { PaymentOrder, PaymentStatus } from "../types/paymentOrder";
 import { STATUS_LABEL } from "./PaymentStatusTag";
+
+type NormalizedPayload = {
+  paymentStatus: PaymentStatus;
+  carrierPaidAmount: number | null;
+  carrierPaidDate: string | null;
+  brokerReceivedAmount: number | null;
+  brokerReceivedDate: string | null;
+};
+
+const toOriginalPayload = (po: PaymentOrder): NormalizedPayload => ({
+  paymentStatus: po.paymentStatus,
+  carrierPaidAmount: po.carrierPaidAmount,
+  carrierPaidDate: po.carrierPaidDate,
+  brokerReceivedAmount: po.brokerReceivedAmount,
+  brokerReceivedDate: po.brokerReceivedDate,
+});
+
+const toCurrentPayload = (values: FormValues): NormalizedPayload => ({
+  paymentStatus: values.paymentStatus,
+  carrierPaidAmount: values.carrierPaidAmount,
+  carrierPaidDate: values.carrierPaidDate?.format("YYYY-MM-DD") ?? null,
+  brokerReceivedAmount: values.brokerReceivedAmount,
+  brokerReceivedDate: values.brokerReceivedDate?.format("YYYY-MM-DD") ?? null,
+});
 
 const STATUS_OPTIONS = (Object.keys(STATUS_LABEL) as PaymentStatus[]).map((value) => ({
   value,
@@ -53,6 +79,22 @@ export default function UpdatePaymentStatusModal({
   const readOnly = mode === "view";
   const { message } = App.useApp();
   const [form] = Form.useForm<FormValues>();
+  const [isDirty, setIsDirty] = useState(false);
+
+  const handleClose = () => {
+    setIsDirty(false);
+    onClose();
+  };
+
+  const handleValuesChange = useCallback(() => {
+    if (!paymentOrder) return;
+    setIsDirty(
+      Object.keys(
+        getDirtyFields(toOriginalPayload(paymentOrder), toCurrentPayload(form.getFieldsValue())),
+      ).length > 0,
+    );
+  }, [paymentOrder, form]);
+
   const { fileList, handleUpload, handleChange, handleRemove, handleDownload } = useInvoiceHandlers(
     paymentOrder,
     onSuccess,
@@ -72,21 +114,18 @@ export default function UpdatePaymentStatusModal({
 
   const { loading, run: save } = useRequest(
     async (values: FormValues) => {
-      if (!paymentOrder) return;
-      await paymentOrderApi.update(paymentOrder.id, {
-        paymentStatus: values.paymentStatus,
-        carrierPaidAmount: values.carrierPaidAmount,
-        carrierPaidDate: values.carrierPaidDate?.format("YYYY-MM-DD") ?? null,
-        brokerReceivedAmount: values.brokerReceivedAmount,
-        brokerReceivedDate: values.brokerReceivedDate?.format("YYYY-MM-DD") ?? null,
-      });
+      if (!paymentOrder) return false;
+      const dirty = getDirtyFields(toOriginalPayload(paymentOrder), toCurrentPayload(values));
+      if (Object.keys(dirty).length === 0) return false;
+      await paymentOrderApi.update(paymentOrder.id, dirty);
+      return true;
     },
     {
       manual: true,
       onSuccess: () => {
         message.success("Payment order updated");
         onSuccess();
-        onClose();
+        handleClose();
       },
       onError: (err) => message.error(getErrorMessage(err)),
     },
@@ -96,15 +135,20 @@ export default function UpdatePaymentStatusModal({
     <Modal
       title={`${readOnly ? "View" : "Edit"} Payment Order — ${paymentOrder?.referenceNumber ?? ""}`}
       open={open}
-      onCancel={onClose}
+      onCancel={handleClose}
       width={640}
       footer={
         readOnly ? (
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={handleClose}>Close</Button>
         ) : (
           <Space>
-            <Button onClick={onClose}>Cancel</Button>
-            <Button type="primary" loading={loading} onClick={() => form.submit()}>
+            <Button onClick={handleClose}>Cancel</Button>
+            <Button
+              type="primary"
+              loading={loading}
+              disabled={!isDirty}
+              onClick={() => form.submit()}
+            >
               Save
             </Button>
           </Space>
@@ -118,6 +162,7 @@ export default function UpdatePaymentStatusModal({
         onFinish={save}
         initialValues={initialValues}
         style={{ marginTop: 16 }}
+        onValuesChange={readOnly ? undefined : handleValuesChange}
       >
         <Row gutter={16}>
           <Col span={12}>
