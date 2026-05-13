@@ -1,8 +1,8 @@
-import { PlusOutlined } from "@ant-design/icons";
+import { EditOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import { useAntdTable } from "ahooks";
-import { Button, Flex, Space, Table, Typography } from "antd";
+import { Button, Flex, Space, Table, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { usePermission } from "@/hooks/usePermission";
@@ -17,6 +17,7 @@ import {
   SERVICE_LABELS,
 } from "../types/officeExpensePaymentOrder";
 import CreateOfficeExpenseModal from "./CreateOfficeExpenseModal";
+import OfficeExpensePaymentOrderDetailModal from "./OfficeExpensePaymentOrderDetailModal";
 import PaymentStatusTag from "./PaymentStatusTag";
 
 const { Title } = Typography;
@@ -50,9 +51,25 @@ const fields: FilterField[] = [
 
 export default function OfficeExpensePOTab() {
   const canCreate = usePermission("office_expense_payment_order", "add");
+  const canView = usePermission("office_expense_payment_order", "view");
+  const canEdit = usePermission("office_expense_payment_order", "edit");
   const [createOpen, setCreateOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
+  const [detailMode, setDetailMode] = useState<"view" | "edit">("view");
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
   const [activeQuery, setActiveQuery] = useState("");
+
+  const openDetail = useCallback((id: string, mode: "view" | "edit") => {
+    setDetailOrderId(id);
+    setDetailMode(mode);
+    setDetailOpen(true);
+  }, []);
+
+  const closeDetail = useCallback(() => {
+    setDetailOpen(false);
+    setDetailOrderId(null);
+  }, []);
 
   const { tableProps, refresh } = useAntdTable(
     async ({ current, pageSize }) => {
@@ -113,6 +130,38 @@ export default function OfficeExpensePOTab() {
       width: 120,
       render: renderDate,
     },
+    ...(canView || canEdit
+      ? ([
+          {
+            title: "Actions",
+            key: "actions",
+            fixed: "right" as const,
+            width: 100,
+            render: (_: unknown, record: OfficeExpensePaymentOrder) => (
+              <Space>
+                {canEdit && (
+                  <Tooltip title="Edit">
+                    <Button
+                      type="text"
+                      icon={<EditOutlined />}
+                      onClick={() => openDetail(record.id, "edit")}
+                    />
+                  </Tooltip>
+                )}
+                {canView && (
+                  <Tooltip title="View">
+                    <Button
+                      type="text"
+                      icon={<EyeOutlined />}
+                      onClick={() => openDetail(record.id, "view")}
+                    />
+                  </Tooltip>
+                )}
+              </Space>
+            ),
+          },
+        ] satisfies ColumnsType<OfficeExpensePaymentOrder>)
+      : []),
   ];
 
   return (
@@ -149,13 +198,21 @@ export default function OfficeExpensePOTab() {
         {...tableProps}
         columns={columns}
         rowKey="id"
-        scroll={{ x: 1000 }}
+        scroll={{ x: canView || canEdit ? 1100 : 1000 }}
         size="middle"
       />
 
       <CreateOfficeExpenseModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
+        onSuccess={refresh}
+      />
+
+      <OfficeExpensePaymentOrderDetailModal
+        orderId={detailOrderId}
+        open={detailOpen}
+        mode={detailMode}
+        onClose={closeDetail}
         onSuccess={refresh}
       />
     </>

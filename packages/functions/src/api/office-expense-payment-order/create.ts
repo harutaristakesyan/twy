@@ -16,7 +16,8 @@ const createHandler = async (
   const ctx = await loadAuthContext(userId);
   assertPermission(ctx, "office_expense_payment_order", "add");
 
-  const { serviceName, paymentPurpose, periodStart, periodEnd, amount, currency } = event.body;
+  const { serviceName, paymentPurpose, periodStart, periodEnd, amount, currency, fileIds } =
+    event.body;
 
   return createOfficeExpensePaymentOrder({
     serviceName,
@@ -26,6 +27,7 @@ const createHandler = async (
     amount,
     currency,
     createdBy: userId,
+    fileIds,
   });
 };
 

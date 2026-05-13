@@ -52,6 +52,7 @@ export interface CreateOfficeExpenseDto {
   periodEnd: string;
   amount: number;
   currency: Currency;
+  fileIds?: string[];
 }
 
 export interface UpdateOfficeExpenseDto {
