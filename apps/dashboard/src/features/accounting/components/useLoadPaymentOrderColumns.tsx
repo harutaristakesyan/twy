@@ -2,13 +2,12 @@ import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import { Button, Space, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { renderCurrency, renderDate } from "@/utils/formatters";
-import { usePaymentOrderModal } from "../hooks/usePaymentOrderModal";
 import type { PaymentOrder } from "../types/paymentOrder";
 import PaymentStatusTag from "./PaymentStatusTag";
 
-export function useLoadPaymentOrderColumns(): ColumnsType<PaymentOrder> {
-  const { openModal } = usePaymentOrderModal();
-
+export function useLoadPaymentOrderColumns(
+  openModal: (record: PaymentOrder, mode: "edit" | "view") => void,
+): ColumnsType<PaymentOrder> {
   return [
     {
       title: "Reference",

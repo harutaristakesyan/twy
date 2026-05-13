@@ -20,7 +20,7 @@ export default function LoadPaymentOrdersTab() {
   const [activeQuery, setActiveQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const canCreate = usePermission("load_payment_order", "add");
-  const { selectedOrder, open, mode, closeModal } = usePaymentOrderModal();
+  const { selectedOrder, open, mode, openModal, closeModal } = usePaymentOrderModal();
 
   const { data: branchesData } = useRequest(() => getBranches({ limit: 200 }), {
     cacheKey: "branches-for-filter",
@@ -49,7 +49,7 @@ export default function LoadPaymentOrdersTab() {
     { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 20 },
   );
 
-  const columns = useLoadPaymentOrderColumns();
+  const columns = useLoadPaymentOrderColumns(openModal);
 
   const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
     setActiveFilter(filter);
