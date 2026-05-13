@@ -17,7 +17,7 @@ import {
   SERVICE_LABELS,
 } from "../types/officeExpensePaymentOrder";
 import CreateOfficeExpenseModal from "./CreateOfficeExpenseModal";
-import OfficeExpenseStatusTag from "./OfficeExpenseStatusTag";
+import PaymentStatusTag from "./PaymentStatusTag";
 
 const { Title } = Typography;
 
@@ -104,7 +104,7 @@ export default function OfficeExpensePOTab() {
       dataIndex: "paymentStatus",
       key: "paymentStatus",
       width: 130,
-      render: (v: OfficeExpensePaymentStatus) => <OfficeExpenseStatusTag status={v} />,
+      render: (v: OfficeExpensePaymentStatus) => <PaymentStatusTag status={v} />,
     },
     {
       title: "Created",
