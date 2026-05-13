@@ -5,11 +5,13 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 
 const uploadFile = async (event: UploadFileEvent): Promise<UploadFileResponse> => {
   const { fileName, contentType, size } = event.body;
+  const { userId } = event.requestContext.authUser;
 
   return await createUploadUrl({
     fileName,
     contentType,
     size,
+    uploadedByUserId: userId,
   });
 };
 

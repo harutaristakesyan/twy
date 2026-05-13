@@ -1,4 +1,5 @@
 import { pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { users } from "./users.js";
 
 export const documentCategoryValues = [
   "rate_confirmation",
@@ -13,6 +14,8 @@ export const file = pgTable("file", {
   id: uuid().primaryKey(),
   fileName: varchar({ length: 255 }).notNull(),
   documentCategory: text().$type<DocumentCategory>(),
+  /** Set on presigned upload; used to authorize linking files to domain entities. */
+  createdBy: uuid().references(() => users.id, { onDelete: "restrict" }),
   createdAt: timestamp().notNull().defaultNow(),
   updatedAt: timestamp().notNull().defaultNow(),
 });

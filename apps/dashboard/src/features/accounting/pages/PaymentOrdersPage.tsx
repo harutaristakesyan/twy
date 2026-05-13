@@ -1,13 +1,15 @@
 import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import { useAntdTable, useRequest } from "ahooks";
-import { Button, Card, Flex, Space, Table, Tooltip, Typography } from "antd";
+import { Button, Card, Flex, Space, Table, Tabs, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useState } from "react";
 import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { getBranches } from "@/features/branch/api/branchApi";
+import { usePermission } from "@/hooks/usePermission";
 import { renderCurrency, renderDate } from "@/utils/formatters";
 import { paymentOrderApi } from "../api/paymentOrderApi";
+import OfficeExpensePOTab from "../components/OfficeExpensePOTab";
 import PaymentStatusTag from "../components/PaymentStatusTag";
 import UpdatePaymentStatusModal from "../components/UpdatePaymentStatusModal";
 import { usePaymentOrderModal } from "../hooks/usePaymentOrderModal";
@@ -15,7 +17,7 @@ import type { PaymentOrder } from "../types/paymentOrder";
 
 const { Title } = Typography;
 
-export default function PaymentOrdersPage() {
+function LoadPaymentOrdersTab() {
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
   const [activeQuery, setActiveQuery] = useState("");
   const { selectedOrder, open, mode, openModal, closeModal } = usePaymentOrderModal();
@@ -184,35 +186,34 @@ export default function PaymentOrdersPage() {
 
   return (
     <>
-      <Card>
-        <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
-          <Title level={4} style={{ margin: 0 }}>
-            Payment Orders ({tableProps.pagination.total ?? 0})
-          </Title>
-          <AdvancedFilterPopover
-            fields={fields}
-            initialFilter={activeFilter}
-            initialQuery={activeQuery}
-            onApply={handleFilterApply}
-          />
-        </Flex>
-
-        <ActiveFilterChips
-          filter={activeFilter}
+      <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
+        <Title level={4} style={{ margin: 0 }}>
+          Load Payment Orders (
+          {tableProps.pagination ? ((tableProps.pagination as { total?: number }).total ?? 0) : 0})
+        </Title>
+        <AdvancedFilterPopover
           fields={fields}
-          query={activeQuery}
-          onChange={setActiveFilter}
-          onClearQuery={() => setActiveQuery("")}
+          initialFilter={activeFilter}
+          initialQuery={activeQuery}
+          onApply={handleFilterApply}
         />
+      </Flex>
 
-        <Table<PaymentOrder>
-          {...tableProps}
-          columns={columns}
-          rowKey="id"
-          scroll={{ x: 2000 }}
-          size="middle"
-        />
-      </Card>
+      <ActiveFilterChips
+        filter={activeFilter}
+        fields={fields}
+        query={activeQuery}
+        onChange={setActiveFilter}
+        onClearQuery={() => setActiveQuery("")}
+      />
+
+      <Table<PaymentOrder>
+        {...tableProps}
+        columns={columns}
+        rowKey="id"
+        scroll={{ x: 2000 }}
+        size="middle"
+      />
 
       <UpdatePaymentStatusModal
         paymentOrder={selectedOrder}
@@ -222,5 +223,43 @@ export default function PaymentOrdersPage() {
         onSuccess={refresh}
       />
     </>
+  );
+}
+
+export default function PaymentOrdersPage() {
+  const canViewLoad = usePermission("load_payment_order", "view");
+  const canViewOfficeExpense = usePermission("office_expense_payment_order", "view");
+
+  const tabItems = [
+    ...(canViewLoad
+      ? [{ key: "load", label: "Load Payment Orders", children: <LoadPaymentOrdersTab /> }]
+      : []),
+    ...(canViewOfficeExpense
+      ? [
+          {
+            key: "office-expense",
+            label: "Office Expense Payment Orders",
+            children: <OfficeExpensePOTab />,
+          },
+        ]
+      : []),
+  ];
+
+  if (tabItems.length === 0) {
+    return (
+      <Card>
+        <Typography.Text type="secondary">
+          You don&apos;t have permission to view payment orders.
+        </Typography.Text>
+      </Card>
+    );
+  }
+
+  const defaultActiveKey = canViewLoad ? "load" : "office-expense";
+
+  return (
+    <Card>
+      <Tabs items={tabItems} defaultActiveKey={defaultActiveKey} />
+    </Card>
   );
 }

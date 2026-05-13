@@ -99,6 +99,20 @@
       "when": 1778520779845,
       "tag": "0013_seed_transition_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1778672016545,
+      "tag": "0014_striped_firestar",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1778677917402,
+      "tag": "0015_peaceful_hemingway",
+      "breakpoints": true
     }
   ]
 }

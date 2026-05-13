@@ -371,6 +371,43 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
+  // office expense payment orders
+  {
+    handler: "packages/functions/src/api/office-expense-payment-order/create.handler",
+    routeKey: "POST /api/office-expense-payment-orders",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/office-expense-payment-order/list.handler",
+    routeKey: "GET /api/office-expense-payment-orders",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/office-expense-payment-order/get.handler",
+    routeKey: "GET /api/office-expense-payment-orders/{id}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/office-expense-payment-order/update.handler",
+    routeKey: "PATCH /api/office-expense-payment-orders/{id}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/office-expense-payment-order/add-file.handler",
+    routeKey: "POST /api/office-expense-payment-orders/{id}/files",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/office-expense-payment-order/remove-file.handler",
+    routeKey: "DELETE /api/office-expense-payment-orders/{id}/files/{fileId}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
   // billing
   {
     handler: "packages/functions/src/api/billing/external-by-branch.handler",

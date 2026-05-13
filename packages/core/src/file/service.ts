@@ -18,6 +18,8 @@ export interface CreateUploadUrlInput {
   readonly fileName: string;
   readonly contentType: string;
   readonly size: number;
+  /** Cognito-linked user id; stored on `file.created_by` for attach authorization. */
+  readonly uploadedByUserId: string;
 }
 
 export interface CreateUploadUrlResult {
@@ -45,6 +47,7 @@ export const createUploadUrl = async ({
   fileName,
   contentType,
   size,
+  uploadedByUserId,
 }: CreateUploadUrlInput): Promise<CreateUploadUrlResult> => {
   const bucketName = Resource.Files.name;
   const fileId = randomUUID();
@@ -63,7 +66,7 @@ export const createUploadUrl = async ({
 
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
 
-  await db.insert(fileTable).values({ id: fileId, fileName });
+  await db.insert(fileTable).values({ id: fileId, fileName, createdBy: uploadedByUserId });
 
   return {
     fileId,
