@@ -30,13 +30,6 @@ export const officeExpenseApi = {
     return res.data;
   },
 
-  get: async (id: string): Promise<OfficeExpensePaymentOrder> => {
-    const res = await ApiClient.get<ApiResponse<OfficeExpensePaymentOrder>>(
-      `/office-expense-payment-orders/${id}`,
-    );
-    return res.data;
-  },
-
   update: async (id: string, dto: UpdateOfficeExpenseDto): Promise<void> => {
     await ApiClient.patch<ApiResponse<{ message: string }>>(
       `/office-expense-payment-orders/${id}`,

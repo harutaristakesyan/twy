@@ -45,9 +45,9 @@ export const UpdatePaymentOrderEventSchema = z.object({
   body: z.object({
     paymentStatus: paymentStatusSchema.optional(),
     carrierPaidAmount: z.number().nonnegative().nullable().optional(),
-    carrierPaidDate: z.string().date().nullable().optional(),
+    carrierPaidDate: z.iso.date().nullable().optional(),
     brokerReceivedAmount: z.number().nonnegative().nullable().optional(),
-    brokerReceivedDate: z.string().date().nullable().optional(),
+    brokerReceivedDate: z.iso.date().nullable().optional(),
   }),
 });
 

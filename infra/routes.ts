@@ -391,12 +391,6 @@ export const appRoutes: RouteDef[] = [
     linkKeys: ["cluster", "authContext"],
   },
   {
-    handler: "packages/functions/src/api/office-expense-payment-order/get.handler",
-    routeKey: "GET /api/office-expense-payment-orders/{id}",
-    requiresAuth: true,
-    linkKeys: ["cluster", "authContext"],
-  },
-  {
     handler: "packages/functions/src/api/office-expense-payment-order/update.handler",
     routeKey: "PATCH /api/office-expense-payment-orders/{id}",
     requiresAuth: true,

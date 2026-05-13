@@ -22,11 +22,14 @@ const computeFinancials = (load: Load) => {
   const customerRate = load.customerRate ?? null;
   const carrierRate = load.carrierRate ?? null;
   const serviceFee = load.serviceFee ?? 30;
-  const brokerReceivable = customerRate;
-  const carrierPayable = carrierRate;
   const profit =
     customerRate != null && carrierRate != null ? customerRate - carrierRate + serviceFee : null;
-  return { brokerReceivable, carrierPayable, profit, serviceFee };
+  return {
+    brokerReceivable: customerRate,
+    carrierPayable: carrierRate,
+    profit,
+    serviceFee,
+  };
 };
 
 export default function CreateLoadPaymentOrderModal({ open, onClose, onSuccess }: Props) {
@@ -100,12 +103,9 @@ export default function CreateLoadPaymentOrderModal({ open, onClose, onSuccess }
     >
       <Typography.Text strong>Load *</Typography.Text>
       <Select<string, LoadOption>
-        showSearch
+        showSearch={{ filterOption: false, onSearch: setSearchText }}
         placeholder="Search by load #, customer, carrier…"
         style={{ width: "100%", marginTop: 4 }}
-        filterOption={false}
-        onSearch={setSearchText}
-        searchValue={searchText}
         options={options}
         notFoundContent={loading ? <Spin size="small" /> : null}
         onChange={(_value, opt) => {

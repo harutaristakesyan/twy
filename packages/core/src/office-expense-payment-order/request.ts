@@ -28,8 +28,8 @@ export const CreateOfficeExpenseEventSchema = z.object({
   body: z.object({
     serviceName: officeExpenseServiceSchema,
     paymentPurpose: z.string().min(1),
-    periodStart: z.string().date(),
-    periodEnd: z.string().date(),
+    periodStart: z.iso.date(),
+    periodEnd: z.iso.date(),
     amount: z.number().positive(),
     currency: currencySchema.default("USD"),
     fileIds: z
@@ -59,14 +59,6 @@ export const ListOfficeExpensesEventSchema = z.object({
 });
 export type ListOfficeExpensesEvent = z.infer<typeof ListOfficeExpensesEventSchema>;
 
-export const GetOfficeExpenseEventSchema = z.object({
-  requestContext: AuthContext,
-  pathParameters: z.object({
-    id: z.uuid("Value must be a valid UUID"),
-  }),
-});
-export type GetOfficeExpenseEvent = z.infer<typeof GetOfficeExpenseEventSchema>;
-
 export const UpdateOfficeExpenseEventSchema = z.object({
   requestContext: AuthContext,
   pathParameters: z.object({
@@ -75,12 +67,12 @@ export const UpdateOfficeExpenseEventSchema = z.object({
   body: z.object({
     serviceName: officeExpenseServiceSchema.optional(),
     paymentPurpose: z.string().min(1).optional(),
-    periodStart: z.string().date().optional(),
-    periodEnd: z.string().date().optional(),
+    periodStart: z.iso.date().optional(),
+    periodEnd: z.iso.date().optional(),
     amount: z.number().positive().optional(),
     currency: currencySchema.optional(),
     paymentStatus: officeExpensePaymentStatusSchema.optional(),
-    paymentMadeOn: z.string().date().nullable().optional(),
+    paymentMadeOn: z.iso.date().nullable().optional(),
   }),
 });
 export type UpdateOfficeExpenseEvent = z.infer<typeof UpdateOfficeExpenseEventSchema>;
