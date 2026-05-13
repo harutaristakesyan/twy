@@ -26,6 +26,8 @@ Always end a working session by running, in order:
 
 Never bypass the gate with `--no-verify`. Never `git push --force*` (the deny list catches it).
 
+**No deprecations may ship.** Before committing, every deprecation warning surfaced by the IDE, `tsc`, or `biome ci` — in code you touched *or anywhere in the diff* — must be fixed. This includes Zod (`z.string().date()` → `z.iso.date()`), AntD v6 (collapsed `showSearch`/`filterOption`/`onSearch`/`searchValue` → `showSearch={{ filterOption, onSearch }}`), and any third-party API marked `@deprecated`. Do not commit "I'll fix it later" — fix all of them in the same change. If a deprecation is genuinely out of scope, call it out explicitly and get user confirmation before committing.
+
 ## Common commands
 
 ```bash
