@@ -1,187 +1,248 @@
 import { BankOutlined, UserOutlined } from "@ant-design/icons";
 import { useRequest } from "ahooks";
-import { Flex, Spin, Table, Typography } from "antd";
+import { Flex, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import type { ReactNode } from "react";
-import { useMemo } from "react";
 import type { AdvancedFilter } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { formatCurrency, renderCurrency } from "@/utils/formatters";
 import { billingApi } from "../api/billingApi";
 import type { ExternalBillingUserGroup } from "../hooks/groupLoadsByCreator";
 import { useBillingFilters } from "../hooks/useBillingFilters";
-import { type ExternalBillingTreeBranchData, useExpandedLoads } from "../hooks/useExpandedLoads";
+import { useExpandedLoads } from "../hooks/useExpandedLoads";
 import type { ExternalBillingBranch, ExternalBillingLoad } from "../types/billing";
 import PaymentStatusTag from "./PaymentStatusTag";
 
 const { Title, Text } = Typography;
 
-interface RowView {
-  key: string;
-  rowType: "branch" | "user" | "load" | "placeholder";
-  branchId: string;
-  label: ReactNode;
-  loadCount: number | null;
-  brokerReceivable: number | null;
-  brokerReceived: number | null;
-  carrierPayable: number | null;
-  carrierPaid: number | null;
-  owed: number;
-  status: ReactNode;
-  children?: RowView[];
-}
+// ---------------------------------------------------------------------------
+// Shared renderers
+// ---------------------------------------------------------------------------
 
-// AntD tree-mode <Table> only renders an expand chevron when `children` is non-empty.
-// Until the user expands a branch (and we fetch its loads), we attach a single placeholder
-// child so the chevron stays visible. The placeholder is swapped for the real tree on fetch.
-const placeholderChild = (branchId: string): RowView => ({
-  key: `branch-${branchId}/placeholder`,
-  rowType: "placeholder",
-  branchId,
-  label: (
-    <Flex align="center" gap={8}>
-      <Spin size="small" />
-      <Text type="secondary">Loading…</Text>
-    </Flex>
-  ),
-  loadCount: null,
-  brokerReceivable: null,
-  brokerReceived: null,
-  carrierPayable: null,
-  carrierPaid: null,
-  owed: 0,
-  status: null,
-});
+const renderDate = (v: string | null | undefined) =>
+  v
+    ? new Date(v).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+    : "—";
 
-const renderOwed = (v: number): ReactNode => (
+const renderOwed = (v: number) => (
   <Text strong style={{ color: v > 0 ? "#cf1322" : "#389e0d" }}>
     {formatCurrency(v)}
   </Text>
 );
 
-const columns: ColumnsType<RowView> = [
+// ---------------------------------------------------------------------------
+// Innermost: load table (one per user group). Keeps the original per-load columns.
+// ---------------------------------------------------------------------------
+
+const loadColumns: ColumnsType<ExternalBillingLoad> = [
   {
-    title: "Branch / User / Load",
-    dataIndex: "label",
-    key: "label",
+    title: "Reference",
+    dataIndex: "referenceNumber",
+    key: "referenceNumber",
+    width: 140,
+    render: (text: string) => <strong>{text}</strong>,
   },
   {
-    title: "Loads",
-    dataIndex: "loadCount",
-    key: "loadCount",
-    width: 80,
-    render: (v: number | null) => v ?? null,
+    title: "Carrier",
+    dataIndex: "carrierName",
+    key: "carrierName",
+    width: 160,
+    render: (v: string | null) => v ?? "—",
   },
   {
     title: "Broker Receivable",
     dataIndex: "brokerReceivable",
     key: "brokerReceivable",
-    width: 160,
+    width: 150,
     render: renderCurrency,
   },
   {
     title: "Broker Received",
-    dataIndex: "brokerReceived",
-    key: "brokerReceived",
-    width: 160,
+    dataIndex: "brokerReceivedAmount",
+    key: "brokerReceivedAmount",
+    width: 150,
     render: renderCurrency,
+  },
+  {
+    title: "Broker Received Date",
+    dataIndex: "brokerReceivedDate",
+    key: "brokerReceivedDate",
+    width: 170,
+    render: renderDate,
   },
   {
     title: "Carrier Payable",
     dataIndex: "carrierPayable",
     key: "carrierPayable",
+    width: 140,
+    render: renderCurrency,
+  },
+  {
+    title: "Carrier Paid",
+    dataIndex: "carrierPaidAmount",
+    key: "carrierPaidAmount",
+    width: 120,
+    render: renderCurrency,
+  },
+  {
+    title: "Carrier Paid Date",
+    dataIndex: "carrierPaidDate",
+    key: "carrierPaidDate",
+    width: 150,
+    render: renderDate,
+  },
+  {
+    title: "Status",
+    dataIndex: "paymentStatus",
+    key: "paymentStatus",
+    width: 140,
+    render: (_: unknown, record: ExternalBillingLoad) => (
+      <PaymentStatusTag status={record.paymentStatus} />
+    ),
+  },
+];
+
+const LoadTable = ({ loads }: { loads: ExternalBillingLoad[] }) => (
+  <Table<ExternalBillingLoad>
+    size="small"
+    dataSource={loads}
+    columns={loadColumns}
+    rowKey="loadId"
+    pagination={false}
+    style={{ margin: "8px 0" }}
+  />
+);
+
+// ---------------------------------------------------------------------------
+// Middle: user table (one per branch). Each user row expands into a LoadTable.
+// ---------------------------------------------------------------------------
+
+const userColumns: ColumnsType<ExternalBillingUserGroup> = [
+  {
+    title: "User",
+    dataIndex: "userName",
+    key: "userName",
+    render: (name: string, row) => (
+      <Text type={row.userId === null ? "secondary" : undefined}>
+        <UserOutlined style={{ marginRight: 6 }} />
+        {name}
+      </Text>
+    ),
+  },
+  { title: "Loads", dataIndex: "loadCount", key: "loadCount", width: 80 },
+  {
+    title: "Broker Receivable",
+    dataIndex: "totalBrokerReceivable",
+    key: "totalBrokerReceivable",
+    width: 160,
+    render: renderCurrency,
+  },
+  {
+    title: "Broker Received",
+    dataIndex: "totalBrokerReceived",
+    key: "totalBrokerReceived",
+    width: 160,
+    render: renderCurrency,
+  },
+  {
+    title: "Carrier Payable",
+    dataIndex: "totalCarrierPayable",
+    key: "totalCarrierPayable",
     width: 150,
     render: renderCurrency,
   },
   {
     title: "Carrier Paid",
-    dataIndex: "carrierPaid",
-    key: "carrierPaid",
+    dataIndex: "totalCarrierPaid",
+    key: "totalCarrierPaid",
     width: 130,
     render: renderCurrency,
   },
   {
     title: "Owed to Branch",
-    dataIndex: "owed",
-    key: "owed",
+    dataIndex: "owedToBranch",
+    key: "owedToBranch",
     width: 150,
     render: (v: number) => renderOwed(v),
   },
-  {
-    title: "Status",
-    dataIndex: "status",
-    key: "status",
-    width: 140,
-  },
 ];
 
-const buildLoadView = (branchId: string, userKey: string, load: ExternalBillingLoad): RowView => ({
-  key: `branch-${branchId}/user-${userKey}/load-${load.loadId}`,
-  rowType: "load",
-  branchId,
-  label: (
-    <span style={{ paddingLeft: 8 }}>
-      <strong>{load.referenceNumber}</strong>
-      {load.carrierName ? <Text type="secondary"> · {load.carrierName}</Text> : null}
-    </span>
-  ),
-  loadCount: null,
-  brokerReceivable: load.brokerReceivable,
-  brokerReceived: load.brokerReceivedAmount,
-  carrierPayable: load.carrierPayable,
-  carrierPaid: load.carrierPaidAmount,
-  owed: load.carrierPayable - (load.carrierPaidAmount ?? 0),
-  status: <PaymentStatusTag status={load.paymentStatus} />,
-});
+const userRowKey = (g: ExternalBillingUserGroup) => g.userId ?? "unknown";
 
-const buildUserView = (branchId: string, group: ExternalBillingUserGroup): RowView => {
-  const userKey = group.userId ?? "unknown";
-  const dim = group.userId === null;
-  return {
-    key: `branch-${branchId}/user-${userKey}`,
-    rowType: "user",
-    branchId,
-    label: (
-      <Text type={dim ? "secondary" : undefined}>
-        <UserOutlined style={{ marginRight: 6 }} />
-        {group.userName}
-      </Text>
+const UserTable = ({
+  userGroups,
+  loading,
+}: {
+  userGroups: ExternalBillingUserGroup[];
+  loading?: boolean;
+}) => (
+  <Table<ExternalBillingUserGroup>
+    size="small"
+    loading={loading}
+    dataSource={userGroups}
+    columns={userColumns}
+    rowKey={userRowKey}
+    pagination={false}
+    style={{ margin: "8px 0" }}
+    expandable={{
+      expandedRowRender: (user) => <LoadTable loads={user.loads} />,
+      rowExpandable: (user) => user.loads.length > 0,
+    }}
+  />
+);
+
+// ---------------------------------------------------------------------------
+// Outer: branch table. Each branch row expands into a UserTable.
+// ---------------------------------------------------------------------------
+
+const branchColumns: ColumnsType<ExternalBillingBranch> = [
+  {
+    title: "Branch",
+    dataIndex: "branchName",
+    key: "branchName",
+    render: (name: string) => (
+      <strong>
+        <BankOutlined style={{ marginRight: 6 }} />
+        {name}
+      </strong>
     ),
-    loadCount: group.loadCount,
-    brokerReceivable: group.totalBrokerReceivable,
-    brokerReceived: group.totalBrokerReceived,
-    carrierPayable: group.totalCarrierPayable,
-    carrierPaid: group.totalCarrierPaid,
-    owed: group.owedToBranch,
-    status: null,
-    children: group.loads.map((l) => buildLoadView(branchId, userKey, l)),
-  };
-};
-
-const buildBranchView = (
-  branch: ExternalBillingBranch,
-  data: ExternalBillingTreeBranchData | undefined,
-): RowView => ({
-  key: `branch-${branch.branchId}`,
-  rowType: "branch",
-  branchId: branch.branchId,
-  label: (
-    <strong>
-      <BankOutlined style={{ marginRight: 6 }} />
-      {branch.branchName}
-    </strong>
-  ),
-  loadCount: branch.loadCount,
-  brokerReceivable: branch.totalBrokerReceivable,
-  brokerReceived: branch.totalBrokerReceived,
-  carrierPayable: branch.totalCarrierPayable,
-  carrierPaid: branch.totalCarrierPaid,
-  owed: branch.owedToBranch,
-  status: null,
-  children: data
-    ? data.userGroups.map((g) => buildUserView(branch.branchId, g))
-    : [placeholderChild(branch.branchId)],
-});
+  },
+  { title: "Loads", dataIndex: "loadCount", key: "loadCount", width: 80 },
+  {
+    title: "Broker Receivable",
+    dataIndex: "totalBrokerReceivable",
+    key: "totalBrokerReceivable",
+    width: 160,
+    render: renderCurrency,
+  },
+  {
+    title: "Broker Received",
+    dataIndex: "totalBrokerReceived",
+    key: "totalBrokerReceived",
+    width: 160,
+    render: renderCurrency,
+  },
+  {
+    title: "Carrier Payable",
+    dataIndex: "totalCarrierPayable",
+    key: "totalCarrierPayable",
+    width: 150,
+    render: renderCurrency,
+  },
+  {
+    title: "Carrier Paid",
+    dataIndex: "totalCarrierPaid",
+    key: "totalCarrierPaid",
+    width: 130,
+    render: renderCurrency,
+  },
+  {
+    title: "Owed to Branch",
+    dataIndex: "owedToBranch",
+    key: "owedToBranch",
+    width: 150,
+    render: (v: number) => renderOwed(v),
+  },
+];
 
 export default function ExternalBillingTable() {
   const {
@@ -193,7 +254,7 @@ export default function ExternalBillingTable() {
     setActiveFilter,
     setActiveQuery,
   } = useBillingFilters();
-  const { onExpand, resetLoads, loadsByBranch } = useExpandedLoads(apiParams);
+  const { onExpand, resetLoads, loadsByBranch, expandingBranchId } = useExpandedLoads(apiParams);
 
   const onFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
     handleFilterApply(filter, query);
@@ -204,10 +265,15 @@ export default function ExternalBillingTable() {
     refreshDeps: [apiParams],
   });
 
-  const treeData = useMemo(
-    () => (branches ?? []).map((b) => buildBranchView(b, loadsByBranch.get(b.branchId))),
-    [branches, loadsByBranch],
-  );
+  const renderBranchExpansion = (branch: ExternalBillingBranch) => {
+    const data = loadsByBranch.get(branch.branchId);
+    return (
+      <UserTable
+        userGroups={data?.userGroups ?? []}
+        loading={expandingBranchId === branch.branchId}
+      />
+    );
+  };
 
   return (
     <>
@@ -231,17 +297,15 @@ export default function ExternalBillingTable() {
         onClearQuery={() => setActiveQuery("")}
       />
 
-      <Table<RowView>
+      <Table<ExternalBillingBranch>
         loading={loading}
-        dataSource={treeData}
-        columns={columns}
-        rowKey="key"
+        dataSource={branches ?? []}
+        columns={branchColumns}
+        rowKey="branchId"
         pagination={false}
         expandable={{
-          childrenColumnName: "children",
-          onExpand: (expanded, row) => {
-            if (row.rowType === "branch") onExpand(expanded, row.branchId);
-          },
+          expandedRowRender: renderBranchExpansion,
+          onExpand: (expanded, record) => onExpand(expanded, record.branchId),
         }}
       />
     </>
