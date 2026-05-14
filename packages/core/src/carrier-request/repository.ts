@@ -14,6 +14,7 @@ import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import createError from "http-errors";
 import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
+import { formatUserName } from "../shared/formatters.js";
 import type { CarrierRequestResponse } from "./response.js";
 
 export interface ListCarrierRequestsInput {
@@ -55,15 +56,6 @@ const sortColumn = (field: ListCarrierRequestsInput["sortField"]) => {
 const submitter = alias(users, "submitter");
 const reviewer = alias(users, "reviewer");
 
-const fullName = (
-  first: string | null,
-  last: string | null,
-  email: string | null,
-): string | null => {
-  const parts = [first, last].filter(Boolean);
-  return parts.length > 0 ? parts.join(" ") : (email ?? null);
-};
-
 const mapRow = (row: {
   id: string;
   kind: CarrierKind;
@@ -102,9 +94,13 @@ const mapRow = (row: {
   notes: row.notes,
   status: row.status,
   submittedBy: row.submittedBy,
-  submittedByName: fullName(row.submitterFirstName, row.submitterLastName, row.submitterEmail),
+  submittedByName: formatUserName(
+    row.submitterFirstName,
+    row.submitterLastName,
+    row.submitterEmail,
+  ),
   reviewedBy: row.reviewedBy,
-  reviewedByName: fullName(row.reviewerFirstName, row.reviewerLastName, row.reviewerEmail),
+  reviewedByName: formatUserName(row.reviewerFirstName, row.reviewerLastName, row.reviewerEmail),
   reviewedAt: row.reviewedAt?.toISOString() ?? null,
   rejectionReason: row.rejectionReason,
   resultCarrierId: row.resultCarrierId,

@@ -13,6 +13,7 @@ import { alias } from "drizzle-orm/pg-core";
 import createError from "http-errors";
 import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
 import { buildDateRangeCondition } from "../shared/advanced-filter-sql.js";
+import { formatUserName } from "../shared/formatters.js";
 import type { BrokerRequestResponse } from "./response.js";
 
 export interface ListBrokerRequestsInput {
@@ -54,15 +55,6 @@ const sortColumn = (field: ListBrokerRequestsInput["sortField"]) => {
 const submitter = alias(users, "submitter");
 const reviewer = alias(users, "reviewer");
 
-const fullName = (
-  first: string | null,
-  last: string | null,
-  email: string | null,
-): string | null => {
-  const parts = [first, last].filter(Boolean);
-  return parts.length > 0 ? parts.join(" ") : (email ?? null);
-};
-
 const mapRow = (row: {
   id: string;
   brokerName: string;
@@ -101,9 +93,13 @@ const mapRow = (row: {
   creditLimit: row.creditLimit !== null ? Number(row.creditLimit) : null,
   status: row.status,
   submittedBy: row.submittedBy,
-  submittedByName: fullName(row.submitterFirstName, row.submitterLastName, row.submitterEmail),
+  submittedByName: formatUserName(
+    row.submitterFirstName,
+    row.submitterLastName,
+    row.submitterEmail,
+  ),
   reviewedBy: row.reviewedBy,
-  reviewedByName: fullName(row.reviewerFirstName, row.reviewerLastName, row.reviewerEmail),
+  reviewedByName: formatUserName(row.reviewerFirstName, row.reviewerLastName, row.reviewerEmail),
   reviewedAt: row.reviewedAt?.toISOString() ?? null,
   rejectionReason: row.rejectionReason,
   resultBrokerId: row.resultBrokerId,

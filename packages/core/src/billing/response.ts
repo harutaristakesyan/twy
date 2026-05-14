@@ -29,6 +29,8 @@ export interface ExternalBillingLoad {
   carrierPaidAmount: number | null;
   carrierPaidDate: string | null;
   paymentStatus: PaymentStatus;
+  createdByUserId: string | null;
+  createdByUserName: string | null;
 }
 
 export interface ExternalBillingLoadListResponse {

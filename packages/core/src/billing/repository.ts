@@ -7,12 +7,14 @@ import {
   type PaymentStatus,
   paymentOrder,
   paymentOrderFiles,
+  users,
 } from "@twy/db";
 import type { SQL } from "drizzle-orm";
 import { and, avg, count, eq, ilike, inArray, sql, sum } from "drizzle-orm";
 import type { PaymentOrderInvoice } from "../payment-order/response.js";
 import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
 import { buildDateRangeCondition } from "../shared/advanced-filter-sql.js";
+import { formatUserName } from "../shared/formatters.js";
 import type {
   ExternalBillingBranch,
   ExternalBillingLoad,
@@ -142,25 +144,37 @@ export const listExternalBillingLoadsForBranch = async (
       carrierPaidAmount: paymentOrder.carrierPaidAmount,
       carrierPaidDate: paymentOrder.carrierPaidDate,
       paymentStatus: paymentOrder.paymentStatus,
+      createdByUserId: load.createdBy,
+      createdByFirstName: users.firstName,
+      createdByLastName: users.lastName,
+      createdByEmail: users.email,
     })
     .from(paymentOrder)
     .innerJoin(load, eq(load.id, paymentOrder.loadId))
     .leftJoin(carrier, eq(carrier.id, paymentOrder.carrierId))
+    .leftJoin(users, eq(users.id, load.createdBy))
     .where(whereClause)
     .orderBy(load.referenceNumber);
 
-  return rows.map((r) => ({
-    loadId: r.loadId,
-    referenceNumber: r.referenceNumber,
-    carrierName: r.carrierName ?? null,
-    brokerReceivable: numericToNumber(r.brokerReceivable),
-    brokerReceivedAmount: numericToNumber(r.brokerReceivedAmount),
-    brokerReceivedDate: r.brokerReceivedDate ?? null,
-    carrierPayable: Number(r.carrierPayable),
-    carrierPaidAmount: numericToNumber(r.carrierPaidAmount),
-    carrierPaidDate: r.carrierPaidDate ?? null,
-    paymentStatus: r.paymentStatus,
-  }));
+  return rows.map((r) => {
+    const createdByUserName = r.createdByUserId
+      ? formatUserName(r.createdByFirstName, r.createdByLastName, r.createdByEmail)
+      : null;
+    return {
+      loadId: r.loadId,
+      referenceNumber: r.referenceNumber,
+      carrierName: r.carrierName ?? null,
+      brokerReceivable: numericToNumber(r.brokerReceivable),
+      brokerReceivedAmount: numericToNumber(r.brokerReceivedAmount),
+      brokerReceivedDate: r.brokerReceivedDate ?? null,
+      carrierPayable: Number(r.carrierPayable),
+      carrierPaidAmount: numericToNumber(r.carrierPaidAmount),
+      carrierPaidDate: r.carrierPaidDate ?? null,
+      paymentStatus: r.paymentStatus,
+      createdByUserId: r.createdByUserId ?? null,
+      createdByUserName,
+    };
+  });
 };
 
 // ---------------------------------------------------------------------------
