@@ -28,7 +28,8 @@ const CarrierAutocomplete: React.FC<CarrierAutocompleteProps> = (props) => {
 
   const options = carriers.map((c) => ({
     value: c.carrierName,
-    label: <LabeledOption label={c.carrierName} description={c.mcDotNumber} />,
+    label: c.carrierName,
+    description: c.mcDotNumber,
   }));
 
   return (
@@ -37,6 +38,12 @@ const CarrierAutocomplete: React.FC<CarrierAutocompleteProps> = (props) => {
       options={options}
       showSearch={{ onSearch, filterOption: false }}
       notFoundContent={loading ? <Spin size="small" /> : undefined}
+      optionRender={(option) => (
+        <LabeledOption
+          label={String(option.data.value)}
+          description={String(option.data.description)}
+        />
+      )}
     />
   );
 };

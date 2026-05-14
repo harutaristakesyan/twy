@@ -29,7 +29,8 @@ const BrokerAutocomplete: React.FC<BrokerAutocompleteProps> = (props) => {
 
   const options = brokers.map((b) => ({
     value: b.brokerName,
-    label: <LabeledOption label={b.brokerName} description={b.mcNumber} />,
+    label: b.brokerName,
+    description: b.mcNumber,
   }));
 
   return (
@@ -38,6 +39,12 @@ const BrokerAutocomplete: React.FC<BrokerAutocompleteProps> = (props) => {
       options={options}
       showSearch={{ onSearch, filterOption: false }}
       notFoundContent={loading ? <Spin size="small" /> : undefined}
+      optionRender={(option) => (
+        <LabeledOption
+          label={String(option.data.value)}
+          description={String(option.data.description)}
+        />
+      )}
     />
   );
 };
