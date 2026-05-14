@@ -1,26 +1,13 @@
-import { UploadOutlined } from "@ant-design/icons";
 import { useRequest } from "ahooks";
 
-import {
-  App,
-  Button,
-  Col,
-  DatePicker,
-  Form,
-  InputNumber,
-  Modal,
-  Row,
-  Select,
-  Space,
-  Upload,
-} from "antd";
+import { App, Button, Col, DatePicker, Form, InputNumber, Modal, Row, Select, Space } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useState } from "react";
 
+import { AttachedFilesField } from "@/features/files";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { getDirtyFields } from "@/utils/getDirtyFields";
 import { paymentOrderApi } from "../api/paymentOrderApi";
-import { useInvoiceHandlers } from "../hooks/useInvoiceHandlers";
 import type { PaymentOrder, PaymentStatus } from "../types/paymentOrder";
 import { STATUS_LABEL } from "./PaymentStatusTag";
 
@@ -94,11 +81,6 @@ export default function UpdatePaymentStatusModal({
       ).length > 0,
     );
   }, [paymentOrder, form]);
-
-  const { fileList, handleUpload, handleChange, handleRemove, handleDownload } = useInvoiceHandlers(
-    paymentOrder,
-    onSuccess,
-  );
 
   const initialValues: Partial<FormValues> = paymentOrder
     ? {
@@ -232,17 +214,25 @@ export default function UpdatePaymentStatusModal({
         </Row>
 
         <Form.Item label="Invoices">
-          <Upload
-            multiple
-            fileList={fileList}
-            customRequest={handleUpload}
-            onChange={handleChange}
-            onRemove={readOnly ? undefined : handleRemove}
-            onDownload={handleDownload}
-            showUploadList={{ showDownloadIcon: true, showRemoveIcon: !readOnly }}
-          >
-            {!readOnly && <Button icon={<UploadOutlined />}>Upload Invoice</Button>}
-          </Upload>
+          <AttachedFilesField
+            files={(paymentOrder?.invoices ?? []).map((inv) => ({
+              fileId: inv.fileId,
+              fileName: inv.fileName,
+            }))}
+            onAdd={(file) =>
+              paymentOrder
+                ? paymentOrderApi.addInvoice(paymentOrder.id, file)
+                : Promise.reject(new Error("Payment order missing"))
+            }
+            onRemove={
+              paymentOrder
+                ? (fileId) => paymentOrderApi.removeInvoice(paymentOrder.id, fileId)
+                : undefined
+            }
+            onChanged={onSuccess}
+            readOnly={readOnly}
+            buttonLabel="Upload Invoice"
+          />
         </Form.Item>
       </Form>
     </Modal>

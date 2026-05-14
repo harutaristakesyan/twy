@@ -1,6 +1,5 @@
-import { ArrowLeftOutlined, DeleteOutlined, UploadOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useRequest } from "ahooks";
-import type { UploadFile } from "antd";
 import {
   App,
   Button,
@@ -16,18 +15,18 @@ import {
   Steps,
   Switch,
   Typography,
-  Upload,
 } from "antd";
 import type { NamePath } from "antd/es/form/interface";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CarrierAutocomplete from "@/features/carrier/components/CarrierAutocomplete";
+import type { FileUploaderHandle, FileUploaderValueItem } from "@/features/files";
+import { FileUploader, MAX_FILES_DEFAULT } from "@/features/files";
 import { loadApi } from "@/features/load/api/loadApi";
 import { LoadStopsFormList } from "@/features/load/components/LoadStopsFormList";
-import type { CreateLoadDto, LoadFile, Location } from "@/features/load/types/load";
+import type { CreateLoadDto, Location } from "@/features/load/types/load";
 import BrokerAutocomplete from "@/features/outside-broker/components/BrokerAutocomplete";
-import { fileApi } from "@/libs/fileApi";
 import { getErrorMessage } from "@/utils/errorUtils";
 
 const { Title } = Typography;
@@ -126,10 +125,10 @@ const CreateLoadPage: React.FC = () => {
   const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStepVisited, setMaxStepVisited] = useState(0);
-  const [activeUploadCount, setActiveUploadCount] = useState(0);
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [uploadedFiles, setUploadedFiles] = useState<LoadFile[]>([]);
+  const [uploaderItems, setUploaderItems] = useState<FileUploaderValueItem[]>([]);
+  const uploaderRef = useRef<FileUploaderHandle>(null);
   const stepContentRef = useRef<HTMLDivElement>(null);
+  const isBusy = uploaderItems.some((i) => i.status === "uploading");
 
   useEffect(() => {
     void currentStep;
@@ -166,6 +165,7 @@ const CreateLoadPage: React.FC = () => {
     {
       manual: true,
       onSuccess: () => {
+        uploaderRef.current?.commit();
         message.success("Load created successfully");
         navigate("/loads");
       },
@@ -174,7 +174,7 @@ const CreateLoadPage: React.FC = () => {
   );
 
   const handleSubmit = async () => {
-    if (activeUploadCount > 0) {
+    if (isBusy) {
       message.warning("Wait for files to finish uploading.");
       return;
     }
@@ -186,6 +186,13 @@ const CreateLoadPage: React.FC = () => {
     const values = form.getFieldsValue(true);
     const pickups = (values.pickups ?? []) as Location[];
     const dropoffs = (values.dropoffs ?? []) as Location[];
+    const filesPayload = uploaderItems
+      .filter((i) => i.status === "done" && i.fileId)
+      .map((i) => ({
+        id: i.fileId as string,
+        fileName: i.name,
+        documentCategory: null as string | null,
+      }));
     create({
       customer: values.customer,
       referenceNumber: values.referenceNumber,
@@ -219,32 +226,8 @@ const CreateLoadPage: React.FC = () => {
         name: d.name,
         address: d.address,
       })),
-      files: uploadedFiles.length ? uploadedFiles : undefined,
+      files: filesPayload.length ? filesPayload : undefined,
     });
-  };
-
-  const handleFileUpload = async (file: File): Promise<UploadFile | null> => {
-    setActiveUploadCount((c) => c + 1);
-    try {
-      message.loading({ content: "Uploading file...", key: "upload" });
-      const fileId = await fileApi.uploadFile(file);
-      const fileEntry: LoadFile = { id: fileId, fileName: file.name, documentCategory: null };
-      setUploadedFiles((prev) => [...prev, fileEntry]);
-      message.success({ content: "File uploaded successfully", key: "upload" });
-      return { uid: fileId, name: file.name, status: "done", size: file.size, type: file.type };
-    } catch (error) {
-      message.error({ content: getErrorMessage(error), key: "upload" });
-      return null;
-    } finally {
-      setActiveUploadCount((c) => Math.max(0, c - 1));
-    }
-  };
-
-  const handleFileRemove = (file: UploadFile) => {
-    setUploadedFiles((prev) => prev.filter((item) => item.id !== file.uid));
-    setFileList((prev) => prev.filter((item) => item.uid !== file.uid));
-    message.success("File removed");
-    return true;
   };
 
   const renderStepContent = () => {
@@ -476,27 +459,13 @@ const CreateLoadPage: React.FC = () => {
       case 4:
         return (
           <Form.Item label="Upload Files">
-            <Upload
-              multiple
-              fileList={fileList}
-              beforeUpload={(file) => {
-                handleFileUpload(file).then((uploaded) => {
-                  if (uploaded) setFileList((prev) => [...prev, uploaded]);
-                });
-                return false;
-              }}
-              onRemove={handleFileRemove}
-              iconRender={() => <DeleteOutlined />}
-            >
-              <Button icon={<UploadOutlined />} size="large" loading={activeUploadCount > 0}>
-                Select Files
-              </Button>
-            </Upload>
-            <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
-              {activeUploadCount > 0
-                ? "Upload in progress… you can submit after it finishes."
-                : "Supporting documents related to this load — multiple files allowed."}
-            </Typography.Paragraph>
+            <FileUploader
+              ref={uploaderRef}
+              max={MAX_FILES_DEFAULT}
+              buttonLabel="Select Files"
+              onChange={setUploaderItems}
+              helpText="Supporting documents related to this load — multiple files allowed."
+            />
           </Form.Item>
         );
 
@@ -560,7 +529,7 @@ const CreateLoadPage: React.FC = () => {
                 type="primary"
                 onClick={() => void handleSubmit()}
                 loading={loading}
-                disabled={activeUploadCount > 0}
+                disabled={isBusy}
                 size="large"
               >
                 Create Load

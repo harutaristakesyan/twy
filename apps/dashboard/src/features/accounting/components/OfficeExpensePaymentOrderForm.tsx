@@ -1,7 +1,4 @@
-import { UploadOutlined } from "@ant-design/icons";
 import {
-  App,
-  Button,
   Col,
   DatePicker,
   Form,
@@ -13,20 +10,17 @@ import {
   Select,
   Space,
   Switch,
-  Upload,
 } from "antd";
-import type { UploadFile, UploadProps } from "antd/es/upload/interface";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { useState } from "react";
-import { getErrorMessage } from "@/utils/errorUtils";
+import { AttachedFilesField } from "@/features/files";
 import { officeExpenseApi } from "../api/officeExpensePaymentOrderApi";
 import {
   CURRENCY_OPTIONS,
   type Currency,
   OFFICE_EXPENSE_SERVICE_OPTIONS,
   OFFICE_EXPENSE_STATUS_OPTIONS,
-  type OfficeExpenseFile,
   type OfficeExpensePaymentOrder,
   type OfficeExpensePaymentStatus,
   type OfficeExpenseService,
@@ -56,9 +50,6 @@ interface Props {
   onValuesChange?: FormProps<OfficeExpenseFormValues>["onValuesChange"];
 }
 
-const toFileList = (files: OfficeExpenseFile[]): UploadFile[] =>
-  files.map((f) => ({ uid: f.fileId, name: f.fileName, status: "done" as const }));
-
 const buildInitialValues = (order: OfficeExpensePaymentOrder): OfficeExpenseFormValues => {
   const sameDay = order.periodStart === order.periodEnd;
   return {
@@ -81,57 +72,10 @@ export default function OfficeExpensePaymentOrderForm({
   onUploadingChange,
   onValuesChange,
 }: Props) {
-  const { message } = App.useApp();
   const [isRange, setIsRange] = useState(() => order.periodStart !== order.periodEnd);
-  const [fileList, setFileList] = useState<UploadFile[]>(() => toFileList(order.files));
 
   const watchedCurrency = Form.useWatch("currency", form);
   const amountPrefix = CURRENCY_SYMBOL[(watchedCurrency ?? order.currency) as Currency];
-
-  const handleUploadChange: UploadProps["onChange"] = ({ file, fileList: next }) => {
-    setFileList(next);
-    onUploadingChange(next.some((f) => f.status === "uploading"));
-    if (file.status === "done") message.success(`${file.name} uploaded`);
-    else if (file.status === "error") message.error(`${file.name} failed to upload`);
-  };
-
-  const customRequest: UploadProps["customRequest"] | undefined = readOnly
-    ? undefined
-    : async ({ file, onSuccess: onUp, onError }) => {
-        const f = file as File;
-        try {
-          const fileId = await officeExpenseApi.addFile(order.id, f);
-          onUp?.(fileId);
-          setFileList((cur) => [
-            ...cur.filter((x) => x.uid !== (file as UploadFile).uid),
-            { uid: fileId, name: f.name, status: "done" },
-          ]);
-          onFilesChanged();
-        } catch (err) {
-          onError?.(err instanceof Error ? err : new Error(String(err)));
-        }
-      };
-
-  const handleRemove: UploadProps["onRemove"] | undefined = readOnly
-    ? undefined
-    : async (file) => {
-        try {
-          await officeExpenseApi.removeFile(order.id, file.uid);
-          message.success(`${file.name} removed`);
-          setFileList((cur) => cur.filter((f) => f.uid !== file.uid));
-          onFilesChanged();
-          return true;
-        } catch (err) {
-          message.error(getErrorMessage(err));
-          return false;
-        }
-      };
-
-  const handleDownload: UploadProps["onDownload"] = (file) => {
-    void officeExpenseApi.downloadFile(file.uid, file.name).catch((err) => {
-      message.error(getErrorMessage(err));
-    });
-  };
 
   return (
     <Form
@@ -230,18 +174,15 @@ export default function OfficeExpensePaymentOrderForm({
       </Form.Item>
 
       <Form.Item label="Documents">
-        <Upload
-          multiple
-          disabled={readOnly}
-          fileList={fileList}
-          customRequest={customRequest}
-          onChange={handleUploadChange}
-          onRemove={handleRemove}
-          onDownload={handleDownload}
-          showUploadList={{ showDownloadIcon: true, showRemoveIcon: !readOnly }}
-        >
-          {!readOnly && <Button icon={<UploadOutlined />}>Upload file</Button>}
-        </Upload>
+        <AttachedFilesField
+          files={order.files.map((f) => ({ fileId: f.fileId, fileName: f.fileName }))}
+          onAdd={(file) => officeExpenseApi.addFile(order.id, file)}
+          onRemove={(fileId) => officeExpenseApi.removeFile(order.id, fileId)}
+          onChanged={onFilesChanged}
+          onUploadingChange={onUploadingChange}
+          readOnly={readOnly}
+          buttonLabel="Upload file"
+        />
       </Form.Item>
     </Form>
   );

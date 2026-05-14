@@ -16,8 +16,8 @@ packages/core/
 │   │   └── index.ts             Re-exports the three above
 │   ├── branch/                  (same shape)
 │   ├── load/                    (same shape)
-│   ├── file/                    Schemas + service (S3 presigned URLs)
-│   │   ├── request.ts response.ts service.ts index.ts
+│   ├── file/                    Schemas + service (S3 presigned URLs, owned deletes, batch cleanup)
+│   │   ├── constants.ts request.ts response.ts service.ts index.ts
 │   ├── shared/                  Cross-domain helpers
 │   │   ├── auth.ts              Common auth Zod schema
 │   │   ├── response.ts          MessageResponse + base envelope schemas
@@ -65,6 +65,19 @@ import {
 ```
 
 The schema enums (`Roles`, `LoadStatus`, `OrderDirection`, `loadStatusValues`) and `PERMISSION_REGISTRY` (plus `PermissionEntity`, `PermissionAction` types) live in `@twy/db`'s schema and are re-exported here for ergonomics — callers never need to know which package owns them.
+
+## File domain (`file/`)
+
+The single source of truth for S3 lifecycle. Three service entry points consumers should know about:
+
+| Function | Purpose | Authorization |
+|---|---|---|
+| `createUploadUrl({ fileName, contentType, size, uploadedByUserId, documentCategory? })` | Inserts the `file` row, returns a 15-min presigned PUT URL. `documentCategory` (optional, enum from `@twy/db`) is persisted on the row. | Caller's `userId` becomes `file.created_by` — used for later attach + delete authorization. |
+| `deleteOwnedFile({ fileId, callerUserId })` | Removes the DB row **and** the S3 object. Throws `NotFound` if the caller is not the uploader (silent, no-info leak). Throws `Conflict` if a junction row still references the file. | `created_by = callerUserId`. |
+| `batchDeleteFiles({ fileIds, callerUserId })` | Best-effort cleanup used by the dashboard on form cancel. Silently skips ids the caller does not own or that are still linked (FK restrict). Returns the list it actually deleted. | Same caller scope. |
+| `deleteFile(fileId)` | Low-level S3-only delete. Does **not** check ownership and does **not** touch the DB row. Reserved for inside this package — e.g. `office-expense-payment-order/repository.ts` calls it after manually unlinking + checking refcount. | None — internal only. |
+
+Constants live in `packages/core/src/file/constants.ts` (`MAX_UPLOAD_FILE_SIZE_BYTES`, `MAX_BATCH_DELETE_FILE_IDS`) and are mirrored in `apps/dashboard/src/features/files/constants.ts` via a "KEEP IN SYNC" comment header in both files.
 
 ## Adding a new domain
 

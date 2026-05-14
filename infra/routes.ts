@@ -136,6 +136,12 @@ export const appRoutes: RouteDef[] = [
     linkKeys: ["cluster", "filesBucket"],
   },
   {
+    handler: "packages/functions/src/api/file/batchDelete.handler",
+    routeKey: "POST /api/files/batch-delete",
+    requiresAuth: true,
+    linkKeys: ["cluster", "filesBucket"],
+  },
+  {
     handler: "packages/functions/src/api/file/download.handler",
     routeKey: "GET /api/files/{fileId}",
     requiresAuth: true,

@@ -14,7 +14,7 @@ packages/functions/
 │   │   ├── user/   {get,list,update,self-update,delete}.ts
 │   │   ├── branch/ {list,create,update,delete}.ts
 │   │   ├── load/   {create,list,update,changeStatus,delete}.ts
-│   │   └── file/   {upload,download,delete}.ts  # presigned-URL endpoints
+│   │   └── file/   {upload,download,delete,batchDelete}.ts  # presigned-URL endpoints + owned/batch deletes
 │   ├── events/                                  # Non-HTTP Lambda triggers
 │   │   └── postConfirmation.ts                  # Cognito post-confirmation (wired in infra/auth.ts)
 │   ├── shared/                                  # Lambda-runtime middleware & helpers
@@ -38,6 +38,17 @@ Every HTTP handler is named in `infra/routes.ts`:
 - `appRoutes` (JWT-required) → handlers under `src/api/{user,branch,load,file}/`.
 
 The Cognito post-confirmation trigger is wired separately in `infra/auth.ts` at `Resource.UserPool` → triggers → postConfirmation → `packages/functions/src/events/postConfirmation.handler`.
+
+### File endpoints
+
+| Route | Handler | Notes |
+|---|---|---|
+| `POST /api/files` | `file/upload.handler` | Returns 15-min presigned PUT URL + creates the `file` row (with optional `documentCategory`). |
+| `GET /api/files/{fileId}` | `file/download.handler` | Returns a 1-hour presigned GET URL. |
+| `DELETE /api/files/{fileId}` | `file/delete.handler` | Calls `deleteOwnedFile` — scoped to `created_by = caller`. 404 on non-owned. |
+| `POST /api/files/batch-delete` | `file/batchDelete.handler` | Caller-scoped best-effort cleanup used by the dashboard on form cancel. Body: `{ fileIds: string[1..50] }`. |
+
+Domain-specific link/unlink endpoints (`POST /api/{entity}/{id}/files`, `DELETE /api/{entity}/{id}/files/{fileId}`) live under the entity's folder (payment-order, office-expense-payment-order). They wrap junction-table inserts/deletes and call into `@twy/core` services. New entities that need attachments follow the same shape rather than reusing this folder.
 
 ## Authoring a handler
 
@@ -111,7 +122,7 @@ export { jsonErrorHandler } from "./middy/jsonErrorHandler.js";
 | `Resource.Cluster.{clusterArn,secretArn,database}` | `infra/database.ts` (`db.cluster`) | Consumed by `@twy/db`; handlers never read directly |
 | `Resource.UserPoolClient.id` | `infra/auth.ts` | Public Cognito flows in `src/api/auth/*` |
 | `Resource.UserPool.id` | `infra/auth.ts` | Admin user ops in `src/api/user/*` |
-| `Resource.Files.name` | `infra/storage.ts` | S3 PUT/GET/DELETE presigned URLs in `libs/s3/fileStorage.ts` |
+| `Resource.Files.name` | `infra/storage.ts` | S3 PUT/GET/DELETE presigned URLs in `@twy/core/file/service.ts` (consumed by `src/api/file/*` handlers) |
 
 The route-side `linkKeys: ["cluster", ...]` in `infra/routes.ts` is what grants the handler the IAM permissions and Resource bindings.
 

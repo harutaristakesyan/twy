@@ -29,11 +29,12 @@ src/
 │   ├── user/        #   api/, components/, pages/, types/
 │   ├── branch/      #   api/, components/, pages/, types/
 │   ├── load/        #   api/, components/, pages/, types/
+│   ├── files/       #   horizontal capability — see "Files & uploads" below
 │   ├── outside-broker/
 │   └── outside-carrier/
 ├── hooks/           # Global reusable hooks (useCurrentUser)
 ├── layouts/         # Page wrappers (AppLayout, AppHeader, Sidebar)
-├── libs/            # Shared libraries (ApiClient, fileApi, api-types, EventBus)
+├── libs/            # Shared libraries (ApiClient, api-types, EventBus)
 ├── providers/       # React context providers (AuthProvider, AntdProvider)
 ├── routes/          # React Router config + guards (router, ProtectedRoute, RoleBasedRoute)
 └── utils/           # Pure helpers (jwt, permissions, email, errorUtils, formatters)
@@ -79,6 +80,24 @@ Files at `apps/dashboard/.env.development` and `apps/dashboard/.env.production` 
 4. Add a sidebar item in `src/layouts/Sidebar.tsx` with the matching `resource` key.
 5. Use `useAntdTable` for paginated tables, `useRequest` (manual) for mutations, `useDebounce` for search inputs.
 6. For create/edit modals or drawers, create a `providers/<Domain>ModalProvider.tsx` and consume via `use<Domain>Modal()`.
+
+## Files & uploads
+
+All file upload/download/delete UI flows go through `@/features/files` (barrel export). **Never import `ApiClient` directly to talk to `/api/files*` and never drop in a raw AntD `<Upload>` — both are reserved for inside `features/files/`.**
+
+| Need | Use | Lifecycle |
+|---|---|---|
+| Attach files atomically when creating/updating an entity (form submit links the `fileIds`) | `<FileUploader ref={uploaderRef} max={…} documentCategory={…} />` + `uploaderRef.current?.commit()` in `onSuccess` | Files uploaded mid-form get auto-deleted on cancel/unmount via `POST /api/files/batch-delete`. Commit on success suppresses cleanup. |
+| Live-edit attachments on an existing entity (each add/remove hits a domain endpoint immediately) | `<AttachedFilesField files={…} onAdd={fn} onRemove={fn} readOnly={…} />` | Caller owns the add/remove API calls; the component owns the AntD `Upload` wiring + download. |
+| Read-only display | `<FileList files={…} />` or `<FileDownloadButton fileId={…} fileName={…} />` | Wraps `useFileDownload` (loading state + error toast). |
+| Imperative, non-form flow | `useFileUpload({ documentCategory, max, … })` — exposes `upload`, `remove`, `commit`, `fileIds`, `isBusy`, plus AntD `beforeUpload`/`customRequest` handlers. | Same commit/cancel contract as `FileUploader`. |
+| Low-level (rare) | `filesApi.{requestUploadUrl, uploadFile, deleteFile, batchDeleteFiles, downloadFile, getDownloadUrl}` | Only consumed from inside `features/files/`, and from domain API modules that build composite flows (`addInvoice`, `addFile`). |
+
+Notes:
+- Form integration: the parent reads busy state from the controlled `value` (`items.some(i => i.status === "uploading")`), not from the ref — refs don't re-render. The ref handle exposes only `{ commit, fileIds }`.
+- Max-file / max-size / accepted-MIME caps are exported from `@/features/files` (`MAX_FILES_DEFAULT`, `MAX_FILE_SIZE_BYTES`, `ACCEPTED_MIME_GROUPS`). Keep in sync with `packages/core/src/file/constants.ts` — comment header in both files calls this out.
+- `DocumentCategory` is an optional prop on `FileUploader` and is persisted on the `file` row at upload time. No per-file picker UI in v1.
+- Cancel-cleanup only fires on unmount, so the parent modal must use `destroyOnHidden` (all existing callsites do).
 
 ## AntD documentation
 

@@ -1,4 +1,3 @@
-import { UploadOutlined } from "@ant-design/icons";
 import { useRequest } from "ahooks";
 import {
   App,
@@ -11,13 +10,11 @@ import {
   Select,
   Space,
   Switch,
-  Typography,
-  Upload,
 } from "antd";
-import type { UploadFile, UploadProps } from "antd/es/upload/interface";
 import type { Dayjs } from "dayjs";
 import { useRef, useState } from "react";
-import { fileApi } from "@/libs/fileApi";
+import type { FileUploaderHandle } from "@/features/files";
+import { FileUploader, MAX_FILES_DEFAULT } from "@/features/files";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { officeExpenseApi } from "../api/officeExpensePaymentOrderApi";
 import {
@@ -27,9 +24,6 @@ import {
   OFFICE_EXPENSE_SERVICE_OPTIONS,
   type OfficeExpenseService,
 } from "../types/officeExpensePaymentOrder";
-
-/** Keep in sync with `CreateOfficeExpenseEventSchema` `fileIds` max in packages/core. */
-const MAX_CREATE_FILES = 20;
 
 const { TextArea } = Input;
 
@@ -62,40 +56,17 @@ const buildPeriod = (values: FormValues): { periodStart: string; periodEnd: stri
   return null;
 };
 
-const collectUploadedIds = (fileList: UploadFile[]): string[] =>
-  fileList.filter((f) => f.status === "done").map((f) => f.uid);
-
 export default function CreateOfficeExpenseModal({ open, onClose, onSuccess }: Props) {
   const { message } = App.useApp();
   const [form] = Form.useForm<FormValues>();
   const [isRange, setIsRange] = useState(false);
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
-
-  // beforeUpload fires synchronously for each file in a multi-file drop,
-  // before AntD has a chance to update fileList — so we need a synchronous
-  // counter to enforce the cap across the batch.
-  const inFlightCount = useRef(0);
-
-  const uploadingCount = fileList.filter((f) => f.status === "uploading").length;
-  const doneCount = fileList.filter((f) => f.status === "done").length;
-
-  const resetLocalState = () => {
-    setIsRange(false);
-    setFileList([]);
-    inFlightCount.current = 0;
-  };
-
-  const cleanupUploadedFiles = (list: UploadFile[]) => {
-    const ids = collectUploadedIds(list);
-    if (ids.length === 0) return;
-    void Promise.allSettled(ids.map((id) => fileApi.deleteFile(id)));
-  };
+  const uploaderRef = useRef<FileUploaderHandle>(null);
 
   const { loading, run: submit } = useRequest(
     async (values: FormValues) => {
       const period = buildPeriod(values);
       if (!period) return;
-      const fileIds = collectUploadedIds(fileList);
+      const fileIds = uploaderRef.current?.fileIds ?? [];
       const dto: CreateOfficeExpenseDto = {
         serviceName: values.serviceName,
         paymentPurpose: values.paymentPurpose,
@@ -109,8 +80,9 @@ export default function CreateOfficeExpenseModal({ open, onClose, onSuccess }: P
     {
       manual: true,
       onSuccess: () => {
+        uploaderRef.current?.commit();
         message.success("Office expense payment order created");
-        resetLocalState();
+        setIsRange(false);
         onSuccess();
         onClose();
       },
@@ -119,53 +91,8 @@ export default function CreateOfficeExpenseModal({ open, onClose, onSuccess }: P
   );
 
   const handleCancel = () => {
-    cleanupUploadedFiles(fileList);
-    resetLocalState();
+    setIsRange(false);
     onClose();
-  };
-
-  const beforeUpload: UploadProps["beforeUpload"] = () => {
-    if (doneCount + uploadingCount + inFlightCount.current >= MAX_CREATE_FILES) {
-      message.warning(`You can attach at most ${MAX_CREATE_FILES} files.`);
-      return Upload.LIST_IGNORE;
-    }
-    inFlightCount.current += 1;
-    return true;
-  };
-
-  const customRequest: UploadProps["customRequest"] = async ({ file, onSuccess: ok, onError }) => {
-    const entry = file as UploadFile;
-    try {
-      const fileId = await fileApi.uploadFile(file as File);
-      ok?.(fileId);
-      setFileList((cur) =>
-        cur.map((x) => (x.uid === entry.uid ? { ...x, uid: fileId, status: "done" } : x)),
-      );
-    } catch (err) {
-      onError?.(err instanceof Error ? err : new Error(String(err)));
-      setFileList((cur) => cur.filter((x) => x.uid !== entry.uid));
-      message.error(getErrorMessage(err));
-    }
-  };
-
-  const handleChange: UploadProps["onChange"] = ({ file, fileList: next }) => {
-    setFileList(next);
-    if (file.status === "done" || file.status === "error") {
-      inFlightCount.current = Math.max(0, inFlightCount.current - 1);
-    }
-  };
-
-  const handleRemove: UploadProps["onRemove"] = (file) => {
-    if (file.status === "done") void fileApi.deleteFile(file.uid);
-    return true;
-  };
-
-  const trySubmit = () => {
-    if (uploadingCount > 0) {
-      message.warning("Wait for files to finish uploading.");
-      return;
-    }
-    void form.submit();
   };
 
   return (
@@ -178,12 +105,7 @@ export default function CreateOfficeExpenseModal({ open, onClose, onSuccess }: P
       footer={
         <Space>
           <Button onClick={handleCancel}>Cancel</Button>
-          <Button
-            type="primary"
-            loading={loading}
-            disabled={uploadingCount > 0}
-            onClick={trySubmit}
-          >
+          <Button type="primary" loading={loading} onClick={() => void form.submit()}>
             Create
           </Button>
         </Space>
@@ -260,26 +182,12 @@ export default function CreateOfficeExpenseModal({ open, onClose, onSuccess }: P
         </Form.Item>
 
         <Form.Item label="Attachments">
-          <Upload
-            multiple
-            fileList={fileList}
-            beforeUpload={beforeUpload}
-            customRequest={customRequest}
-            onChange={handleChange}
-            onRemove={handleRemove}
-          >
-            <Button
-              icon={<UploadOutlined />}
-              disabled={doneCount >= MAX_CREATE_FILES || uploadingCount > 0}
-            >
-              Upload files
-            </Button>
-          </Upload>
-          <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
-            {uploadingCount > 0
-              ? "Upload in progress… wait before creating."
-              : `Up to ${MAX_CREATE_FILES} files. Files are linked when you create the order.`}
-          </Typography.Paragraph>
+          <FileUploader
+            ref={uploaderRef}
+            max={MAX_FILES_DEFAULT}
+            buttonLabel="Upload files"
+            helpText={`Up to ${MAX_FILES_DEFAULT} files. Files are linked when you create the order.`}
+          />
         </Form.Item>
       </Form>
     </Modal>

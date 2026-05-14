@@ -1,6 +1,6 @@
+import { filesApi } from "@/features/files";
 import ApiClient from "@/libs/ApiClient";
 import type { ApiResponse } from "@/libs/api-types";
-import { fileApi } from "@/libs/fileApi";
 import type { PaginatedPaymentOrdersResponse, UpdatePaymentOrderDto } from "../types/paymentOrder";
 
 export const paymentOrderApi = {
@@ -33,7 +33,7 @@ export const paymentOrderApi = {
   },
 
   addInvoice: async (paymentOrderId: string, file: File): Promise<string> => {
-    const fileId = await fileApi.uploadFile(file);
+    const fileId = await filesApi.uploadFile(file);
     await ApiClient.post<ApiResponse<{ message: string }>>(
       `/payment-orders/${paymentOrderId}/files`,
       { fileId },
@@ -47,5 +47,5 @@ export const paymentOrderApi = {
     );
   },
 
-  downloadInvoice: (fileId: string, fileName: string) => fileApi.downloadFile(fileId, fileName),
+  downloadInvoice: (fileId: string, fileName: string) => filesApi.downloadFile(fileId, fileName),
 };

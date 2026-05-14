@@ -1,6 +1,4 @@
-import { DeleteOutlined, UploadOutlined } from "@ant-design/icons";
 import { useRequest } from "ahooks";
-import type { UploadFile } from "antd";
 import {
   App,
   Button,
@@ -14,17 +12,16 @@ import {
   Space,
   Steps,
   Switch,
-  Typography,
-  Upload,
 } from "antd";
 import type { NamePath } from "antd/es/form/interface";
 import { useEffect, useRef, useState } from "react";
 import CarrierAutocomplete from "@/features/carrier/components/CarrierAutocomplete";
+import type { FileUploaderHandle, FileUploaderValueItem } from "@/features/files";
+import { FileUploader, MAX_FILES_DEFAULT } from "@/features/files";
 import { loadApi } from "@/features/load/api/loadApi";
 import { LoadStopsFormList } from "@/features/load/components/LoadStopsFormList";
-import type { Load, LoadFile, Location, UpdateLoadDto } from "@/features/load/types/load";
+import type { Load, Location, UpdateLoadDto } from "@/features/load/types/load";
 import BrokerAutocomplete from "@/features/outside-broker/components/BrokerAutocomplete";
-import { fileApi } from "@/libs/fileApi";
 import { getErrorMessage } from "@/utils/errorUtils";
 
 interface LoadEditModalProps {
@@ -152,20 +149,23 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
   const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStepVisited, setMaxStepVisited] = useState(LAST_STEP_INDEX);
-  const [activeUploadCount, setActiveUploadCount] = useState(0);
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [uploadedFiles, setUploadedFiles] = useState<LoadFile[]>([]);
+  const [uploaderItems, setUploaderItems] = useState<FileUploaderValueItem[]>([]);
+  const uploaderRef = useRef<FileUploaderHandle>(null);
   const stepContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     setCurrentStep(0);
     setMaxStepVisited(LAST_STEP_INDEX);
-    setUploadedFiles(load.files ?? []);
-    setFileList(
-      (load.files ?? []).map((f) => ({ uid: f.id, name: f.fileName, status: "done" as const })),
-    );
-  }, [open, load]);
+  }, [open]);
+
+  const initialUploaderItems: FileUploaderValueItem[] = (load.files ?? []).map((f) => ({
+    uid: f.id,
+    name: f.fileName,
+    status: "done" as const,
+    fileId: f.id,
+  }));
+  const isBusy = uploaderItems.some((i) => i.status === "uploading");
 
   useEffect(() => {
     void currentStep;
@@ -201,6 +201,7 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
     {
       manual: true,
       onSuccess: () => {
+        uploaderRef.current?.commit();
         message.success("Load updated successfully");
         onSuccess();
       },
@@ -209,7 +210,7 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
   );
 
   const handleSubmit = async () => {
-    if (activeUploadCount > 0) {
+    if (isBusy) {
       message.warning("Wait for files to finish uploading.");
       return;
     }
@@ -221,6 +222,13 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
     const values = form.getFieldsValue(true);
     const pickups = (values.pickups ?? []) as Location[];
     const dropoffs = (values.dropoffs ?? []) as Location[];
+    const filesPayload = uploaderItems
+      .filter((i) => i.status === "done" && i.fileId)
+      .map((i) => ({
+        id: i.fileId as string,
+        fileName: i.name,
+        documentCategory: null as string | null,
+      }));
     update({
       customer: values.customer,
       referenceNumber: values.referenceNumber,
@@ -254,32 +262,8 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
         name: d.name,
         address: d.address,
       })),
-      files: uploadedFiles,
+      files: filesPayload,
     });
-  };
-
-  const handleFileUpload = async (file: File): Promise<UploadFile | null> => {
-    setActiveUploadCount((c) => c + 1);
-    try {
-      message.loading({ content: "Uploading file...", key: "upload" });
-      const fileId = await fileApi.uploadFile(file);
-      const fileEntry: LoadFile = { id: fileId, fileName: file.name, documentCategory: null };
-      setUploadedFiles((prev) => [...prev, fileEntry]);
-      message.success({ content: "File uploaded successfully", key: "upload" });
-      return { uid: fileId, name: file.name, status: "done", size: file.size, type: file.type };
-    } catch (error) {
-      message.error({ content: getErrorMessage(error), key: "upload" });
-      return null;
-    } finally {
-      setActiveUploadCount((c) => Math.max(0, c - 1));
-    }
-  };
-
-  const handleFileRemove = (file: UploadFile) => {
-    setUploadedFiles((prev) => prev.filter((item) => item.id !== file.uid));
-    setFileList((prev) => prev.filter((item) => item.uid !== file.uid));
-    message.success("File removed");
-    return true;
   };
 
   const renderStepContent = () => {
@@ -499,27 +483,14 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
       case 4:
         return (
           <Form.Item label="Upload Files">
-            <Upload
-              multiple
-              fileList={fileList}
-              beforeUpload={(file) => {
-                handleFileUpload(file).then((uploaded) => {
-                  if (uploaded) setFileList((prev) => [...prev, uploaded]);
-                });
-                return false;
-              }}
-              onRemove={handleFileRemove}
-              iconRender={() => <DeleteOutlined />}
-            >
-              <Button icon={<UploadOutlined />} loading={activeUploadCount > 0}>
-                Select Files
-              </Button>
-            </Upload>
-            <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
-              {activeUploadCount > 0
-                ? "Upload in progress… you can submit after it finishes."
-                : "Supporting documents related to this load — multiple files allowed."}
-            </Typography.Paragraph>
+            <FileUploader
+              ref={uploaderRef}
+              max={MAX_FILES_DEFAULT}
+              buttonLabel="Select Files"
+              value={initialUploaderItems}
+              onChange={setUploaderItems}
+              helpText="Supporting documents related to this load — multiple files allowed."
+            />
           </Form.Item>
         );
 
@@ -570,7 +541,7 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
             type="primary"
             onClick={() => void handleSubmit()}
             loading={loading}
-            disabled={activeUploadCount > 0}
+            disabled={isBusy}
           >
             Update Load
           </Button>

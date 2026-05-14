@@ -9,8 +9,8 @@ import {
 import type { MenuProps } from "antd";
 import { App, Button, Dropdown, Space, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { filesApi } from "@/features/files";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { fileApi } from "@/libs/fileApi";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { formatCurrency } from "@/utils/formatters";
 import { useLoadModal } from "../providers/LoadModalProvider";
@@ -64,7 +64,7 @@ export function useLoadColumns(
   const handleFileDownload = async (fileId: string, fileName: string) => {
     try {
       message.loading({ content: "Downloading file...", key: "download" });
-      await fileApi.downloadFile(fileId, fileName);
+      await filesApi.downloadFile(fileId, fileName);
       message.success({ content: "File downloaded successfully", key: "download" });
     } catch (error) {
       message.error({ content: getErrorMessage(error), key: "download" });

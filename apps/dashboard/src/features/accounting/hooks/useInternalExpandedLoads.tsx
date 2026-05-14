@@ -2,7 +2,7 @@ import { useRequest } from "ahooks";
 import { Button, Flex, Popover, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useState } from "react";
-import { fileApi } from "@/libs/fileApi";
+import { FileDownloadButton } from "@/features/files";
 import { formatPercent, renderCurrency } from "@/utils/formatters";
 import { billingApi } from "../api/billingApi";
 import PaymentStatusTag from "../components/PaymentStatusTag";
@@ -14,15 +14,12 @@ const InvoicesCell = ({ invoices }: { invoices: BillingInvoice[] }) => {
   const content = (
     <Flex vertical gap={4}>
       {invoices.map((inv) => (
-        <Button
+        <FileDownloadButton
           key={inv.fileId}
-          type="link"
-          size="small"
+          fileId={inv.fileId}
+          fileName={inv.fileName}
           style={{ padding: 0, height: "auto" }}
-          onClick={() => fileApi.downloadFile(inv.fileId, inv.fileName)}
-        >
-          {inv.fileName}
-        </Button>
+        />
       ))}
     </Flex>
   );
