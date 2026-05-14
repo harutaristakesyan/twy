@@ -205,7 +205,15 @@ const LoadEditModal: React.FC<LoadEditModalProps> = ({ open, load, onCancel, onS
         message.success("Load updated successfully");
         onSuccess();
       },
-      onError: (error) => message.error(getErrorMessage(error)),
+      onError: (error) => {
+        const apiError = error as Error & { status?: number; data?: { code?: string } };
+        if (apiError.status === 409 && apiError.data?.code === "LOAD_EDIT_BLOCKED_BY_STATUS") {
+          message.error("This load can no longer be edited. Move it back to Hold first.");
+          onCancel();
+          return;
+        }
+        message.error(getErrorMessage(error));
+      },
     },
   );
 
