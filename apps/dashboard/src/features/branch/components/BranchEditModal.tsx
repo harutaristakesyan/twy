@@ -95,7 +95,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
         </Form.Item>
 
         <Form.Item name="ciId" label="Community License">
-          <CIAutocomplete placeholder="Search by CI number" />
+          <CIAutocomplete placeholder="Search by CI number" existingCI={branch.ci} />
         </Form.Item>
 
         <Form.Item name="owner" label="Branch Owner">

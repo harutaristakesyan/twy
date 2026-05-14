@@ -37,11 +37,11 @@ const BrokerAutocomplete: React.FC<BrokerAutocompleteProps> = (props) => {
     <AutoComplete
       {...props}
       options={options}
-      showSearch={{ onSearch, filterOption: false }}
+      showSearch={{ onSearch, filterOption: () => true }}
       notFoundContent={loading ? <Spin size="small" /> : undefined}
       optionRender={(option) => (
         <LabeledOption
-          label={String(option.data.value)}
+          label={String(option.data.label)}
           description={String(option.data.description)}
         />
       )}
