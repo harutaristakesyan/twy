@@ -2,6 +2,7 @@ import { useRequest } from "ahooks";
 import { App, Button, Form, Input, Modal, Select, Space } from "antd";
 import type React from "react";
 import { LabeledOption } from "@/components/LabeledOption";
+import CIAutocomplete from "@/features/community-license/components/CIAutocomplete";
 import type { User } from "@/features/user/types/user";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { createBranch } from "../api/branchApi";
@@ -74,6 +75,10 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
             rows={3}
             id="create-contact"
           />
+        </Form.Item>
+
+        <Form.Item name="ciId" label="Community License">
+          <CIAutocomplete placeholder="Search by CI number" id="create-ciId" />
         </Form.Item>
 
         <Form.Item name="owner" label="Branch Owner">

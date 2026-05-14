@@ -20,6 +20,7 @@ const ACTION_LABELS: Record<Action, string> = {
 
 const RESOURCE_LABELS: Record<Resource, string> = {
   branches: "Branches",
+  settings: "Settings",
   brokers: "Outside Brokers",
   brokers_requests: "Brokers — Requests",
   carriers_twy: "Carriers — Twy",

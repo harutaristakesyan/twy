@@ -70,6 +70,13 @@ export function useBranchColumns(
           ),
       },
       {
+        title: "Community License",
+        dataIndex: "ci",
+        key: "ci",
+        render: (ci: Branch["ci"]) =>
+          ci ? <span>{ci.ciNumber}</span> : <Tag color="default">—</Tag>,
+      },
+      {
         title: "Created Date",
         dataIndex: "createdAt",
         key: "createdAt",

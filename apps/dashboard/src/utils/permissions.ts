@@ -1,5 +1,6 @@
 export const RESOURCES = [
   "branches",
+  "settings",
   "brokers",
   "brokers_requests",
   "carriers_twy",
@@ -16,6 +17,7 @@ export const RESOURCES = [
 export const ACTIONS = ["add", "view", "edit", "delete"] as const;
 export const RESOURCE_ACTIONS: Record<Resource, readonly Action[]> = {
   branches: ["add", "view", "edit", "delete"],
+  settings: ["add", "view", "edit", "delete"],
   brokers: ["add", "view", "edit", "delete"],
   brokers_requests: ["view", "edit"],
   carriers_twy: ["add", "view", "edit", "delete"],

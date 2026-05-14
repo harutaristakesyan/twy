@@ -2,6 +2,7 @@ import {
   AccountBookOutlined,
   BranchesOutlined,
   CarOutlined,
+  SettingOutlined,
   TeamOutlined,
   TruckOutlined,
   UsergroupAddOutlined,
@@ -104,6 +105,12 @@ const allMenuItems: SidebarMenuItem[] = [
         resources: ["carriers_requests"],
       },
     ],
+  },
+  {
+    key: "/settings",
+    icon: <SettingOutlined />,
+    label: "Settings",
+    resources: ["settings"] as Resource[],
   },
   {
     key: "/accounting",

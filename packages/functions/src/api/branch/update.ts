@@ -15,12 +15,13 @@ const updateBranch = async (event: UpdateBranchEvent): Promise<MessageResponse> 
   assertPermission(ctx, "branches", "edit");
 
   const { branchId } = event.pathParameters;
-  const { name, owner, contact } = event.body;
+  const { name, owner, contact, ciId } = event.body;
 
   await updateBranchRecord(branchId, {
     name,
     ownerId: typeof owner === "undefined" ? undefined : owner,
     contact: typeof contact === "undefined" ? undefined : contact,
+    ciId: typeof ciId === "undefined" ? undefined : ciId,
   });
 
   return { message: "Branch updated successfully" };

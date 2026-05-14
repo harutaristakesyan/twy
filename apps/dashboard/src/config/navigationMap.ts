@@ -14,5 +14,6 @@ export const navigationLabelMap: Record<string, string> = {
   "/accounting/payment-orders": "Payment Orders",
   "/accounting/external-billing": "External Billing",
   "/accounting/internal-billing": "Internal Billing",
+  "/settings": "Settings",
   "/profile": "My Profile",
 };

@@ -4,6 +4,7 @@ import { paymentStatusValues } from "./paymentOrder.js";
 
 export const PERMISSION_REGISTRY = {
   branches: { actions: ["add", "view", "edit", "delete"] as const },
+  settings: { actions: ["add", "view", "edit", "delete"] as const },
   brokers: { actions: ["add", "view", "edit", "delete"] as const },
   brokers_requests: { actions: ["view", "edit"] as const },
   carriers_twy: { actions: ["add", "view", "edit", "delete"] as const },

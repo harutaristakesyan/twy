@@ -110,7 +110,7 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
 
   return (
     <Modal
-      title="Update Status Approval"
+      title="Update Load Status"
       open={open}
       onCancel={onCancel}
       destroyOnHidden

@@ -6,6 +6,7 @@ const BranchBaseSchema = z.object({
   name: z.string().trim().min(1, "Branch name is required"),
   owner: z.uuid().nullable().optional(),
   contact: z.string().trim().min(1).optional(),
+  ciId: z.uuid().nullable().optional(),
 });
 
 export const sortFieldMap = {
@@ -59,6 +60,7 @@ const UpdateBranchPayloadSchema = z
     name: z.string().trim().min(1).optional(),
     owner: z.uuid().nullable().optional(),
     contact: z.string().trim().min(1).nullable().optional(),
+    ciId: z.uuid().nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided to update the branch",

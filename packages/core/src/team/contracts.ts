@@ -1,5 +1,6 @@
 export const RESOURCES = [
   "branches",
+  "settings",
   "brokers",
   "brokers_requests",
   "carriers_twy",

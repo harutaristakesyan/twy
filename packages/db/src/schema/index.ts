@@ -2,6 +2,7 @@ export * from "./branch.js";
 export * from "./brokerRequest.js";
 export * from "./carrier.js";
 export * from "./carrierRequest.js";
+export * from "./communityLicense.js";
 export * from "./file.js";
 export * from "./load.js";
 export * from "./loadComment.js";

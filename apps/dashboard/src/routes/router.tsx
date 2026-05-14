@@ -21,6 +21,7 @@ import BrokerRequestsTab from "@/features/outside-broker/pages/BrokerRequestsTab
 import OutsideBrokersIndexRedirect from "@/features/outside-broker/pages/OutsideBrokersIndexRedirect";
 import OutsideBrokersLayout from "@/features/outside-broker/pages/OutsideBrokersLayout";
 import OutsideBrokersPage from "@/features/outside-broker/pages/OutsideBrokersPage";
+import SettingsPage from "@/features/settings/pages/SettingsPage";
 import ProfilePage from "@/features/user/pages/ProfilePage";
 import TeamsPage from "@/features/user/pages/TeamsPage";
 import UserManagementLayout from "@/features/user/pages/UserManagementLayout";
@@ -181,6 +182,14 @@ export const router = createBrowserRouter([
                 ),
               },
             ],
+          },
+          {
+            path: "settings",
+            element: (
+              <RequirePermission resource="settings" action="view">
+                <SettingsPage />
+              </RequirePermission>
+            ),
           },
           { path: "profile", element: <ProfilePage /> },
         ],

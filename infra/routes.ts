@@ -122,6 +122,31 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
+  // community-license
+  {
+    handler: "packages/functions/src/api/community-license/list.handler",
+    routeKey: "GET /api/community-licenses",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/community-license/create.handler",
+    routeKey: "POST /api/community-licenses",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/community-license/update.handler",
+    routeKey: "PUT /api/community-licenses/{ciId}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/community-license/delete.handler",
+    routeKey: "DELETE /api/community-licenses/{ciId}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
   // file
   {
     handler: "packages/functions/src/api/file/upload.handler",

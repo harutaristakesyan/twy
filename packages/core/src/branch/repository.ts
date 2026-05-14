@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { branch, db, type OrderDirection, users } from "@twy/db";
+import { branch, communityLicenses, db, type OrderDirection, users } from "@twy/db";
 import type { SQL } from "drizzle-orm";
 import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
@@ -13,24 +13,34 @@ export interface BranchOwner {
   email: string;
 }
 
+export interface BranchCI {
+  id: string;
+  ciNumber: string;
+  validFrom: string;
+  validTo: string | null;
+}
+
 export interface Branch {
   id: string;
   name: string;
   contact: string | null;
   createdAt: string | null;
   owner: BranchOwner | null;
+  ci: BranchCI | null;
 }
 
 export interface NewBranchInput {
   name: string;
   contact?: string | null;
   ownerId?: string | null;
+  ciId?: string | null;
 }
 
 export interface UpdateBranchInput {
   name?: string;
   contact?: string | null;
   ownerId?: string | null;
+  ciId?: string | null;
 }
 
 export interface ListBranchesInput {
@@ -77,6 +87,10 @@ const mapBranchRow = (row: {
   ownerFirstName: string | null;
   ownerLastName: string | null;
   ownerEmail: string | null;
+  ciId: string | null;
+  ciNumber: string | null;
+  ciValidFrom: string | null;
+  ciValidTo: string | null;
 }): Branch => ({
   id: row.id,
   name: row.name,
@@ -91,6 +105,15 @@ const mapBranchRow = (row: {
           email: row.ownerEmail,
         }
       : null,
+  ci:
+    row.ciId !== null
+      ? {
+          id: row.ciId,
+          ciNumber: row.ciNumber!,
+          validFrom: row.ciValidFrom!,
+          validTo: row.ciValidTo,
+        }
+      : null,
 });
 
 export const listBranches = async (input: ListBranchesInput) => {
@@ -103,6 +126,7 @@ export const listBranches = async (input: ListBranchesInput) => {
     : undefined;
   const branchClause = input.branchId ? eq(branch.id, input.branchId) : undefined;
   const owner = users;
+  const ci = communityLicenses;
   const filterClause = buildBranchAdvancedClause(input.advancedFilter);
   const whereClause = and(searchClause, branchClause, filterClause);
 
@@ -117,9 +141,14 @@ export const listBranches = async (input: ListBranchesInput) => {
         ownerFirstName: owner.firstName,
         ownerLastName: owner.lastName,
         ownerEmail: owner.email,
+        ciId: ci.id,
+        ciNumber: ci.ciNumber,
+        ciValidFrom: ci.validFrom,
+        ciValidTo: ci.validTo,
       })
       .from(branch)
       .leftJoin(owner, eq(owner.id, branch.ownerId))
+      .leftJoin(ci, eq(ci.id, branch.ciId))
       .where(whereClause)
       .orderBy(direction(orderColumn))
       .limit(input.limit)
@@ -150,6 +179,7 @@ export const createBranch = async (input: NewBranchInput) => {
       name: input.name,
       contact: input.contact ?? null,
       ownerId: input.ownerId ?? null,
+      ciId: input.ciId ?? null,
     });
 
     if (input.ownerId) {
@@ -203,6 +233,10 @@ export const updateBranch = async (branchId: string, input: UpdateBranchInput) =
           .where(eq(users.id, newOwnerId));
       }
       updatePayload.ownerId = newOwnerId;
+    }
+
+    if (input.ciId !== undefined) {
+      updatePayload.ciId = input.ciId;
     }
 
     await tx

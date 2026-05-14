@@ -14,12 +14,13 @@ const createBranch = async (event: CreateBranchEvent): Promise<MessageResponse> 
   const ctx = await loadAuthContext(userId);
   assertPermission(ctx, "branches", "add");
 
-  const { name, owner, contact } = event.body;
+  const { name, owner, contact, ciId } = event.body;
 
   await createBranchRecord({
     name,
     ownerId: owner,
     contact: contact,
+    ciId,
   });
 
   return { message: "Branch created successfully" };

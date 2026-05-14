@@ -43,6 +43,7 @@ export * from "./branch/index.js";
 export * from "./broker-request/index.js";
 export * from "./carrier/index.js";
 export * from "./carrier-request/index.js";
+export * from "./community-license/index.js";
 export * from "./file/index.js";
 export * from "./load/index.js";
 export * from "./office-expense-payment-order/index.js";

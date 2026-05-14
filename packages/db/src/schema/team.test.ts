@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 import { PERMISSION_REGISTRY } from "./team.js";
 
 describe("PERMISSION_REGISTRY", () => {
-  it("covers all 13 entities", () => {
-    expect(Object.keys(PERMISSION_REGISTRY)).toHaveLength(13);
+  it("covers all 14 entities", () => {
+    expect(Object.keys(PERMISSION_REGISTRY)).toHaveLength(14);
+  });
+
+  it("settings is in the registry", () => {
+    expect(Object.keys(PERMISSION_REGISTRY)).toContain("settings");
+    expect(PERMISSION_REGISTRY.settings.actions).toEqual(["add", "view", "edit", "delete"]);
   });
 
   it("loads has transitions", () => {

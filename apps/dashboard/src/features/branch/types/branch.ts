@@ -1,3 +1,10 @@
+export interface BranchCI {
+  id: string;
+  ciNumber: string;
+  validFrom: string;
+  validTo: string | null;
+}
+
 export interface Branch {
   id: string;
   name: string;
@@ -8,6 +15,7 @@ export interface Branch {
     lastName: string;
     email: string;
   } | null;
+  ci: BranchCI | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -16,6 +24,7 @@ export interface BranchFormData {
   name: string;
   owner?: string | null;
   contact?: string;
+  ciId?: string | null;
 }
 
 export interface UpdateBranchRequest {
@@ -23,6 +32,7 @@ export interface UpdateBranchRequest {
   name?: string;
   contact?: string | null;
   owner?: string | null;
+  ciId?: string | null;
 }
 
 export interface GetBranchesParams {

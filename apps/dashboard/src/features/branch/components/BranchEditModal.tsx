@@ -2,6 +2,7 @@ import { useRequest } from "ahooks";
 import { App, Button, Form, Input, Modal, Select, Space } from "antd";
 import type React from "react";
 import { LabeledOption } from "@/components/LabeledOption";
+import CIAutocomplete from "@/features/community-license/components/CIAutocomplete";
 import type { User } from "@/features/user/types/user";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { updateBranch } from "../api/branchApi";
@@ -36,6 +37,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
         name: values.name,
         contact: values.contact || undefined,
         owner: values.owner,
+        ciId: values.ciId,
       });
     },
     {
@@ -67,6 +69,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
           name: branch.name,
           contact: branch.contact || undefined,
           owner: branch.owner?.id,
+          ciId: branch.ci?.id,
         }}
       >
         <Form.Item
@@ -89,6 +92,10 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
             placeholder="Enter contact information (phone, email, address, etc.)"
             rows={3}
           />
+        </Form.Item>
+
+        <Form.Item name="ciId" label="Community License">
+          <CIAutocomplete placeholder="Search by CI number" />
         </Form.Item>
 
         <Form.Item name="owner" label="Branch Owner">
