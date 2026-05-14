@@ -1,4 +1,4 @@
-import { branch, db, type NewUser, type OrderDirection, team, users } from "@twy/db";
+import { branch, db, file, type NewUser, type OrderDirection, team, users } from "@twy/db";
 import type { SQL } from "drizzle-orm";
 import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import createError from "http-errors";
@@ -26,6 +26,7 @@ interface UserDetailsRow {
   branchName: string | null;
   teamId: string | null;
   teamName: string | null;
+  profilePictureFileId: string | null;
   createdAt: Date | null;
 }
 
@@ -37,6 +38,7 @@ const mapUserDetails = (row: UserDetailsRow) => ({
   branch: row.branchId ? { id: row.branchId, name: row.branchName } : null,
   teamId: row.teamId ?? null,
   teamName: row.teamName ?? null,
+  profilePictureFileId: row.profilePictureFileId ?? null,
   createdAt: row.createdAt ? row.createdAt.toISOString() : null,
 });
 
@@ -80,6 +82,7 @@ export const getFullUserInfoById = async (userId: string) => {
       branchName: branch.name,
       teamId: users.teamId,
       teamName: team.name,
+      profilePictureFileId: users.profilePictureFileId,
       createdAt: users.createdAt,
     })
     .from(users)
@@ -165,6 +168,7 @@ export const listUsers = async (input: ListUsersInput) => {
         branchName: branch.name,
         teamId: users.teamId,
         teamName: team.name,
+        profilePictureFileId: users.profilePictureFileId,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -273,6 +277,7 @@ export const deleteUser = async (userId: string): Promise<boolean> => {
 export interface SelfUpdateUserInput {
   firstName?: string;
   lastName?: string;
+  profilePictureFileId?: string | null;
 }
 
 export const updateSelfUser = async (
@@ -293,6 +298,20 @@ export const updateSelfUser = async (
 
   if (typeof input.lastName !== "undefined") {
     updatePayload.lastName = input.lastName;
+  }
+
+  if (Object.hasOwn(input, "profilePictureFileId")) {
+    const fileId = input.profilePictureFileId ?? null;
+    if (fileId !== null) {
+      const [fileRow] = await db
+        .select({ id: file.id })
+        .from(file)
+        .where(and(eq(file.id, fileId), eq(file.createdBy, userId)));
+      if (!fileRow) {
+        throw new createError.NotFound("Profile picture file not found");
+      }
+    }
+    updatePayload.profilePictureFileId = fileId;
   }
 
   if (Object.keys(updatePayload).length > 0) {

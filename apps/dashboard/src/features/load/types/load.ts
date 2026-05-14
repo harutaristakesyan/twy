@@ -88,6 +88,7 @@ export interface LoadComment {
   loadId: string;
   userId: string | null;
   authorName: string | null;
+  authorProfilePictureFileId: string | null;
   commentType: LoadCommentType;
   body: string;
   createdAt: string;

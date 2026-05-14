@@ -1,20 +1,8 @@
 import { CommentOutlined, PlusOutlined, SendOutlined } from "@ant-design/icons";
 import { useRequest } from "ahooks";
-import {
-  App,
-  Avatar,
-  Button,
-  Empty,
-  Flex,
-  Form,
-  Input,
-  Modal,
-  Spin,
-  Tag,
-  Typography,
-  theme,
-} from "antd";
+import { App, Button, Empty, Flex, Form, Input, Modal, Spin, Tag, Typography, theme } from "antd";
 import { useEffect, useRef, useState } from "react";
+import { UserAvatar } from "@/components/UserAvatar";
 import { loadApi } from "@/features/load/api/loadApi";
 import type { LoadComment, LoadCommentType } from "@/features/load/types/load";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -52,35 +40,19 @@ const formatDate = (iso: string): string => {
   });
 };
 
-const initialsFromName = (name: string | null): string => {
-  if (!name?.trim()) return "?";
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
-
-const avatarColorForName = (name: string | null): string => {
-  const palette = ["#1677ff", "#722ed1", "#13c2c2", "#eb2f96", "#fa8c16", "#52c41a"];
-  if (!name?.trim()) return palette[0];
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h + name.charCodeAt(i) * (i + 1)) % palette.length;
-  return palette[h] ?? palette[0];
-};
-
 const CommentItem = ({ comment }: { comment: LoadComment }) => {
   const { token } = theme.useToken();
   const author = comment.authorName ?? "Unknown";
   return (
     <Flex gap={12} align="flex-start">
-      <Avatar
-        size={40}
-        style={{
-          backgroundColor: avatarColorForName(comment.authorName),
-          flexShrink: 0,
-        }}
-      >
-        {initialsFromName(comment.authorName)}
-      </Avatar>
+      <div style={{ flexShrink: 0 }}>
+        <UserAvatar
+          fullName={author}
+          showName={false}
+          pictureFileId={comment.authorProfilePictureFileId}
+          size={40}
+        />
+      </div>
       <Flex vertical gap={6} style={{ minWidth: 0, flex: 1 }}>
         <Flex wrap="wrap" align="center" gap={8}>
           <Typography.Text strong style={{ fontSize: 13 }}>
