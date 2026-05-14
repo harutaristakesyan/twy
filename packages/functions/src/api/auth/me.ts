@@ -25,6 +25,7 @@ interface MeResponse {
     lastName: string | null;
     isActive: boolean;
     branch: UserBranchResponse | null;
+    profilePictureFileId: string | null;
   };
   team: Pick<TeamResponse, "id" | "name" | "branchRestricted" | "onlyOwnData"> | null;
   permissions: PermissionsMap;
@@ -58,6 +59,7 @@ const getMe = async (event: MeEvent): Promise<MeResponse> => {
       lastName: profile.lastName,
       isActive: profile.isActive,
       branch: profile.branch,
+      profilePictureFileId: profile.profilePictureFileId,
     },
     team,
     permissions: ctx.permissions,

@@ -11,6 +11,7 @@ export const useCurrentUser = () => {
         lastName: authMe.user.lastName,
         isActive: authMe.user.isActive,
         branch: authMe.user.branch,
+        profilePictureFileId: authMe.user.profilePictureFileId,
       }
     : null;
 

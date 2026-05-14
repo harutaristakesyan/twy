@@ -35,6 +35,7 @@ export interface UpdateUserRequest {
 export interface SelfUpdateRequest {
   firstName?: string;
   lastName?: string;
+  profilePictureFileId?: string | null;
 }
 
 export interface GetUsersParams {

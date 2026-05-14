@@ -1,5 +1,6 @@
 import { type AnyPgColumn, boolean, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { branch } from "./branch.js";
+import { file } from "./file.js";
 import { team } from "./team.js";
 
 export const users = pgTable("users", {
@@ -12,6 +13,7 @@ export const users = pgTable("users", {
   branch: uuid().references(() => branch.id, { onDelete: "set null" }),
   teamId: uuid().references(() => team.id, { onDelete: "set null" }),
   createdBy: uuid().references((): AnyPgColumn => users.id, { onDelete: "restrict" }),
+  profilePictureFileId: uuid().references((): AnyPgColumn => file.id, { onDelete: "set null" }),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });

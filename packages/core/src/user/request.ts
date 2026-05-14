@@ -77,6 +77,7 @@ const SelfUpdateUserPayloadSchema = z
   .object({
     firstName: z.string().trim().min(1, "First name is required").optional(),
     lastName: z.string().trim().min(1, "Last name is required").optional(),
+    profilePictureFileId: z.uuid("profilePictureFileId must be a valid UUID").nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided to update the user",

@@ -45,6 +45,7 @@ export interface AuthMe {
     lastName: string | null;
     isActive: boolean;
     branch: { id: string; name: string | null } | null;
+    profilePictureFileId: string | null;
   };
   team: { id: string; name: string; branchRestricted: boolean; onlyOwnData: boolean } | null;
   permissions: PermissionsMap;

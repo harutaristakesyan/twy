@@ -1,13 +1,12 @@
 import {
+  CameraOutlined,
   CloseOutlined,
   EditOutlined,
   LockOutlined,
   SaveOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
-  Avatar,
   Button,
   Card,
   Col,
@@ -17,17 +16,23 @@ import {
   message,
   Row,
   Space,
+  Spin,
+  Tooltip,
   Typography,
 } from "antd";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/utils/errorUtils";
-import { selfUpdateUser } from "../api/userApi";
+import { selfUpdateUser, uploadProfilePicture } from "../api/userApi";
 import type { SelfUpdateRequest } from "../types/user";
 import ChangePasswordModal from "./ChangePasswordModal";
 
 const { Title, Text } = Typography;
+
+const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
+const ACCEPTED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const UserSelfUpdate: React.FC = () => {
   const [form] = Form.useForm();
@@ -35,6 +40,8 @@ const UserSelfUpdate: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -64,15 +71,115 @@ const UserSelfUpdate: React.FC = () => {
     setIsEditing(false);
   };
 
+  const handleAvatarClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!ACCEPTED_AVATAR_TYPES.includes(file.type)) {
+        message.error("Only JPEG, PNG, and WebP images are supported");
+        return;
+      }
+      if (file.size > MAX_AVATAR_SIZE_BYTES) {
+        message.error("Image must be smaller than 5 MB");
+        return;
+      }
+
+      setUploadingAvatar(true);
+      try {
+        await uploadProfilePicture(file);
+        await refetch();
+        message.success("Profile picture updated");
+      } catch (error) {
+        message.error(getErrorMessage(error));
+      } finally {
+        setUploadingAvatar(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    },
+    [refetch],
+  );
+
   if (!user) {
     return <Card loading={userLoading} />;
   }
+
+  const pictureFileId = user.profilePictureFileId;
 
   return (
     <Card>
       <Row gutter={24} align="middle">
         <Col>
-          <Avatar size={64} icon={<UserOutlined />} />
+          <Tooltip title="Click to change profile picture">
+            <button
+              type="button"
+              style={{
+                position: "relative",
+                display: "inline-block",
+                cursor: "pointer",
+                background: "none",
+                border: "none",
+                padding: 0,
+              }}
+              onClick={handleAvatarClick}
+            >
+              {uploadingAvatar ? (
+                <div
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#f0f0f0",
+                  }}
+                >
+                  <Spin size="small" />
+                </div>
+              ) : (
+                <UserAvatar
+                  firstName={user.firstName ?? undefined}
+                  lastName={user.lastName ?? undefined}
+                  showName={false}
+                  pictureFileId={pictureFileId}
+                  size={64}
+                />
+              )}
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  right: 0,
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  background: "#1677ff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontSize: 11,
+                  border: "2px solid #fff",
+                }}
+              >
+                <CameraOutlined />
+              </div>
+            </button>
+          </Tooltip>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED_AVATAR_TYPES.join(",")}
+            style={{ display: "none" }}
+            onChange={handleFileChange}
+          />
         </Col>
         <Col flex={1}>
           <Title level={4} style={{ margin: 0 }}>

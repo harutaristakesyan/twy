@@ -2,13 +2,13 @@ import { DownOutlined, LogoutOutlined, UserOutlined } from "@ant-design/icons";
 import { Dropdown, Flex, type MenuProps } from "antd";
 import { useNavigate } from "react-router-dom";
 import { UserAvatar } from "@/components/UserAvatar.tsx";
+import { useCurrentUser } from "@/hooks/useCurrentUser.ts";
 import { useAuth } from "@/providers/AuthProvider.tsx";
-import { decodeIdTokenToken } from "@/utils/jwt.ts";
 
 const UserDropdown = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const user = decodeIdTokenToken();
+  const { user } = useCurrentUser();
 
   const menuItems: MenuProps["items"] = [
     {
@@ -30,7 +30,11 @@ const UserDropdown = () => {
   return (
     <Dropdown menu={{ items: menuItems }} trigger={["click"]} placement="bottomRight">
       <Flex justify="space-between" align="center" style={{ cursor: "pointer" }}>
-        <UserAvatar firstName={user?.given_name} lastName={user?.family_name} />
+        <UserAvatar
+          firstName={user?.firstName ?? undefined}
+          lastName={user?.lastName ?? undefined}
+          pictureFileId={user?.profilePictureFileId}
+        />
         <DownOutlined style={{ marginLeft: 6, fontSize: 12 }} />
       </Flex>
     </Dropdown>

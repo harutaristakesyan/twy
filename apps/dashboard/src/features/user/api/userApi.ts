@@ -1,4 +1,5 @@
 import type { MessageDto } from "@/config/apiMessages.ts";
+import { filesApi } from "@/features/files/api/filesApi";
 import ApiClient from "@/libs/ApiClient.ts";
 import type { ApiResponse } from "@/libs/api-types.ts";
 import type {
@@ -61,4 +62,9 @@ export const changePassword = async (data: { currentPassword: string; newPasswor
     data,
   );
   return response.data;
+};
+
+export const uploadProfilePicture = async (file: File): Promise<void> => {
+  const fileId = await filesApi.uploadFile(file);
+  await selfUpdateUser({ profilePictureFileId: fileId });
 };
