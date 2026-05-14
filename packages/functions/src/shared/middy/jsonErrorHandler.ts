@@ -28,12 +28,15 @@ export const jsonErrorHandler = (): MiddlewareObj => ({
         response = { message: error.message, ...extras };
       }
     } else {
-      const message = error instanceof Error ? error.message : "Internal server error";
+      const cause = error instanceof Error ? (error as Error & { cause?: unknown }).cause : error;
+      const causeMessage = cause instanceof Error ? cause.message : undefined;
+      const message =
+        causeMessage ?? (error instanceof Error ? error.message : "Internal server error");
       response = { message };
       console.error({
         name: error instanceof Error ? error.name : typeof error,
         message: error instanceof Error ? error.message : String(error),
-        cause: error instanceof Error ? (error as Error & { cause?: unknown }).cause : error,
+        cause,
       });
     }
 

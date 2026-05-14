@@ -447,6 +447,17 @@ export const createLoad = async (input: CreateLoadInput): Promise<string> =>
   db.transaction(async (tx) => {
     await ensureBranchExists(tx, input.branchId);
 
+    const [existingRef] = await tx
+      .select({ id: load.id })
+      .from(load)
+      .where(eq(load.referenceNumber, input.referenceNumber));
+
+    if (existingRef) {
+      throw new createError.Conflict(
+        `A load with reference number "${input.referenceNumber}" already exists`,
+      );
+    }
+
     const fileIds = input.files ? await ensureFilesPersisted(tx, input.files) : [];
 
     const loadId = randomUUID();

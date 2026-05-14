@@ -41,7 +41,7 @@ export const paymentOrder = pgTable(
     brokerReceivable: numeric({ precision: 10, scale: 2 }),
     carrierPayable: numeric({ precision: 10, scale: 2 }).notNull(),
     serviceFee: numeric({ precision: 10, scale: 2 }).notNull().default("30.00"),
-    incomePercentage: numeric({ precision: 5, scale: 2 }),
+    incomePercentage: numeric({ precision: 8, scale: 2 }),
     charges: numeric({ precision: 10, scale: 2 }),
     profit: numeric({ precision: 10, scale: 2 }),
 
