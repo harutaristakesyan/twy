@@ -36,6 +36,15 @@ export class FinancialsLockedError extends Error {
   }
 }
 
+export class LoadEditBlockedByStatusError extends Error {
+  readonly code = "LOAD_EDIT_BLOCKED_BY_STATUS" as const;
+
+  constructor(readonly loadStatus: Extract<LoadStatus, "Delivered" | "Declined">) {
+    super(`Load cannot be edited while in ${loadStatus} status`);
+    this.name = "LoadEditBlockedByStatusError";
+  }
+}
+
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Tx;
 
@@ -504,12 +513,16 @@ const FINANCIAL_FIELDS = ["customerRate", "carrierRate"] as const;
 export const updateLoad = async (loadId: string, input: UpdateLoad): Promise<boolean> =>
   db.transaction(async (tx) => {
     const [existing] = await tx
-      .select({ id: load.id, financialsLockedAt: load.financialsLockedAt })
+      .select({ id: load.id, status: load.status, financialsLockedAt: load.financialsLockedAt })
       .from(load)
       .where(eq(load.id, loadId));
 
     if (!existing) {
       return false;
+    }
+
+    if (existing.status === "Delivered" || existing.status === "Declined") {
+      throw new LoadEditBlockedByStatusError(existing.status);
     }
 
     if (existing.financialsLockedAt !== null) {

@@ -3,6 +3,7 @@ import type { MessageResponse } from "@twy/core";
 import {
   assertPermission,
   FinancialsLockedError,
+  LoadEditBlockedByStatusError,
   type LoadFileInput,
   loadAuthContext,
   type UpdateLoad,
@@ -34,6 +35,12 @@ const updateLoad = async (event: UpdateLoadEvent): Promise<MessageResponse> => {
   try {
     updated = await updateLoadRecord(loadId, payload);
   } catch (err) {
+    if (err instanceof LoadEditBlockedByStatusError) {
+      throw Object.assign(new createError.Conflict(err.message), {
+        code: err.code,
+        loadStatus: err.loadStatus,
+      });
+    }
     if (err instanceof FinancialsLockedError) throw new createError.Conflict(err.message);
     throw err;
   }

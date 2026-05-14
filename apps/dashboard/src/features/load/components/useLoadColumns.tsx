@@ -235,6 +235,14 @@ export function useLoadColumns(
       width: 100,
       align: "center" as const,
       render: (_: unknown, record: Load) => {
+        const canEditNow = canEdit && record.status !== "Delivered" && record.status !== "Declined";
+        const canChangeStatusNow = canEdit && record.status !== "Declined";
+
+        const editTooltip =
+          record.status === "Declined"
+            ? "Declined loads cannot be edited."
+            : "Move this load back to Hold to edit it.";
+
         const items: MenuProps["items"] = [
           {
             key: "comments",
@@ -249,13 +257,25 @@ export function useLoadColumns(
                   key: "approve",
                   icon: <CheckCircleOutlined />,
                   label: "Change Status",
-                  onClick: () => openStatusUpdate({ load: record }, () => refresh()),
+                  onClick: () => {
+                    if (!canChangeStatusNow) {
+                      void message.info("Declined loads cannot have their status changed.");
+                      return;
+                    }
+                    openStatusUpdate({ load: record }, () => refresh());
+                  },
                 },
                 {
                   key: "edit",
                   icon: <EditOutlined />,
                   label: "Edit",
-                  onClick: () => openLoadEdit({ load: record }, () => refresh()),
+                  onClick: () => {
+                    if (!canEditNow) {
+                      void message.info(editTooltip);
+                      return;
+                    }
+                    openLoadEdit({ load: record }, () => refresh());
+                  },
                 },
                 { type: "divider" as const },
                 {
