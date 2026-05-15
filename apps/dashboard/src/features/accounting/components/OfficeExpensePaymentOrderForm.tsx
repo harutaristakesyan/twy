@@ -28,7 +28,7 @@ import {
 
 const { TextArea } = Input;
 
-const CURRENCY_SYMBOL: Record<Currency, string> = { USD: "$", EUR: "€" };
+const CURRENCY_SYMBOL: Record<Currency, string> = { USD: "$", EUR: "€", AMD: "֏" };
 
 export interface OfficeExpenseFormValues {
   serviceName: OfficeExpenseService;

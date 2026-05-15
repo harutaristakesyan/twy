@@ -20,7 +20,7 @@ export default function LoadPaymentOrdersTab() {
   const [activeQuery, setActiveQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const canCreate = usePermission("load_payment_order", "add");
-  const { selectedOrder, open, mode, openModal, closeModal } = usePaymentOrderModal();
+  const { selectedOrder, open, mode, openModal, closeModal, openKey } = usePaymentOrderModal();
 
   const { data: branchesData } = useRequest(() => getBranches({ limit: 200 }), {
     cacheKey: "branches-for-filter",
@@ -95,6 +95,7 @@ export default function LoadPaymentOrdersTab() {
       />
 
       <UpdatePaymentStatusModal
+        key={openKey}
         paymentOrder={selectedOrder}
         open={open}
         mode={mode}
