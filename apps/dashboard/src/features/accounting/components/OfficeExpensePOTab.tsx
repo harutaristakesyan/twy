@@ -40,6 +40,7 @@ export default function OfficeExpensePOTab() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState<OfficeExpensePaymentOrder | null>(null);
   const [detailMode, setDetailMode] = useState<"view" | "edit">("view");
+  const [detailOpenKey, setDetailOpenKey] = useState(0);
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
   const [activeQuery, setActiveQuery] = useState("");
 
@@ -47,6 +48,7 @@ export default function OfficeExpensePOTab() {
     setDetailOrder(record);
     setDetailMode(mode);
     setDetailOpen(true);
+    setDetailOpenKey((k: number) => k + 1);
   }, []);
 
   const closeDetail = useCallback(() => {
@@ -119,6 +121,7 @@ export default function OfficeExpensePOTab() {
       />
 
       <OfficeExpensePaymentOrderDetailModal
+        key={detailOpenKey}
         order={detailOrder}
         open={detailOpen}
         mode={detailMode}
