@@ -1,4 +1,4 @@
-import { loadStatusValues } from "@twy/db";
+import { chargeSideValues, loadStatusValues } from "@twy/db";
 import z from "zod";
 import { filtersQueryParamSchema } from "../shared/advanced-filter-schema.js";
 import { AuthContext } from "../shared/auth.js";
@@ -121,17 +121,29 @@ export const UpdateLoadEventSchema = z.object({
 
 export type UpdateLoadEvent = z.infer<typeof UpdateLoadEventSchema>;
 
+const chargeSideEnum = z.enum([...chargeSideValues] as [
+  (typeof chargeSideValues)[number],
+  ...(typeof chargeSideValues)[number][],
+]);
+
 export const ChangeLoadStatusEventSchema = z.object({
   requestContext: AuthContext,
   pathParameters: z.object({
     loadId: uuidField,
   }),
-  body: z.object({
-    status: loadStatusEnum,
-    isChargable: z.boolean().optional().default(false),
-    chargeAmount: z.number().nonnegative().nullable().optional(),
-    comment: z.string().trim().min(1).max(500).optional(),
-  }),
+  body: z
+    .object({
+      status: loadStatusEnum,
+      isChargable: z.boolean().optional().default(false),
+      chargeAmount: z.number().nonnegative().nullable().optional(),
+      chargeSide: chargeSideEnum.nullable().optional(),
+      fileIds: z.array(uuidField).max(10).optional(),
+      comment: z.string().trim().min(1).max(500).optional(),
+    })
+    .refine((b) => !b.isChargable || b.status === "Delivered", {
+      message: "isChargable is only valid when transitioning to Delivered",
+      path: ["isChargable"],
+    }),
 });
 
 export type ChangeLoadStatusEvent = z.infer<typeof ChangeLoadStatusEventSchema>;

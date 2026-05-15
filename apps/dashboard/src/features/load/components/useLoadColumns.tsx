@@ -15,6 +15,7 @@ import { getErrorMessage } from "@/utils/errorUtils";
 import { formatCurrency } from "@/utils/formatters";
 import { useLoadModal } from "../providers/LoadModalProvider";
 import type { Load, Location } from "../types/load";
+import ChargeSideTag from "./ChargeSideTag";
 
 /** API list row during transition if cached JSON still has singular `pickup` / `dropoff`. */
 type LoadListRow = Load & { pickup?: Location; dropoff?: Location };
@@ -136,6 +137,13 @@ export function useLoadColumns(
       width: 110,
       render: (value: number | null, record: Load) =>
         record.isChargable && value != null ? formatCurrency(value) : "—",
+    },
+    {
+      title: "Charge Side",
+      dataIndex: "chargeSide",
+      key: "chargeSide",
+      width: 120,
+      render: (value: Load["chargeSide"]) => <ChargeSideTag value={value} />,
     },
     {
       title: "Payment Method",
