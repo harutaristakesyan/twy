@@ -8,10 +8,13 @@ import {
   Input,
   InputNumber,
   Modal,
+  Radio,
   Select,
   Space,
   Tag,
 } from "antd";
+import { useRef } from "react";
+import { FileUploader, type FileUploaderHandle } from "@/features/files";
 import { loadApi } from "@/features/load/api/loadApi";
 import type { Load, LoadStatus } from "@/features/load/types/load";
 import { getAllowedTransitions } from "@/features/load/utils/statusMachine";
@@ -29,6 +32,7 @@ interface StatusFormValues {
   status: LoadStatus;
   isChargable: boolean;
   chargeAmount: number | null;
+  chargeSide: "broker" | "carrier" | null;
   comment: string | undefined;
 }
 
@@ -43,7 +47,7 @@ const statusColors: Record<LoadStatus, string> = {
 const commentLabel = (status: LoadStatus | undefined, chargable: boolean): string | null => {
   if (status === "Hold") return "Hold Reason";
   if (status === "Declined") return "Decline Reason";
-  if (status === "Approved" && chargable) return "Charge Reason";
+  if (status === "Delivered" && chargable) return "Charge Reason";
   return null;
 };
 
@@ -53,24 +57,30 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
   const selectedStatus = Form.useWatch("status", form);
   const isChargable = Form.useWatch("isChargable", form);
   const { permissions } = useCurrentUser();
+  const uploaderRef = useRef<FileUploaderHandle>(null);
 
   const { loading, run: submit } = useRequest(
     async (
       status: LoadStatus,
       chargable: boolean,
       chargeAmount: number | null,
+      chargeSide: "broker" | "carrier" | null,
+      fileIds: string[],
       comment: string | undefined,
     ) => {
       await loadApi.changeStatus(load?.id ?? "", {
         status,
         isChargable: chargable,
         chargeAmount: chargable ? chargeAmount : null,
+        chargeSide: chargable ? chargeSide : null,
+        fileIds: fileIds.length > 0 ? fileIds : undefined,
         comment,
       });
     },
     {
       manual: true,
       onSuccess: () => {
+        uploaderRef.current?.commit();
         antMessage.success("Load status updated successfully");
         onSuccess();
       },
@@ -87,16 +97,26 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
       if ((e as { errorFields?: unknown }).errorFields) return;
       throw e;
     }
-    const { status, isChargable: chargable, chargeAmount, comment } = values;
+    const { status, isChargable: chargable, chargeAmount, chargeSide, comment } = values;
+    const fileIds = uploaderRef.current?.fileIds ?? [];
     if (
       status === load.status &&
       (chargable ?? false) === (load.isChargable ?? false) &&
-      (chargeAmount ?? null) === (load.chargeAmount ?? null)
+      (chargeAmount ?? null) === (load.chargeAmount ?? null) &&
+      (chargeSide ?? null) === (load.chargeSide ?? null) &&
+      fileIds.length === 0
     ) {
       onCancel();
       return;
     }
-    submit(status, chargable ?? false, chargeAmount ?? null, comment?.trim() || undefined);
+    submit(
+      status,
+      chargable ?? false,
+      chargeAmount ?? null,
+      chargeSide ?? null,
+      fileIds,
+      comment?.trim() || undefined,
+    );
   };
 
   if (!load) return null;
@@ -145,26 +165,29 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
             status: load.status,
             isChargable: load.isChargable ?? false,
             chargeAmount: load.chargeAmount ?? null,
+            chargeSide: load.chargeSide ?? null,
           }}
         >
           <Form.Item name="status" label="New Status">
             <Select
               options={statusOptions}
               onChange={(v) => {
-                if (v !== "Approved") {
-                  form.setFieldsValue({ isChargable: false, chargeAmount: null });
+                if (v !== "Delivered") {
+                  form.setFieldsValue({ isChargable: false, chargeAmount: null, chargeSide: null });
                 }
                 form.resetFields(["comment"]);
               }}
             />
           </Form.Item>
 
-          {selectedStatus === "Approved" && (
+          {selectedStatus === "Delivered" && (
             <>
               <Form.Item name="isChargable" valuePropName="checked">
                 <Checkbox
                   onChange={(e) => {
-                    if (!e.target.checked) form.resetFields(["chargeAmount"]);
+                    if (!e.target.checked) {
+                      form.setFieldsValue({ chargeAmount: null, chargeSide: null });
+                    }
                     form.resetFields(["comment"]);
                   }}
                 >
@@ -173,26 +196,45 @@ const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModa
               </Form.Item>
 
               {isChargable && (
-                <Form.Item
-                  name="chargeAmount"
-                  label="Charge Amount"
-                  rules={[
-                    {
-                      validator: (_, v) =>
-                        typeof v === "number" && v > 0
-                          ? Promise.resolve()
-                          : Promise.reject(new Error("Charge Amount must be greater than 0")),
-                    },
-                  ]}
-                >
-                  <InputNumber
-                    min={0.01}
-                    precision={2}
-                    prefix="€"
-                    style={{ width: "100%" }}
-                    placeholder="Enter charge amount"
-                  />
-                </Form.Item>
+                <>
+                  <Form.Item
+                    name="chargeSide"
+                    label="Charge Side"
+                    rules={[
+                      { required: true, message: "Please select Broker Side or Carrier Side" },
+                    ]}
+                  >
+                    <Radio.Group>
+                      <Radio value="broker">Broker Side</Radio>
+                      <Radio value="carrier">Carrier Side</Radio>
+                    </Radio.Group>
+                  </Form.Item>
+
+                  <Form.Item
+                    name="chargeAmount"
+                    label="Charge Amount"
+                    rules={[
+                      {
+                        validator: (_, v) =>
+                          typeof v === "number" && v > 0
+                            ? Promise.resolve()
+                            : Promise.reject(new Error("Charge Amount must be greater than 0")),
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      min={0.01}
+                      precision={2}
+                      prefix="€"
+                      style={{ width: "100%" }}
+                      placeholder="Enter charge amount"
+                    />
+                  </Form.Item>
+
+                  <Form.Item label="Documents">
+                    <FileUploader ref={uploaderRef} max={5} disabled={loading} />
+                  </Form.Item>
+                </>
               )}
             </>
           )}

@@ -1,6 +1,7 @@
 import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import { Button, Space, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import ChargeSideTag from "@/features/load/components/ChargeSideTag";
 import { renderCurrency, renderDate } from "@/utils/formatters";
 import type { PaymentOrder } from "../types/paymentOrder";
 import PaymentStatusTag from "./PaymentStatusTag";
@@ -59,6 +60,13 @@ export function useLoadPaymentOrderColumns(
       key: "charges",
       width: 110,
       render: renderCurrency,
+    },
+    {
+      title: "Charge Side",
+      dataIndex: "chargeSide",
+      key: "chargeSide",
+      width: 120,
+      render: (value: PaymentOrder["chargeSide"]) => <ChargeSideTag value={value} />,
     },
     {
       title: "Profit",

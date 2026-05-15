@@ -18,6 +18,7 @@ export interface PaymentOrderResponse {
   serviceFee: number;
   incomePercentage: number | null;
   charges: number | null;
+  chargeSide: "broker" | "carrier" | null;
   profit: number | null;
   carrierPaidAmount: number | null;
   carrierPaidDate: string | null;

@@ -2,6 +2,7 @@ import { middyfy } from "@shared/index";
 import type { ChangeLoadStatusResponse } from "@twy/core";
 import {
   assertTransition,
+  buildScope,
   type ChangeLoadStatusEvent,
   ChangeLoadStatusEventSchema,
   changeLoadStatus as changeLoadStatusRecord,
@@ -13,16 +14,24 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import createError from "http-errors";
 
 const requiresComment = (status: string, isChargable: boolean): boolean =>
-  status === "Hold" || status === "Declined" || (status === "Approved" && isChargable);
+  status === "Hold" || status === "Declined" || (status === "Delivered" && isChargable);
 
 const changeLoadStatus = async (
   event: ChangeLoadStatusEvent,
 ): Promise<ChangeLoadStatusResponse> => {
   const changedBy = event.requestContext.authUser.userId;
   const ctx = await loadAuthContext(changedBy);
+  const scope = buildScope(ctx);
 
   const { loadId } = event.pathParameters;
-  const { status, isChargable = false, chargeAmount = null, comment } = event.body;
+  const {
+    status,
+    isChargable = false,
+    chargeAmount = null,
+    chargeSide = null,
+    fileIds,
+    comment,
+  } = event.body;
 
   assertTransition(ctx, "loads", status);
 
@@ -37,6 +46,9 @@ const changeLoadStatus = async (
       changedBy,
       isChargable,
       chargeAmount ?? null,
+      chargeSide ?? null,
+      scope,
+      fileIds,
       comment,
     );
 
