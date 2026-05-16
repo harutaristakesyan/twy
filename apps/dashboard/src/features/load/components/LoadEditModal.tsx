@@ -1,7 +1,10 @@
 import { Button, Modal, Spinner, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Controller, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
+import { z } from "zod";
+import { FormCheckbox, FormNumberInput, FormTextField } from "@/components/form";
 import CarrierAutocomplete from "@/features/carrier/components/CarrierAutocomplete";
 import type { FileUploaderHandle, FileUploaderValueItem } from "@/features/files";
 import { FileUploader, MAX_FILES_DEFAULT } from "@/features/files";
@@ -9,6 +12,7 @@ import { loadApi } from "@/features/load/api/loadApi";
 import { LoadStopsFormList } from "@/features/load/components/LoadStopsFormList";
 import type { Location, UpdateLoadDto } from "@/features/load/types/load";
 import BrokerAutocomplete from "@/features/outside-broker/components/BrokerAutocomplete";
+import { useZodForm } from "@/libs/form";
 import { useApiMutation, useApiQuery } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 
@@ -21,60 +25,77 @@ const STEPS = [
 ];
 const LAST_STEP = STEPS.length - 1;
 
-const toNumberOrNull = (value?: string, fieldName?: string): number | null | undefined => {
-  if (value === undefined) return undefined;
-  if (fieldName === "customerRate" || fieldName === "carrierRate") {
-    if (value === null || value === "")
-      throw new Error(
-        `${fieldName === "customerRate" ? "Customer Rate" : "Carrier Rate"} is required`,
-      );
-  } else {
-    if (value === null || value === "") return null;
-  }
-  const parsed = Number(value);
-  if (Number.isNaN(parsed)) {
-    if (fieldName === "customerRate" || fieldName === "carrierRate")
-      throw new Error(
-        `${fieldName === "customerRate" ? "Customer Rate" : "Carrier Rate"} must be a valid number`,
-      );
-    return null;
-  }
-  if ((fieldName === "customerRate" || fieldName === "carrierRate") && parsed <= 0)
-    throw new Error(
-      `${fieldName === "customerRate" ? "Customer Rate" : "Carrier Rate"} must be greater than 0`,
-    );
-  return parsed;
+const locationSchema = z.object({
+  cityZipCode: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  carrier: z.string().min(1, "Carrier is required"),
+  name: z.string().min(1, "Name is required"),
+  address: z.string().min(1, "Address is required"),
+});
+
+const schema = z.object({
+  customer: z.string().min(1, "Customer is required"),
+  referenceNumber: z.string().min(1, "Reference number is required"),
+  customerRate: z
+    .number({ invalid_type_error: "Customer rate is required" })
+    .positive("Customer rate must be greater than 0"),
+  contactName: z.string().min(1, "Contact name is required"),
+  paymentMethod: z.string().min(1, "Payment method is required"),
+  paymentTerms: z.string().min(1, "Payment terms is required"),
+  carrier: z.string().nullable().optional(),
+  carrierPaymentMethod: z.string().nullable().optional(),
+  carrierRate: z
+    .number({ invalid_type_error: "Carrier rate is required" })
+    .positive("Carrier rate must be greater than 0"),
+  chargeServiceFeeToOffice: z.boolean(),
+  loadType: z.string().min(1, "Load type is required"),
+  serviceType: z.string().min(1, "Service type is required"),
+  serviceGivenAs: z.string().min(1, "Service given as is required"),
+  commodity: z.string().min(1, "Commodity is required"),
+  bookedAs: z.string().min(1, "Booked as is required"),
+  soldAs: z.string().min(1, "Sold as is required"),
+  weight: z.string().min(1, "Weight is required"),
+  temperature: z.string().nullable().optional(),
+  pickups: z.array(locationSchema),
+  dropoffs: z.array(locationSchema),
+});
+
+type FormValues = z.infer<typeof schema>;
+
+const STEP_FIELDS: Record<number, (keyof FormValues)[]> = {
+  0: [
+    "customer",
+    "referenceNumber",
+    "customerRate",
+    "contactName",
+    "paymentMethod",
+    "paymentTerms",
+    "carrier",
+    "carrierPaymentMethod",
+    "carrierRate",
+  ],
+  1: [
+    "chargeServiceFeeToOffice",
+    "loadType",
+    "serviceType",
+    "serviceGivenAs",
+    "commodity",
+    "bookedAs",
+    "soldAs",
+    "weight",
+    "temperature",
+  ],
+  2: ["pickups"],
+  3: ["dropoffs"],
 };
 
-const toNullableString = (value?: string | null): string | null | undefined => {
-  if (value === undefined) return undefined;
-  if (value === null) return null;
-  const trimmed = value.trim();
-  return trimmed.length ? trimmed : null;
-};
-
-type FormState = {
-  customer: string;
-  referenceNumber: string;
-  customerRate: string;
-  contactName: string;
-  paymentMethod: string;
-  paymentTerms: string;
-  carrier: string;
-  carrierPaymentMethod: string;
-  carrierRate: string;
-  chargeServiceFeeToOffice: boolean;
-  loadType: string;
-  serviceType: string;
-  serviceGivenAs: string;
-  commodity: string;
-  bookedAs: string;
-  soldAs: string;
-  weight: string;
-  temperature: string;
-  pickups: Location[];
-  dropoffs: Location[];
-};
+const emptyStop = (): Location => ({
+  cityZipCode: null,
+  phone: null,
+  carrier: "",
+  name: "",
+  address: "",
+});
 
 const LoadEditModal = () => {
   const { loadId } = useParams<{ loadId: string }>();
@@ -97,16 +118,18 @@ const LoadEditModal = () => {
   const isBusy = uploaderItems.some((i) => i.status === "uploading");
 
   const [currentStep, setCurrentStep] = useState(0);
-  const [form, setForm] = useState<FormState>({
+  const [stepErrors, setStepErrors] = useState<string[]>([]);
+
+  const { control, handleSubmit, reset, trigger } = useZodForm<FormValues>(schema, {
     customer: "",
     referenceNumber: "",
-    customerRate: "",
+    customerRate: 0,
     contactName: "",
     paymentMethod: "",
     paymentTerms: "",
     carrier: "",
     carrierPaymentMethod: "",
-    carrierRate: "",
+    carrierRate: 0,
     chargeServiceFeeToOffice: false,
     loadType: "",
     serviceType: "",
@@ -116,57 +139,45 @@ const LoadEditModal = () => {
     soldAs: "",
     weight: "",
     temperature: "",
-    pickups: [{ carrier: "", name: "", address: "" }],
-    dropoffs: [{ carrier: "", name: "", address: "" }],
+    pickups: [emptyStop()],
+    dropoffs: [emptyStop()],
   });
-  const [stepErrors, setStepErrors] = useState<string[]>([]);
 
-  const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const validateStep = (step: number): string[] => {
-    const errs: string[] = [];
-    if (step === 0) {
-      if (!form.customer.trim()) errs.push("Customer is required");
-      if (!form.referenceNumber.trim()) errs.push("Reference number is required");
-      const cr = Number(form.customerRate);
-      if (!form.customerRate.trim() || Number.isNaN(cr) || cr <= 0)
-        errs.push("Customer rate must be greater than 0");
-      if (!form.contactName.trim()) errs.push("Contact name is required");
-      if (!form.paymentMethod.trim()) errs.push("Payment method is required");
-      if (!form.paymentTerms.trim()) errs.push("Payment terms is required");
-      const rr = Number(form.carrierRate);
-      if (!form.carrierRate.trim() || Number.isNaN(rr) || rr <= 0)
-        errs.push("Carrier rate must be greater than 0");
-    } else if (step === 1) {
-      if (!form.loadType.trim()) errs.push("Load type is required");
-      if (!form.serviceType.trim()) errs.push("Service type is required");
-      if (!form.serviceGivenAs.trim()) errs.push("Service given as is required");
-      if (!form.commodity.trim()) errs.push("Commodity is required");
-      if (!form.bookedAs.trim()) errs.push("Booked as is required");
-      if (!form.soldAs.trim()) errs.push("Sold as is required");
-      if (!form.weight.trim()) errs.push("Weight is required");
-    } else if (step === 2) {
-      form.pickups.forEach((p, i) => {
-        if (!p.carrier.trim()) errs.push(`Pickup ${i + 1}: carrier is required`);
-        if (!p.name.trim()) errs.push(`Pickup ${i + 1}: name is required`);
-        if (!p.address.trim()) errs.push(`Pickup ${i + 1}: address is required`);
-      });
-    } else if (step === 3) {
-      form.dropoffs.forEach((d, i) => {
-        if (!d.carrier.trim()) errs.push(`Dropoff ${i + 1}: carrier is required`);
-        if (!d.name.trim()) errs.push(`Dropoff ${i + 1}: name is required`);
-        if (!d.address.trim()) errs.push(`Dropoff ${i + 1}: address is required`);
+  useEffect(() => {
+    if (load) {
+      reset({
+        customer: load.customer,
+        referenceNumber: load.referenceNumber,
+        customerRate: load.customerRate ?? 0,
+        contactName: load.contactName,
+        paymentMethod: load.paymentMethod,
+        paymentTerms: load.paymentTerms,
+        carrier: load.carrier ?? "",
+        carrierPaymentMethod: load.carrierPaymentMethod ?? "",
+        carrierRate: load.carrierRate ?? 0,
+        chargeServiceFeeToOffice: load.chargeServiceFeeToOffice,
+        loadType: load.loadType,
+        serviceType: load.serviceType,
+        serviceGivenAs: load.serviceGivenAs,
+        commodity: load.commodity,
+        bookedAs: load.bookedAs,
+        soldAs: load.soldAs,
+        weight: load.weight,
+        temperature: load.temperature ?? "",
+        pickups: load.pickups.length > 0 ? load.pickups : [emptyStop()],
+        dropoffs: load.dropoffs.length > 0 ? load.dropoffs : [emptyStop()],
       });
     }
-    return errs;
-  };
+  }, [load, reset]);
 
-  const handleNext = () => {
-    const errs = validateStep(currentStep);
-    if (errs.length > 0) {
-      setStepErrors(errs);
+  const pickupsField = useFieldArray({ control, name: "pickups" });
+  const dropoffsField = useFieldArray({ control, name: "dropoffs" });
+
+  const handleNext = async () => {
+    const fields = STEP_FIELDS[currentStep];
+    const valid = fields ? await trigger(fields) : true;
+    if (!valid) {
+      setStepErrors(["Please fix the errors above before proceeding."]);
       return;
     }
     setStepErrors([]);
@@ -197,17 +208,11 @@ const LoadEditModal = () => {
     },
   );
 
-  const handleSubmit = () => {
+  const onSubmit = handleSubmit((values) => {
     if (isBusy) {
       toast.danger("Wait for files to finish uploading.");
       return;
     }
-    const errs = validateStep(currentStep);
-    if (errs.length > 0) {
-      setStepErrors(errs);
-      return;
-    }
-    setStepErrors([]);
     const filesPayload = uploaderItems
       .filter((i) => i.status === "done" && i.fileId)
       .map((i) => ({
@@ -215,46 +220,47 @@ const LoadEditModal = () => {
         fileName: i.name,
         documentCategory: null as string | null,
       }));
+    const toNull = (v: string | null | undefined): string | null | undefined => {
+      if (v === undefined) return undefined;
+      if (v === null) return null;
+      return v.trim().length ? v.trim() : null;
+    };
     mutation.mutate({
-      customer: form.customer,
-      referenceNumber: form.referenceNumber,
-      customerRate: toNumberOrNull(form.customerRate, "customerRate"),
-      contactName: form.contactName,
-      paymentMethod: form.paymentMethod,
-      paymentTerms: form.paymentTerms,
-      carrier: toNullableString(form.carrier),
-      carrierPaymentMethod: toNullableString(form.carrierPaymentMethod),
-      carrierRate: toNumberOrNull(form.carrierRate, "carrierRate"),
-      chargeServiceFeeToOffice: form.chargeServiceFeeToOffice,
-      loadType: form.loadType,
-      serviceType: form.serviceType,
-      serviceGivenAs: form.serviceGivenAs,
-      commodity: form.commodity,
-      bookedAs: form.bookedAs,
-      soldAs: form.soldAs,
-      weight: form.weight,
-      temperature: toNullableString(form.temperature),
-      pickups: form.pickups.map((p) => ({
-        cityZipCode: toNullableString(p.cityZipCode),
-        phone: toNullableString(p.phone),
+      customer: values.customer,
+      referenceNumber: values.referenceNumber,
+      customerRate: values.customerRate,
+      contactName: values.contactName,
+      paymentMethod: values.paymentMethod,
+      paymentTerms: values.paymentTerms,
+      carrier: toNull(values.carrier),
+      carrierPaymentMethod: toNull(values.carrierPaymentMethod),
+      carrierRate: values.carrierRate,
+      chargeServiceFeeToOffice: values.chargeServiceFeeToOffice,
+      loadType: values.loadType,
+      serviceType: values.serviceType,
+      serviceGivenAs: values.serviceGivenAs,
+      commodity: values.commodity,
+      bookedAs: values.bookedAs,
+      soldAs: values.soldAs,
+      weight: values.weight,
+      temperature: toNull(values.temperature),
+      pickups: values.pickups.map((p) => ({
+        cityZipCode: toNull(p.cityZipCode),
+        phone: toNull(p.phone),
         carrier: p.carrier,
         name: p.name,
         address: p.address,
       })),
-      dropoffs: form.dropoffs.map((d) => ({
-        cityZipCode: toNullableString(d.cityZipCode),
-        phone: toNullableString(d.phone),
+      dropoffs: values.dropoffs.map((d) => ({
+        cityZipCode: toNull(d.cityZipCode),
+        phone: toNull(d.phone),
         carrier: d.carrier,
         name: d.name,
         address: d.address,
       })),
       files: filesPayload,
     });
-  };
-
-  const fieldClass =
-    "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent";
-  const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+  });
 
   if (!load) {
     return (
@@ -283,31 +289,6 @@ const LoadEditModal = () => {
     );
   }
 
-  const initializedForm: FormState = {
-    customer: load.customer,
-    referenceNumber: load.referenceNumber,
-    customerRate: load.customerRate != null ? String(load.customerRate) : "",
-    contactName: load.contactName,
-    paymentMethod: load.paymentMethod,
-    paymentTerms: load.paymentTerms,
-    carrier: load.carrier ?? "",
-    carrierPaymentMethod: load.carrierPaymentMethod ?? "",
-    carrierRate: load.carrierRate != null ? String(load.carrierRate) : "",
-    chargeServiceFeeToOffice: load.chargeServiceFeeToOffice,
-    loadType: load.loadType,
-    serviceType: load.serviceType,
-    serviceGivenAs: load.serviceGivenAs,
-    commodity: load.commodity,
-    bookedAs: load.bookedAs,
-    soldAs: load.soldAs,
-    weight: load.weight,
-    temperature: load.temperature ?? "",
-    pickups: load.pickups.length > 0 ? load.pickups : [{ carrier: "", name: "", address: "" }],
-    dropoffs: load.dropoffs.length > 0 ? load.dropoffs : [{ carrier: "", name: "", address: "" }],
-  };
-
-  const activeForm = form.referenceNumber === "" ? initializedForm : form;
-
   const initialUploaderItems: FileUploaderValueItem[] = (load.files ?? []).map((f) => ({
     uid: f.id,
     name: f.fileName,
@@ -325,100 +306,57 @@ const LoadEditModal = () => {
             <p className="text-sm font-semibold text-gray-600 border-b pb-1">Customer</p>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className={labelClass}>Customer *</span>
-                <BrokerAutocomplete
-                  value={activeForm.customer}
-                  onChange={(_, name) => set("customer", name)}
-                  placeholder="Enter customer name"
+                <Controller
+                  name="customer"
+                  control={control}
+                  render={({ field }) => (
+                    <BrokerAutocomplete
+                      value={field.value}
+                      onChange={(_, name) => field.onChange(name)}
+                      placeholder="Enter customer name"
+                    />
+                  )}
                 />
               </div>
-              <div>
-                <label className={labelClass}>
-                  Reference Number *
-                  <input
-                    className={fieldClass}
-                    value={activeForm.referenceNumber}
-                    onChange={(e) => set("referenceNumber", e.target.value)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Customer Rate *
-                  <input
-                    type="number"
-                    className={fieldClass}
-                    value={activeForm.customerRate}
-                    onChange={(e) => set("customerRate", e.target.value)}
-                    min="0"
-                    step="0.01"
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Contact Name *
-                  <input
-                    className={fieldClass}
-                    value={activeForm.contactName}
-                    onChange={(e) => set("contactName", e.target.value)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Payment Method *
-                  <input
-                    className={fieldClass}
-                    value={activeForm.paymentMethod}
-                    onChange={(e) => set("paymentMethod", e.target.value)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Payment Terms *
-                  <input
-                    className={fieldClass}
-                    value={activeForm.paymentTerms}
-                    onChange={(e) => set("paymentTerms", e.target.value)}
-                  />
-                </label>
-              </div>
+              <FormTextField control={control} name="referenceNumber" label="Reference Number *" />
+              <FormNumberInput
+                control={control}
+                name="customerRate"
+                label="Customer Rate *"
+                min="0"
+                step="0.01"
+              />
+              <FormTextField control={control} name="contactName" label="Contact Name *" />
+              <FormTextField control={control} name="paymentMethod" label="Payment Method *" />
+              <FormTextField control={control} name="paymentTerms" label="Payment Terms *" />
             </div>
             <p className="text-sm font-semibold text-gray-600 border-b pb-1 mt-2">Carrier</p>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className={labelClass}>Carrier</span>
-                <CarrierAutocomplete
-                  value={activeForm.carrier}
-                  onChange={(_, name) => set("carrier", name)}
-                  placeholder="Enter carrier"
+                <Controller
+                  name="carrier"
+                  control={control}
+                  render={({ field }) => (
+                    <CarrierAutocomplete
+                      value={field.value ?? ""}
+                      onChange={(_, name) => field.onChange(name)}
+                      placeholder="Enter carrier"
+                    />
+                  )}
                 />
               </div>
-              <div>
-                <label className={labelClass}>
-                  Carrier Payment Method
-                  <input
-                    className={fieldClass}
-                    value={activeForm.carrierPaymentMethod}
-                    onChange={(e) => set("carrierPaymentMethod", e.target.value)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Carrier Rate *
-                  <input
-                    type="number"
-                    className={fieldClass}
-                    value={activeForm.carrierRate}
-                    onChange={(e) => set("carrierRate", e.target.value)}
-                    min="0"
-                    step="0.01"
-                  />
-                </label>
-              </div>
+              <FormTextField
+                control={control}
+                name="carrierPaymentMethod"
+                label="Carrier Payment Method"
+              />
+              <FormNumberInput
+                control={control}
+                name="carrierRate"
+                label="Carrier Rate *"
+                min="0"
+                step="0.01"
+              />
             </div>
           </div>
         );
@@ -426,124 +364,45 @@ const LoadEditModal = () => {
         return (
           <div className="flex flex-col gap-4">
             <p className="text-sm font-semibold text-gray-600 border-b pb-1">Service</p>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="chargeServiceFee"
-                checked={activeForm.chargeServiceFeeToOffice}
-                onChange={(e) => set("chargeServiceFeeToOffice", e.target.checked)}
-              />
-              <label htmlFor="chargeServiceFee" className="text-sm">
-                Charge Service Fee to Office
-              </label>
-            </div>
+            <FormCheckbox
+              control={control}
+              name="chargeServiceFeeToOffice"
+              label="Charge Service Fee to Office"
+            />
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>
-                  Load Type *
-                  <input
-                    className={fieldClass}
-                    value={activeForm.loadType}
-                    onChange={(e) => set("loadType", e.target.value)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Service Type *
-                  <input
-                    className={fieldClass}
-                    value={activeForm.serviceType}
-                    onChange={(e) => set("serviceType", e.target.value)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Service Given As *
-                  <input
-                    className={fieldClass}
-                    value={activeForm.serviceGivenAs}
-                    onChange={(e) => set("serviceGivenAs", e.target.value)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Commodity *
-                  <input
-                    className={fieldClass}
-                    value={activeForm.commodity}
-                    onChange={(e) => set("commodity", e.target.value)}
-                  />
-                </label>
-              </div>
+              <FormTextField control={control} name="loadType" label="Load Type *" />
+              <FormTextField control={control} name="serviceType" label="Service Type *" />
+              <FormTextField control={control} name="serviceGivenAs" label="Service Given As *" />
+              <FormTextField control={control} name="commodity" label="Commodity *" />
             </div>
             <p className="text-sm font-semibold text-gray-600 border-b pb-1 mt-2">Booking</p>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>
-                  Booked As *
-                  <input
-                    className={fieldClass}
-                    value={activeForm.bookedAs}
-                    onChange={(e) => set("bookedAs", e.target.value)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Sold As *
-                  <input
-                    className={fieldClass}
-                    value={activeForm.soldAs}
-                    onChange={(e) => set("soldAs", e.target.value)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Weight *
-                  <input
-                    className={fieldClass}
-                    value={activeForm.weight}
-                    onChange={(e) => set("weight", e.target.value)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Temperature
-                  <input
-                    className={fieldClass}
-                    value={activeForm.temperature}
-                    onChange={(e) => set("temperature", e.target.value)}
-                  />
-                </label>
-              </div>
+              <FormTextField control={control} name="bookedAs" label="Booked As *" />
+              <FormTextField control={control} name="soldAs" label="Sold As *" />
+              <FormTextField control={control} name="weight" label="Weight *" />
+              <FormTextField control={control} name="temperature" label="Temperature" />
             </div>
           </div>
         );
       case 2:
         return (
           <LoadStopsFormList
-            stops={activeForm.pickups}
-            onChange={(stops) => set("pickups", stops)}
+            stops={pickupsField.fields as Location[]}
+            onChange={(stops) => pickupsField.replace(stops)}
             legLabel="Pick-up"
           />
         );
       case 3:
         return (
           <LoadStopsFormList
-            stops={activeForm.dropoffs}
-            onChange={(stops) => set("dropoffs", stops)}
+            stops={dropoffsField.fields as Location[]}
+            onChange={(stops) => dropoffsField.replace(stops)}
             legLabel="Drop-off"
           />
         );
       case 4:
         return (
           <div>
-            <p className={labelClass}>Upload Files</p>
             <FileUploader
               ref={uploaderRef}
               max={MAX_FILES_DEFAULT}
@@ -576,22 +435,22 @@ const LoadEditModal = () => {
             <Modal.Body className="p-2">
               <div className="flex gap-1 mb-6">
                 {STEPS.map((step, i) => (
-                  <button
+                  <Button
                     key={step.title}
-                    type="button"
-                    className={`flex-1 text-xs py-1 border-b-2 transition-colors ${
+                    variant="ghost"
+                    className={`flex-1 text-xs py-1 border-b-2 rounded-none transition-colors ${
                       i === currentStep
                         ? "border-primary text-primary font-medium"
                         : i < currentStep
                           ? "border-green-500 text-green-600"
                           : "border-gray-200 text-gray-400"
                     }`}
-                    onClick={() => {
+                    onPress={() => {
                       if (i <= currentStep) setCurrentStep(i);
                     }}
                   >
                     {i + 1}. {step.title}
-                  </button>
+                  </Button>
                 ))}
               </div>
 
@@ -605,7 +464,9 @@ const LoadEditModal = () => {
                 </div>
               )}
 
-              {renderStep()}
+              <form id="load-edit-form" onSubmit={onSubmit}>
+                {renderStep()}
+              </form>
             </Modal.Body>
             <Modal.Footer>
               <Button variant="ghost" onPress={close}>
@@ -630,7 +491,8 @@ const LoadEditModal = () => {
               {currentStep === LAST_STEP && (
                 <Button
                   variant="primary"
-                  onPress={handleSubmit}
+                  type="submit"
+                  form="load-edit-form"
                   isDisabled={mutation.isPending || isBusy}
                 >
                   {mutation.isPending ? <Spinner size="sm" /> : "Update Load"}

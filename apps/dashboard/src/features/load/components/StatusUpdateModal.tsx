@@ -1,11 +1,15 @@
-import { Button, Modal, Spinner, toast } from "@heroui/react";
+import { Button, Label, ListBox, Modal, Select, Spinner, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect } from "react";
+import { Controller } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
+import { z } from "zod";
+import { FormCheckbox, FormNumberInput, FormTextArea } from "@/components/form";
 import { loadApi } from "@/features/load/api/loadApi";
 import type { LoadStatus } from "@/features/load/types/load";
 import { getAllowedTransitions } from "@/features/load/utils/statusMachine";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useZodForm } from "@/libs/form";
 import { useApiMutation, useApiQuery } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 
@@ -24,12 +28,22 @@ const commentLabel = (status: LoadStatus | undefined, chargable: boolean): strin
   return null;
 };
 
+// Cross-field validation (chargeAmount, comment) is handled imperatively in handleSubmit
+// because effectiveStatus is derived from the loaded record, not stored in the form.
+const schema = z.object({
+  selectedStatus: z.string().nullable(),
+  isChargable: z.boolean(),
+  chargeAmount: z.number().nullable(),
+  comment: z.string(),
+});
+
+type FormValues = z.infer<typeof schema>;
+
 const StatusUpdateModal = () => {
   const { loadId } = useParams<{ loadId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { permissions } = useCurrentUser();
-  const uploaderRef = useRef<FileUploaderHandle>(null);
 
   const close = () => navigate("..");
 
@@ -51,17 +65,31 @@ const StatusUpdateModal = () => {
     : [];
   const isTerminal = load ? allowedStatuses.length === 0 : false;
 
-  const [selectedStatus, setSelectedStatus] = useState<LoadStatus | null>(null);
-  const [isChargable, setIsChargable] = useState<boolean | null>(null);
-  const [chargeAmount, setChargeAmount] = useState<string | null>(null);
-  const [comment, setComment] = useState("");
-  const [errors, setErrors] = useState<{ chargeAmount?: string; comment?: string }>({});
+  const { control, handleSubmit, watch, setValue, reset } = useZodForm<FormValues>(schema, {
+    selectedStatus: null,
+    isChargable: false,
+    chargeAmount: null,
+    comment: "",
+  });
+
+  useEffect(() => {
+    if (load) {
+      reset({
+        selectedStatus: null,
+        isChargable: load.isChargable ?? false,
+        chargeAmount: load.chargeAmount ?? null,
+        comment: "",
+      });
+    }
+  }, [load, reset]);
+
+  const selectedStatus = watch("selectedStatus") as LoadStatus | null;
+  const isChargable = watch("isChargable");
+  const comment = watch("comment");
 
   const effectiveStatus: LoadStatus | undefined =
     selectedStatus ?? (load ? (allowedStatuses[0] ?? load.status) : undefined);
-  const effectiveIsChargable: boolean = isChargable ?? (load ? (load.isChargable ?? false) : false);
-  const effectiveChargeAmount: string =
-    chargeAmount ?? (load && load.chargeAmount != null ? String(load.chargeAmount) : "");
+  const effectiveIsChargable: boolean = isChargable;
 
   const mutation = useApiMutation(
     async ({
@@ -93,39 +121,19 @@ const StatusUpdateModal = () => {
     },
   );
 
-  const validate = (): boolean => {
-    const errs: { chargeAmount?: string; comment?: string } = {};
-    if (effectiveStatus === "Approved" && effectiveIsChargable) {
-      const amt = Number(effectiveChargeAmount);
-      if (!effectiveChargeAmount.trim() || Number.isNaN(amt) || amt <= 0)
-        errs.chargeAmount = "Charge amount must be greater than 0";
-    }
-    const label = commentLabel(effectiveStatus, effectiveIsChargable);
-    if (label !== null && !comment.trim()) errs.comment = `${label} is required`;
-    if (label !== null && comment.length > 500)
-      errs.comment = "Comment cannot exceed 500 characters";
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
+  const cLabel = commentLabel(effectiveStatus, effectiveIsChargable);
 
-  const handleSubmit = () => {
-    if (!validate()) return;
+  const onSubmit = handleSubmit((values) => {
     if (!effectiveStatus) return;
-    const amt =
-      effectiveIsChargable && effectiveChargeAmount ? Number(effectiveChargeAmount) : null;
+    const chargable = values.isChargable;
+    const amt = chargable && values.chargeAmount ? values.chargeAmount : null;
     mutation.mutate({
       status: effectiveStatus,
-      chargable: effectiveIsChargable,
+      chargable,
       amount: amt,
-      cmt: comment.trim() || undefined,
+      cmt: values.comment.trim() || undefined,
     });
-  };
-
-  const fieldClass =
-    "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary";
-  const errorClass = "text-red-500 text-xs mt-1";
-  const labelClass = "block text-sm font-medium text-gray-700 mb-1";
-  const cLabel = commentLabel(effectiveStatus, effectiveIsChargable);
+  });
 
   if (!load) {
     return (
@@ -169,122 +177,107 @@ const StatusUpdateModal = () => {
               <Modal.Heading>Update Load Status</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="p-2">
-              <div className="flex flex-col gap-4">
-                <div className="flex gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-600">Reference:</span>{" "}
-                    {load.referenceNumber}
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-600">Current Status:</span>{" "}
-                    <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusBadge[load.status] ?? ""}`}
-                    >
-                      {load.status}
-                    </span>
-                  </div>
-                </div>
-
-                {isTerminal ? (
-                  <p className="text-gray-500 text-sm">
-                    This load is in a terminal state and cannot be transitioned further.
-                  </p>
-                ) : (
-                  <>
+              <form id="status-update-form" onSubmit={onSubmit}>
+                <div className="flex flex-col gap-4">
+                  <div className="flex gap-4 text-sm">
                     <div>
-                      <label className={labelClass}>
-                        New Status
-                        <select
-                          className={fieldClass}
-                          value={effectiveStatus}
-                          onChange={(e) => {
-                            const s = e.target.value as LoadStatus;
-                            setSelectedStatus(s);
-                            if (s !== "Approved") {
-                              setIsChargable(false);
-                              setChargeAmount("");
-                            }
-                            setComment("");
-                            setErrors({});
-                          }}
-                        >
-                          {allowedStatuses.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                      <span className="font-medium text-gray-600">Reference:</span>{" "}
+                      {load.referenceNumber}
                     </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Current Status:</span>{" "}
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusBadge[load.status] ?? ""}`}
+                      >
+                        {load.status}
+                      </span>
+                    </div>
+                  </div>
 
-                    {effectiveStatus === "Approved" && (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id="isChargable"
-                            checked={effectiveIsChargable}
-                            onChange={(e) => {
-                              setIsChargable(e.target.checked);
-                              if (!e.target.checked) setChargeAmount("");
-                              setComment("");
-                              setErrors({});
+                  {isTerminal ? (
+                    <p className="text-gray-500 text-sm">
+                      This load is in a terminal state and cannot be transitioned further.
+                    </p>
+                  ) : (
+                    <>
+                      <Controller
+                        name="selectedStatus"
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            value={field.value ?? effectiveStatus}
+                            onChange={(key) => {
+                              const s = key as LoadStatus;
+                              field.onChange(s);
+                              if (s !== "Approved") {
+                                setValue("isChargable", false);
+                                setValue("chargeAmount", null);
+                              }
+                              setValue("comment", "");
                             }}
-                          />
-                          <label htmlFor="isChargable" className="text-sm">
-                            Is Chargable
-                          </label>
-                        </div>
-
-                        {effectiveIsChargable && (
-                          <div>
-                            <label className={labelClass}>
-                              Charge Amount
-                              <input
-                                type="number"
-                                className={fieldClass}
-                                placeholder="Enter charge amount"
-                                min="0.01"
-                                step="0.01"
-                                value={effectiveChargeAmount}
-                                onChange={(e) => setChargeAmount(e.target.value)}
-                              />
-                            </label>
-                            {errors.chargeAmount && (
-                              <p className={errorClass}>{errors.chargeAmount}</p>
-                            )}
-                          </div>
+                            fullWidth
+                          >
+                            <Label>New Status</Label>
+                            <Select.Trigger />
+                            <Select.Popover>
+                              <ListBox>
+                                {allowedStatuses.map((s) => (
+                                  <ListBox.Item key={s} id={s}>
+                                    {s}
+                                  </ListBox.Item>
+                                ))}
+                              </ListBox>
+                            </Select.Popover>
+                          </Select>
                         )}
-                      </>
-                    )}
+                      />
 
-                    {cLabel !== null && (
-                      <div>
-                        <label className={labelClass}>
-                          {cLabel}
-                          <textarea
-                            className={fieldClass}
+                      {effectiveStatus === "Approved" && (
+                        <>
+                          <FormCheckbox control={control} name="isChargable" label="Is Chargable" />
+
+                          {effectiveIsChargable && (
+                            <FormNumberInput
+                              control={control}
+                              name="chargeAmount"
+                              label="Charge Amount"
+                              placeholder="Enter charge amount"
+                              min="0.01"
+                              step="0.01"
+                            />
+                          )}
+                        </>
+                      )}
+
+                      {cLabel !== null && (
+                        <div>
+                          <FormTextArea
+                            control={control}
+                            name="comment"
+                            label={cLabel}
                             rows={3}
                             placeholder={`Enter ${cLabel.toLowerCase()}…`}
                             maxLength={500}
-                            value={comment}
-                            onChange={(e) => setComment(e.target.value)}
                           />
-                        </label>
-                        <p className="text-xs text-gray-400 mt-1">{comment.length}/500</p>
-                        {errors.comment && <p className={errorClass}>{errors.comment}</p>}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
+                          <p className="text-xs text-gray-400 mt-1">{comment.length}/500</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </form>
             </Modal.Body>
             <Modal.Footer>
               <Button variant="ghost" onPress={close}>
                 Cancel
               </Button>
               {!isTerminal && (
-                <Button variant="primary" onPress={handleSubmit} isDisabled={mutation.isPending}>
+                <Button
+                  variant="primary"
+                  type="submit"
+                  form="status-update-form"
+                  isDisabled={mutation.isPending}
+                >
                   {mutation.isPending ? <Spinner size="sm" /> : "Update Status"}
                 </Button>
               )}
