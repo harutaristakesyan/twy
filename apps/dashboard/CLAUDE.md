@@ -51,7 +51,7 @@ src/
 | Tokens | `src/utils/jwt.ts` | **Cookies via `js-cookie`**, not `localStorage`. |
 | API | `src/libs/ApiClient.ts` | Axios singleton with relative `/api` baseURL + auth interceptor + token refresh. Never use raw `axios`/`fetch`. |
 | Server state | `ahooks` | `useAntdTable` for paginated tables, `useRequest` for mutations/aux data, `useDebounce` for search. |
-| Modals | Custom providers | Each domain has a `providers/<Domain>ModalProvider.tsx` that manages open state and renders modal/drawer components. Consume via `use<Domain>Modal()` hook. |
+| Modals | Route-based | Modals are child routes of their list page. Open with `navigate("create")` / `navigate(\`${id}/edit\`)`. Close with `navigate("..")`. Refresh via `queryClient.invalidateQueries({ queryKey: [...] })` in mutation `onSuccess`. |
 | Permissions | `src/utils/permissions.ts` | `MenuFeature` enum drives sidebar items + `<RequirePermission resource="..." action="view">`. |
 | Charts | `@ant-design/charts@2.6.7` | Already installed. |
 | Tables | `antd` `<Table>` | Use proper column generic types — don't `any` columns. |

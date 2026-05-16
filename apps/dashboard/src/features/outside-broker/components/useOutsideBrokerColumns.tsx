@@ -1,132 +1,92 @@
-import {
-  DeleteOutlined,
-  EditOutlined,
-  EuroOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
-import { Button, Flex, Popconfirm, Space, Tag, Tooltip, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useOutsideBrokerModal } from "../providers/OutsideBrokerModalProvider";
+import { Chip } from "@heroui/react";
+import { ActionsMenu } from "@/components/ActionsMenu";
 import type { OutsideBroker } from "../types/broker";
+import { BrokerStatus } from "../types/broker";
 
-const { Text } = Typography;
+export type OutsideBrokerColumnDef = {
+  id: string;
+  label: string;
+  isRowHeader?: boolean;
+};
 
-export function useOutsideBrokerColumns(
-  refresh: () => void,
-  runDelete: (id: string) => void,
-): ColumnsType<OutsideBroker> {
-  const { permissions } = useCurrentUser();
-  const { openOutsideBrokerEdit } = useOutsideBrokerModal();
-  const canUpdate = permissions.brokers.edit;
-  const canDelete = permissions.brokers.edit;
+export const OUTSIDE_BROKER_COLUMNS: OutsideBrokerColumnDef[] = [
+  { id: "brokerName", label: "Broker Name", isRowHeader: true },
+  { id: "mcNumber", label: "MC Number" },
+  { id: "contactName", label: "Contact" },
+  { id: "status", label: "Status" },
+  { id: "creditLimit", label: "Credit Limit" },
+  { id: "email", label: "Email" },
+  { id: "phone", label: "Phone" },
+  { id: "actions", label: "Actions" },
+];
 
-  return [
-    {
-      title: "Broker Name",
-      dataIndex: "brokerName",
-      key: "brokerName",
-      render: (name: string) => (
-        <Space>
-          <TeamOutlined />
-          <span style={{ fontWeight: 500 }}>{name}</span>
-        </Space>
-      ),
-      sorter: true,
-    },
-    {
-      title: "MC Number",
-      dataIndex: "mcNumber",
-      key: "mcNumber",
-      render: (mcNumber: string) => <Text code>{mcNumber}</Text>,
-      sorter: true,
-    },
-    {
-      title: "Contact Name",
-      dataIndex: "contactName",
-      key: "contactName",
-      render: (contactName: string | null) =>
-        contactName ? <Text>{contactName}</Text> : <Tag color="default">No Contact</Tag>,
-    },
-    {
-      title: "Phone / Email",
-      key: "contact",
-      render: (_, record) => (
-        <Flex vertical gap="small">
-          {record.phone && (
-            <Space size="small">
-              <PhoneOutlined />
-              <Text>{record.phone}</Text>
-            </Space>
-          )}
-          {record.email && (
-            <Space size="small">
-              <MailOutlined />
-              <Text type="secondary" style={{ fontSize: "12px" }}>
-                {record.email}
-              </Text>
-            </Space>
-          )}
-          {!record.phone && !record.email && <Tag color="default">No Contact Info</Tag>}
-        </Flex>
-      ),
-    },
-    {
-      title: "Credit Limit",
-      key: "creditLimit",
-      render: (_, record) =>
-        record.creditLimitUnlimited ? (
-          <Tag color="green">Unlimited</Tag>
-        ) : (
-          <Text>
-            <EuroOutlined style={{ marginRight: 4 }} />
-            {record.creditLimit !== null
-              ? record.creditLimit.toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })
-              : "—"}
-          </Text>
-        ),
-    },
-    {
-      title: "Created Date",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (date: string) => (date ? new Date(date).toLocaleDateString() : "N/A"),
-      sorter: true,
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Space>
-          {canUpdate && (
-            <Tooltip title="Edit Broker">
-              <Button
-                type="text"
-                icon={<EditOutlined />}
-                onClick={() => openOutsideBrokerEdit({ broker: record }, () => refresh())}
-              />
-            </Tooltip>
-          )}
-          {canDelete && (
-            <Popconfirm
-              title="Are you sure you want to delete this broker?"
-              description="This action cannot be undone."
-              onConfirm={() => runDelete(record.id)}
-              okText="Yes"
-              cancelText="No"
-            >
-              <Tooltip title="Delete Broker">
-                <Button type="text" danger icon={<DeleteOutlined />} />
-              </Tooltip>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
-    },
-  ];
+const statusColor: Record<BrokerStatus, "success" | "warning" | "danger"> = {
+  [BrokerStatus.APPROVED]: "success",
+  [BrokerStatus.PENDING]: "warning",
+  [BrokerStatus.DENIED]: "danger",
+};
+
+type UseOutsideBrokerColumnsParams = {
+  canEdit: boolean;
+  canDelete: boolean;
+  isDeleting: boolean;
+  onEdit: (broker: OutsideBroker) => void;
+  onDelete: (id: string) => void;
+};
+
+export function useOutsideBrokerColumns({
+  canEdit,
+  canDelete,
+  isDeleting,
+  onEdit,
+  onDelete,
+}: UseOutsideBrokerColumnsParams) {
+  const renderCell = (broker: OutsideBroker, colId: string) => {
+    switch (colId) {
+      case "brokerName":
+        return <span className="font-medium">{broker.brokerName}</span>;
+      case "mcNumber":
+        return (
+          <Chip size="sm" variant="soft">
+            {broker.mcNumber}
+          </Chip>
+        );
+      case "contactName":
+        return broker.contactName ?? "—";
+      case "status":
+        return (
+          <Chip color={statusColor[broker.status] ?? "default"} size="sm" variant="soft">
+            {broker.status}
+          </Chip>
+        );
+      case "creditLimit":
+        return broker.creditLimitUnlimited
+          ? "Unlimited"
+          : broker.creditLimit != null
+            ? `€${broker.creditLimit.toFixed(2)}`
+            : "—";
+      case "email":
+        return broker.email ?? "—";
+      case "phone":
+        return broker.phone ?? "—";
+      case "actions":
+        return (
+          <ActionsMenu
+            actions={[
+              { type: "edit", hidden: !canEdit, onAction: () => onEdit(broker) },
+              {
+                type: "delete",
+                hidden: !canDelete,
+                disabled: isDeleting,
+                onAction: () => onDelete(broker.id),
+              },
+            ]}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return { columns: OUTSIDE_BROKER_COLUMNS, renderCell };
 }

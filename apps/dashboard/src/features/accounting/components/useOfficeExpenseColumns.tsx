@@ -1,7 +1,4 @@
-import { EditOutlined, EyeOutlined } from "@ant-design/icons";
-import { Button, Space, Tooltip } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { useCallback } from "react";
+import { ActionsMenu } from "@/components/ActionsMenu";
 import { usePermission } from "@/hooks/usePermission";
 import { renderDate } from "@/utils/formatters";
 import {
@@ -17,83 +14,76 @@ const CURRENCY_SYMBOL: Record<string, string> = { USD: "$", EUR: "€" };
 const renderAmount = (amount: number, record: OfficeExpensePaymentOrder) =>
   `${CURRENCY_SYMBOL[record.currency] ?? ""}${amount.toFixed(2)}`;
 
-const renderPeriod = (_: unknown, record: OfficeExpensePaymentOrder) =>
+const renderPeriod = (record: OfficeExpensePaymentOrder) =>
   record.periodStart === record.periodEnd
     ? renderDate(record.periodStart)
     : `${renderDate(record.periodStart)} – ${renderDate(record.periodEnd)}`;
 
-export function useOfficeExpenseColumns(
-  openDetail: (record: OfficeExpensePaymentOrder, mode: "view" | "edit") => void,
-): ColumnsType<OfficeExpensePaymentOrder> {
+export interface OfficeExpenseColumn {
+  key: string;
+  label: string;
+  render: (record: OfficeExpensePaymentOrder) => React.ReactNode;
+  width?: string;
+  isRowHeader?: boolean;
+}
+
+export function useOfficeExpenseColumns(navigate: (path: string) => void): OfficeExpenseColumn[] {
+  const canView = usePermission("office_expense_payment_order", "view");
   const canEdit = usePermission("office_expense_payment_order", "edit");
 
-  const renderActions = useCallback(
-    (_: unknown, record: OfficeExpensePaymentOrder) => (
-      <Space>
-        {canEdit && (
-          <Tooltip title="Edit">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => openDetail(record, "edit")}
-            />
-          </Tooltip>
-        )}
-        <Tooltip title="View">
-          <Button type="text" icon={<EyeOutlined />} onClick={() => openDetail(record, "view")} />
-        </Tooltip>
-      </Space>
-    ),
-    [canEdit, openDetail],
+  const renderActions = (r: OfficeExpensePaymentOrder) => (
+    <ActionsMenu
+      actions={[
+        {
+          type: "edit",
+          hidden: !canEdit,
+          onAction: () => navigate(`office-expense/${r.id}?mode=edit`),
+        },
+        {
+          type: "view",
+          hidden: !canView,
+          onAction: () => navigate(`office-expense/${r.id}`),
+        },
+      ]}
+    />
   );
 
   return [
     {
-      title: "Service",
-      dataIndex: "serviceName",
       key: "serviceName",
-      width: 180,
-      render: (v: OfficeExpenseService) => SERVICE_LABELS[v],
+      label: "Service",
+      width: "w-44",
+      isRowHeader: true,
+      render: (r) => SERVICE_LABELS[r.serviceName as OfficeExpenseService],
     },
     {
-      title: "Payment Purpose",
-      dataIndex: "paymentPurpose",
       key: "paymentPurpose",
-      ellipsis: true,
+      label: "Payment Purpose",
+      render: (r) => (
+        <span className="block max-w-xs truncate" title={r.paymentPurpose}>
+          {r.paymentPurpose}
+        </span>
+      ),
     },
+    { key: "period", label: "Period", width: "w-44", render: (r) => renderPeriod(r) },
     {
-      title: "Period",
-      key: "period",
-      width: 200,
-      render: renderPeriod,
-    },
-    {
-      title: "Amount",
-      dataIndex: "amount",
       key: "amount",
-      width: 120,
-      render: (v: number, record) => renderAmount(v, record),
+      label: "Amount",
+      width: "w-28",
+      render: (r) => renderAmount(r.amount, r),
     },
     {
-      title: "Status",
-      dataIndex: "paymentStatus",
       key: "paymentStatus",
-      width: 130,
-      render: (v: OfficeExpensePaymentStatus) => <PaymentStatusTag status={v} />,
+      label: "Status",
+      width: "w-32",
+      render: (r) => <PaymentStatusTag status={r.paymentStatus as OfficeExpensePaymentStatus} />,
     },
     {
-      title: "Created",
-      dataIndex: "createdAt",
       key: "createdAt",
-      width: 120,
-      render: renderDate,
+      label: "Created",
+      width: "w-28",
+      render: (r) => renderDate(r.createdAt),
     },
-    {
-      title: "Actions",
-      key: "actions",
-      fixed: "right",
-      width: 100,
-      render: renderActions,
-    },
+    { key: "actions", label: "Actions", width: "w-20", render: (r) => renderActions(r) },
   ];
 }

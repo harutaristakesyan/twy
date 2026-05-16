@@ -67,9 +67,9 @@ export const SubmitCarrierRequestEventSchema = z.object({
     mcDotNumber: z.string().trim().min(1, "MC/DOT number is required"),
     equipmentType: z.string().trim().min(1, "Equipment type is required"),
     insuranceStatus: insuranceStatusEnum.optional(),
-    insuranceExpiry: z.string().datetime().nullable().optional(),
+    insuranceExpiry: z.iso.date().nullable().optional(),
     phone: z.string().trim().min(1, "Phone is required"),
-    email: z.string().trim().email("Please enter a valid email address"),
+    email: z.email("Please enter a valid email address").trim(),
     notes: z.string().trim().optional(),
   }),
 });

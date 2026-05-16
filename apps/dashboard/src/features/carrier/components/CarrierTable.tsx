@@ -1,140 +1,111 @@
-import { PlusOutlined } from "@ant-design/icons";
-import { useAntdTable, useRequest } from "ahooks";
-import { App, Button, Card, Empty, Flex, Table, Typography } from "antd";
+import { Plus } from "@gravity-ui/icons";
+import { Button, toast } from "@heroui/react";
 import type React from "react";
 import { useState } from "react";
-import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
-import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
+import { useNavigate } from "react-router-dom";
+import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { DataTable } from "@/components/DataTable";
+import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useServerTable } from "@/hooks/useServerTable";
+import { useApiMutation } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { deleteCarrier, getCarriers } from "../api/carrierApi";
-import { useCarrierModal } from "../providers/CarrierModalProvider";
-import type { CarrierKind } from "../types/carrier";
-import { CarrierStatus, InsuranceStatus } from "../types/carrier";
+import type { Carrier, CarrierKind } from "../types/carrier";
 import { useCarrierColumns } from "./useCarrierColumns";
-
-const { Title } = Typography;
-
-type SortField =
-  | "carrierName"
-  | "mcDotNumber"
-  | "status"
-  | "insuranceStatus"
-  | "createdAt"
-  | undefined;
-
-const FILTER_FIELDS: FilterField[] = [
-  {
-    key: "status",
-    label: "Status",
-    type: "select",
-    options: [
-      { label: "Approved", value: CarrierStatus.APPROVED },
-      { label: "Denied", value: CarrierStatus.DENIED },
-    ],
-  },
-  {
-    key: "insuranceStatus",
-    label: "Insurance status",
-    type: "select",
-    options: [
-      { label: "Valid", value: InsuranceStatus.VALID },
-      { label: "Expired", value: InsuranceStatus.EXPIRED },
-      { label: "Pending", value: InsuranceStatus.PENDING },
-    ],
-  },
-];
 
 interface CarrierTableProps {
   kind: CarrierKind;
 }
 
 const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
-  const { message } = App.useApp();
+  const navigate = useNavigate();
   const { permissions } = useCurrentUser();
-  const { openCarrierCreate } = useCarrierModal();
-  const addResource = kind === "twy" ? "carriers_twy" : "carriers_outside";
-  const canCreate = permissions[addResource]?.add;
+  const resource = kind === "twy" ? "carriers_twy" : "carriers_outside";
+  const canCreate = Boolean(permissions[resource]?.add);
+  const canEdit = Boolean(permissions[resource]?.edit);
+  const canDelete = Boolean(permissions[resource]?.delete);
 
-  const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
-  const [activeQuery, setActiveQuery] = useState("");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
 
-  const { tableProps, refresh } = useAntdTable(
-    async ({ current, pageSize, sorter }) => {
-      const s = Array.isArray(sorter) ? sorter[0] : sorter;
+  const table = useServerTable<Carrier>({
+    queryKey: ["carriers", kind, debouncedSearch],
+    fetcher: async ({ page, pageSize }) => {
       const result = await getCarriers({
         kind,
-        page: current - 1,
+        page: page - 1,
         limit: pageSize,
-        sortField: s?.field as SortField,
-        sortOrder: (s?.order ?? undefined) as "ascend" | "descend" | undefined,
-        query: activeQuery || undefined,
-        filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
+        query: debouncedSearch || undefined,
       });
-      return { total: result.total, list: result.carriers };
+      return { items: result.carriers, total: result.total };
     },
-    { refreshDeps: [kind, activeQuery, activeFilter], defaultPageSize: 10 },
-  );
-
-  const { run: runDelete } = useRequest(deleteCarrier, {
-    manual: true,
-    onSuccess: () => {
-      message.success("Carrier deleted successfully");
-      refresh();
-    },
-    onError: (error) => message.error(getErrorMessage(error)),
+    initialPageSize: 10,
   });
 
-  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
-    setActiveFilter(filter);
-    setActiveQuery(query ?? "");
-  };
+  const deleteMutation = useApiMutation((id: string) => deleteCarrier(id), {
+    onSuccess: () => {
+      toast.success("Carrier deleted successfully");
+      void table.refetch();
+    },
+    onError: (err: unknown) => toast.danger(getErrorMessage(err)),
+  });
 
-  const columns = useCarrierColumns(refresh, runDelete, kind);
+  const handleCreate = () => navigate("create");
+  const handleEdit = (carrier: Carrier) => navigate(`${carrier.id}/edit`);
+
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
+
+  const handleDelete = (id: string) =>
+    confirm({
+      title: "Delete this carrier?",
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete",
+      status: "danger",
+      onConfirm: () => deleteMutation.mutate(id),
+    });
+
+  const { columns, renderCell } = useCarrierColumns({
+    canEdit,
+    canDelete,
+    isDeleting: deleteMutation.isPending,
+    onEdit: handleEdit,
+    onDelete: handleDelete,
+  });
+
   const title = kind === "twy" ? "Twy Carriers" : "Outside Carriers";
 
   return (
-    <div>
-      <Card>
-        <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
-          <Title level={4} style={{ margin: 0 }}>
-            {title} ({tableProps.pagination.total ?? 0})
-          </Title>
-          <Flex align="middle" gap="middle">
-            <AdvancedFilterPopover
-              fields={FILTER_FIELDS}
-              initialFilter={activeFilter}
-              initialQuery={activeQuery}
-              onApply={handleFilterApply}
-            />
-            {canCreate && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => openCarrierCreate(kind, () => refresh())}
-              >
-                Add Carrier
-              </Button>
-            )}
-          </Flex>
-        </Flex>
+    <div className="p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold">
+          {title} ({table.total})
+        </h2>
+        <div className="flex items-center gap-2">
+          <Search query={search} onQueryChange={setSearch} placeholder="Search carriers..." />
+          {canCreate && (
+            <Button variant="primary" onPress={handleCreate}>
+              <Plus className="h-4 w-4" />
+              Add Carrier
+            </Button>
+          )}
+        </div>
+      </div>
 
-        <ActiveFilterChips
-          filter={activeFilter}
-          fields={FILTER_FIELDS}
-          query={activeQuery}
-          onChange={setActiveFilter}
-          onClearQuery={() => setActiveQuery("")}
-        />
+      <DataTable
+        ariaLabel={title}
+        items={table.items}
+        columns={columns}
+        renderCell={renderCell}
+        total={table.total}
+        page={table.page}
+        pageSize={table.pageSize}
+        isLoading={table.isLoading}
+        onPageChange={table.setPage}
+      />
 
-        <Table
-          columns={columns}
-          rowKey="id"
-          scroll={{ x: 1200 }}
-          {...tableProps}
-          locale={{ emptyText: <Empty description={`No ${title.toLowerCase()} found`} /> }}
-        />
-      </Card>
+      {confirmDialog}
     </div>
   );
 };

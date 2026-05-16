@@ -116,6 +116,33 @@ const mapBranchRow = (row: {
       : null,
 });
 
+export const getBranchById = async (branchId: string): Promise<Branch | null> => {
+  const owner = users;
+  const ci = communityLicenses;
+
+  const [row] = await db
+    .select({
+      id: branch.id,
+      name: branch.name,
+      contact: branch.contact,
+      createdAt: branch.createdAt,
+      ownerId: owner.id,
+      ownerFirstName: owner.firstName,
+      ownerLastName: owner.lastName,
+      ownerEmail: owner.email,
+      ciId: ci.id,
+      ciNumber: ci.ciNumber,
+      ciValidFrom: ci.validFrom,
+      ciValidTo: ci.validTo,
+    })
+    .from(branch)
+    .leftJoin(owner, eq(owner.id, branch.ownerId))
+    .leftJoin(ci, eq(ci.id, branch.ciId))
+    .where(eq(branch.id, branchId));
+
+  return row ? mapBranchRow(row) : null;
+};
+
 export const listBranches = async (input: ListBranchesInput) => {
   const direction = input.sortOrder === "asc" ? asc : desc;
   const orderColumn = sortColumn(input.sortField);

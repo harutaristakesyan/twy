@@ -13,6 +13,8 @@ export const outsideBroker = pgTable("outside_broker", {
   email: text(),
   address: text(),
   notes: text(),
+  paymentMethod: text(),
+  paymentTerms: text(),
   status: text().$type<BrokerStatus>().notNull().default("pending"),
   creditLimitUnlimited: boolean().notNull().default(true),
   creditLimit: numeric({ precision: 10, scale: 2 }),

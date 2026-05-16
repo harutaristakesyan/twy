@@ -49,6 +49,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           lastName: null,
           isActive: false,
           branch: null,
+          profilePictureFileId: null,
         },
         team: null,
         permissions: emptyPermissionsMap(),

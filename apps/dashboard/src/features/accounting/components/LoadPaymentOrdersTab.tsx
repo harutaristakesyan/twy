@@ -1,113 +1,76 @@
-import { PlusOutlined } from "@ant-design/icons";
-import { useAntdTable, useRequest } from "ahooks";
-import { Button, Flex, Space, Table, Typography } from "antd";
+import { Plus } from "@gravity-ui/icons";
+import { Button } from "@heroui/react";
 import { useState } from "react";
-import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
-import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
-import { getBranches } from "@/features/branch/api/branchApi";
+import { Outlet, useNavigate } from "react-router-dom";
+import { DataTable } from "@/components/DataTable";
+import { Search } from "@/components/Search";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePermission } from "@/hooks/usePermission";
+import { useServerTable } from "@/hooks/useServerTable";
 import { paymentOrderApi } from "../api/paymentOrderApi";
-import { usePaymentOrderModal } from "../hooks/usePaymentOrderModal";
 import type { PaymentOrder } from "../types/paymentOrder";
-import CreateLoadPaymentOrderModal from "./CreateLoadPaymentOrderModal";
-import UpdatePaymentStatusModal from "./UpdatePaymentStatusModal";
 import { useLoadPaymentOrderColumns } from "./useLoadPaymentOrderColumns";
 
-const { Title } = Typography;
-
 export default function LoadPaymentOrdersTab() {
-  const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
-  const [activeQuery, setActiveQuery] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
+  const navigate = useNavigate();
   const canCreate = usePermission("load_payment_order", "add");
-  const { selectedOrder, open, mode, openModal, closeModal, openKey } = usePaymentOrderModal();
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
 
-  const { data: branchesData } = useRequest(() => getBranches({ limit: 200 }), {
-    cacheKey: "branches-for-filter",
+  const table = useServerTable<PaymentOrder>({
+    queryKey: ["payment-orders", debouncedSearch],
+    fetcher: async ({ page, pageSize }) => {
+      const res = await paymentOrderApi.list({
+        page: page - 1,
+        limit: pageSize,
+        query: debouncedSearch || undefined,
+      });
+      return { items: res.paymentOrders, total: res.total };
+    },
+    initialPageSize: 20,
   });
 
-  const fields: FilterField[] = [
-    {
-      key: "branchId",
-      label: "Branch",
-      type: "select",
-      options: branchesData?.branches.map((b) => ({ label: b.name, value: b.id })) ?? [],
-      placeholder: "All branches",
-    },
-  ];
-
-  const { tableProps, refresh } = useAntdTable(
-    async ({ current, pageSize }) => {
-      const res = await paymentOrderApi.list({
-        page: (current ?? 1) - 1,
-        limit: pageSize ?? 20,
-        query: activeQuery || undefined,
-        filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
-      });
-      return { list: res.paymentOrders, total: res.total };
-    },
-    { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 20 },
-  );
-
-  const columns = useLoadPaymentOrderColumns(openModal);
-
-  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
-    setActiveFilter(filter);
-    setActiveQuery(query ?? "");
+  const rawColumns = useLoadPaymentOrderColumns(navigate);
+  const columns = rawColumns.map((col) => ({
+    id: col.key,
+    label: col.label,
+    isRowHeader: col.isRowHeader,
+  }));
+  const renderCell = (record: PaymentOrder, colId: string) => {
+    const col = rawColumns.find((c) => c.key === colId);
+    return col?.render(record);
   };
+
+  const handleCreate = () => navigate("create-load-po");
 
   return (
     <>
-      <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>
-          Load Payment Orders (
-          {tableProps.pagination ? ((tableProps.pagination as { total?: number }).total ?? 0) : 0})
-        </Title>
-        <Space>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-base font-semibold">Load Payment Orders ({table.total})</h2>
+        <div className="flex items-center gap-2">
+          <Search query={search} onQueryChange={setSearch} placeholder="Search orders..." />
           {canCreate && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+            <Button variant="primary" onPress={handleCreate}>
+              <Plus className="h-4 w-4" />
               Create
             </Button>
           )}
-          <AdvancedFilterPopover
-            fields={fields}
-            initialFilter={activeFilter}
-            initialQuery={activeQuery}
-            onApply={handleFilterApply}
-          />
-        </Space>
-      </Flex>
+        </div>
+      </div>
 
-      <ActiveFilterChips
-        filter={activeFilter}
-        fields={fields}
-        query={activeQuery}
-        onChange={setActiveFilter}
-        onClearQuery={() => setActiveQuery("")}
-      />
-
-      <Table<PaymentOrder>
-        {...tableProps}
+      <DataTable
+        ariaLabel="Load Payment Orders table"
+        items={table.items}
         columns={columns}
-        rowKey="id"
-        scroll={{ x: "max-content" }}
-        size="middle"
+        renderCell={renderCell}
+        total={table.total}
+        page={table.page}
+        pageSize={table.pageSize}
+        isLoading={table.isLoading}
+        onPageChange={table.setPage}
       />
 
-      <UpdatePaymentStatusModal
-        key={openKey}
-        paymentOrder={selectedOrder}
-        open={open}
-        mode={mode}
-        onClose={closeModal}
-        onSuccess={refresh}
-      />
-
-      <CreateLoadPaymentOrderModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onSuccess={refresh}
-      />
+      <Outlet />
     </>
   );
 }

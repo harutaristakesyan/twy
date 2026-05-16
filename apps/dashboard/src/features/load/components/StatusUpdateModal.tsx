@@ -1,47 +1,36 @@
-import { useRequest } from "ahooks";
 import {
-  App,
   Button,
-  Checkbox,
-  Descriptions,
-  Form,
-  Input,
-  InputNumber,
+  Label,
+  ListBox,
   Modal,
   Radio,
+  RadioGroup,
   Select,
-  Space,
-  Tag,
-} from "antd";
-import { useRef } from "react";
-import { FileUploader, type FileUploaderHandle } from "@/features/files";
+  Spinner,
+  toast,
+} from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { Controller } from "react-hook-form";
+import { useNavigate, useParams } from "react-router-dom";
+import { z } from "zod";
+import { FormCheckbox, FormNumberInput, FormTextArea } from "@/components/form";
+import type { FileUploaderHandle, FileUploaderValueItem } from "@/features/files";
+import { FileUploader, MAX_FILES_DEFAULT } from "@/features/files";
 import { loadApi } from "@/features/load/api/loadApi";
-import type { Load, LoadStatus } from "@/features/load/types/load";
+import type { LoadStatus } from "@/features/load/types/load";
 import { getAllowedTransitions } from "@/features/load/utils/statusMachine";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useZodForm } from "@/libs/form";
+import { useApiMutation, useApiQuery } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 
-interface StatusUpdateModalProps {
-  open: boolean;
-  load: Load | null;
-  onCancel: () => void;
-  onSuccess: () => void;
-}
-
-interface StatusFormValues {
-  status: LoadStatus;
-  isChargable: boolean;
-  chargeAmount: number | null;
-  chargeSide: "broker" | "carrier" | null;
-  comment: string | undefined;
-}
-
-const statusColors: Record<LoadStatus, string> = {
-  Pending: "gold",
-  Approved: "green",
-  Delivered: "cyan",
-  Declined: "red",
-  Hold: "orange",
+const statusBadge: Record<LoadStatus, string> = {
+  Pending: "bg-yellow-100 text-yellow-800",
+  Approved: "bg-green-100 text-green-800",
+  Delivered: "bg-blue-100 text-blue-800",
+  Declined: "bg-red-100 text-red-800",
+  Hold: "bg-orange-100 text-orange-800",
 };
 
 const commentLabel = (status: LoadStatus | undefined, chargable: boolean): string | null => {
@@ -51,214 +40,343 @@ const commentLabel = (status: LoadStatus | undefined, chargable: boolean): strin
   return null;
 };
 
-const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModalProps) => {
-  const { message: antMessage } = App.useApp();
-  const [form] = Form.useForm<StatusFormValues>();
-  const selectedStatus = Form.useWatch("status", form);
-  const isChargable = Form.useWatch("isChargable", form);
-  const { permissions } = useCurrentUser();
-  const uploaderRef = useRef<FileUploaderHandle>(null);
+// Cross-field validation (chargeAmount, chargeSide, comment) is handled imperatively in
+// handleSubmit because effectiveStatus is derived from the loaded record, not stored in the form.
+const schema = z.object({
+  selectedStatus: z.string().nullable(),
+  isChargable: z.boolean(),
+  chargeAmount: z.number().nullable(),
+  chargeSide: z.enum(["broker", "carrier"]).nullable(),
+  comment: z.string(),
+});
 
-  const { loading, run: submit } = useRequest(
-    async (
-      status: LoadStatus,
-      chargable: boolean,
-      chargeAmount: number | null,
-      chargeSide: "broker" | "carrier" | null,
-      fileIds: string[],
-      comment: string | undefined,
-    ) => {
-      await loadApi.changeStatus(load?.id ?? "", {
+type FormValues = z.infer<typeof schema>;
+
+const StatusUpdateModal = () => {
+  const { loadId } = useParams<{ loadId: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { permissions } = useCurrentUser();
+
+  const close = () => navigate("..");
+
+  const { data: load } = useApiQuery(
+    ["load", loadId],
+    () => {
+      if (!loadId) return Promise.reject(new Error("No loadId"));
+      return loadApi.getById(loadId);
+    },
+    { enabled: !!loadId },
+  );
+
+  const allowedStatuses = load
+    ? getAllowedTransitions(load.status).filter((s) =>
+        Boolean(
+          (permissions as Record<string, Record<string, boolean>>).loads?.[`transition:${s}`],
+        ),
+      )
+    : [];
+  const isTerminal = load ? allowedStatuses.length === 0 : false;
+
+  const uploaderRef = useRef<FileUploaderHandle>(null);
+  const [uploaderItems, setUploaderItems] = useState<FileUploaderValueItem[]>([]);
+  const isBusy = uploaderItems.some((i) => i.status === "uploading");
+
+  const { control, handleSubmit, watch, setValue, reset } = useZodForm<FormValues>(schema, {
+    selectedStatus: null,
+    isChargable: false,
+    chargeAmount: null,
+    chargeSide: null,
+    comment: "",
+  });
+
+  useEffect(() => {
+    if (load) {
+      reset({
+        selectedStatus: null,
+        isChargable: load.isChargable ?? false,
+        chargeAmount: load.chargeAmount ?? null,
+        chargeSide: load.chargeSide ?? null,
+        comment: "",
+      });
+    }
+  }, [load, reset]);
+
+  const selectedStatus = watch("selectedStatus") as LoadStatus | null;
+  const isChargable = watch("isChargable");
+  const comment = watch("comment");
+
+  const effectiveStatus: LoadStatus | undefined =
+    selectedStatus ?? (load ? (allowedStatuses[0] ?? load.status) : undefined);
+  const effectiveIsChargable: boolean = isChargable;
+
+  const mutation = useApiMutation(
+    async ({
+      status,
+      chargable,
+      amount,
+      side,
+      fileIds,
+      cmt,
+    }: {
+      status: LoadStatus;
+      chargable: boolean;
+      amount: number | null;
+      side: "broker" | "carrier" | null;
+      fileIds?: string[];
+      cmt?: string;
+    }) => {
+      if (!loadId) return;
+      await loadApi.changeStatus(loadId, {
         status,
         isChargable: chargable,
-        chargeAmount: chargable ? chargeAmount : null,
-        chargeSide: chargable ? chargeSide : null,
-        fileIds: fileIds.length > 0 ? fileIds : undefined,
-        comment,
+        chargeAmount: chargable ? amount : null,
+        chargeSide: chargable ? side : null,
+        fileIds,
+        comment: cmt,
       });
     },
     {
-      manual: true,
-      onSuccess: () => {
+      onSuccess: async () => {
         uploaderRef.current?.commit();
-        antMessage.success("Load status updated successfully");
-        onSuccess();
+        toast.success("Load status updated successfully");
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["loads"] }),
+          queryClient.invalidateQueries({ queryKey: ["load", loadId] }),
+        ]);
+        close();
       },
-      onError: (error) => antMessage.error(getErrorMessage(error)),
+      onError: (err: unknown) => toast.danger(getErrorMessage(err)),
     },
   );
 
-  const handleSubmit = async () => {
-    if (!load) return;
-    let values: StatusFormValues;
-    try {
-      values = await form.validateFields();
-    } catch (e) {
-      if ((e as { errorFields?: unknown }).errorFields) return;
-      throw e;
-    }
-    const { status, isChargable: chargable, chargeAmount, chargeSide, comment } = values;
-    const fileIds = uploaderRef.current?.fileIds ?? [];
-    if (
-      status === load.status &&
-      (chargable ?? false) === (load.isChargable ?? false) &&
-      (chargeAmount ?? null) === (load.chargeAmount ?? null) &&
-      (chargeSide ?? null) === (load.chargeSide ?? null) &&
-      fileIds.length === 0
-    ) {
-      onCancel();
+  const cLabel = commentLabel(effectiveStatus, effectiveIsChargable);
+
+  const onSubmit = handleSubmit((values) => {
+    if (!effectiveStatus) return;
+    const chargable = values.isChargable;
+    if (chargable && !values.chargeSide) {
+      toast.danger("Please select Broker Side or Carrier Side.");
       return;
     }
-    submit(
-      status,
-      chargable ?? false,
-      chargeAmount ?? null,
-      chargeSide ?? null,
+    if (chargable && isBusy) {
+      toast.danger("Wait for files to finish uploading.");
+      return;
+    }
+    const amt = chargable && values.chargeAmount ? values.chargeAmount : null;
+    const side = chargable ? values.chargeSide : null;
+    const fileIds = chargable
+      ? uploaderItems.filter((i) => i.status === "done" && i.fileId).map((i) => i.fileId as string)
+      : undefined;
+    mutation.mutate({
+      status: effectiveStatus,
+      chargable,
+      amount: amt,
+      side,
       fileIds,
-      comment?.trim() || undefined,
-    );
-  };
+      cmt: values.comment.trim() || undefined,
+    });
+  });
 
-  if (!load) return null;
-
-  const allowedStatuses = getAllowedTransitions(load.status).filter((s) =>
-    Boolean((permissions as Record<string, Record<string, boolean>>).loads?.[`transition:${s}`]),
-  );
-  const statusOptions = allowedStatuses.map((s) => ({ value: s, label: s }));
-  const isTerminal = allowedStatuses.length === 0;
-  const commentFieldLabel = commentLabel(selectedStatus, isChargable ?? false);
-
-  return (
-    <Modal
-      title="Update Load Status"
-      open={open}
-      onCancel={onCancel}
-      destroyOnHidden
-      footer={
-        <Space>
-          <Button onClick={onCancel}>Cancel</Button>
-          {!isTerminal && (
-            <Button type="primary" onClick={handleSubmit} loading={loading}>
-              Update Status
-            </Button>
-          )}
-        </Space>
-      }
-      width={500}
-    >
-      <Descriptions column={1} size="small" style={{ marginBottom: 24 }}>
-        <Descriptions.Item label="Reference Number">{load.referenceNumber}</Descriptions.Item>
-        <Descriptions.Item label="Current Status">
-          <Tag color={statusColors[load.status]}>{load.status}</Tag>
-        </Descriptions.Item>
-      </Descriptions>
-
-      {isTerminal ? (
-        <p style={{ color: "var(--ant-color-text-secondary)" }}>
-          This load is in a terminal state and cannot be transitioned further.
-        </p>
-      ) : (
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{
-            status: load.status,
-            isChargable: load.isChargable ?? false,
-            chargeAmount: load.chargeAmount ?? null,
-            chargeSide: load.chargeSide ?? null,
+  if (!load) {
+    return (
+      <Modal>
+        <Modal.Backdrop
+          isOpen
+          onOpenChange={(open) => {
+            if (!open) close();
           }}
         >
-          <Form.Item name="status" label="New Status">
-            <Select
-              options={statusOptions}
-              onChange={(v) => {
-                if (v !== "Delivered") {
-                  form.setFieldsValue({ isChargable: false, chargeAmount: null, chargeSide: null });
-                }
-                form.resetFields(["comment"]);
-              }}
-            />
-          </Form.Item>
+          <Modal.Container>
+            <Modal.Dialog>
+              <Modal.CloseTrigger />
+              <Modal.Header>
+                <Modal.Heading>Update Load Status</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body className="p-2">
+                <div className="flex justify-center py-8">
+                  <Spinner size="lg" />
+                </div>
+              </Modal.Body>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
+    );
+  }
 
-          {selectedStatus === "Delivered" && (
-            <>
-              <Form.Item name="isChargable" valuePropName="checked">
-                <Checkbox
-                  onChange={(e) => {
-                    if (!e.target.checked) {
-                      form.setFieldsValue({ chargeAmount: null, chargeSide: null });
-                    }
-                    form.resetFields(["comment"]);
-                  }}
+  return (
+    <Modal>
+      <Modal.Backdrop
+        isOpen
+        onOpenChange={(open) => {
+          if (!open) close();
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>Update Load Status</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="p-2">
+              <form id="status-update-form" onSubmit={onSubmit}>
+                <div className="flex flex-col gap-4">
+                  <div className="flex gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Reference:</span>{" "}
+                      {load.referenceNumber}
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Current Status:</span>{" "}
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusBadge[load.status] ?? ""}`}
+                      >
+                        {load.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isTerminal ? (
+                    <p className="text-gray-500 text-sm">
+                      This load is in a terminal state and cannot be transitioned further.
+                    </p>
+                  ) : (
+                    <>
+                      <Controller
+                        name="selectedStatus"
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            value={field.value ?? effectiveStatus}
+                            onChange={(key) => {
+                              const s = key as LoadStatus;
+                              field.onChange(s);
+                              if (s !== "Delivered") {
+                                setValue("isChargable", false);
+                                setValue("chargeAmount", null);
+                                setValue("chargeSide", null);
+                                setUploaderItems([]);
+                              }
+                              setValue("comment", "");
+                            }}
+                            fullWidth
+                          >
+                            <Label>New Status</Label>
+                            <Select.Trigger>
+                              <Select.Value />
+                              <Select.Indicator />
+                            </Select.Trigger>
+                            <Select.Popover>
+                              <ListBox>
+                                {allowedStatuses.map((s) => (
+                                  <ListBox.Item key={s} id={s} textValue={s}>
+                                    {s}
+                                  </ListBox.Item>
+                                ))}
+                              </ListBox>
+                            </Select.Popover>
+                          </Select>
+                        )}
+                      />
+
+                      {effectiveStatus === "Delivered" && (
+                        <>
+                          <FormCheckbox control={control} name="isChargable" label="Is Chargable" />
+
+                          {effectiveIsChargable && (
+                            <>
+                              <Controller
+                                name="chargeSide"
+                                control={control}
+                                render={({ field }) => (
+                                  <RadioGroup
+                                    value={field.value ?? null}
+                                    onChange={(v) =>
+                                      field.onChange(v as "broker" | "carrier" | null)
+                                    }
+                                  >
+                                    <Label>Charge Side</Label>
+                                    <div className="flex flex-col gap-2 mt-1">
+                                      <Radio value="broker">
+                                        <Radio.Control>
+                                          <Radio.Indicator />
+                                        </Radio.Control>
+                                        <Radio.Content>
+                                          <Label>Broker Side</Label>
+                                        </Radio.Content>
+                                      </Radio>
+                                      <Radio value="carrier">
+                                        <Radio.Control>
+                                          <Radio.Indicator />
+                                        </Radio.Control>
+                                        <Radio.Content>
+                                          <Label>Carrier Side</Label>
+                                        </Radio.Content>
+                                      </Radio>
+                                    </div>
+                                  </RadioGroup>
+                                )}
+                              />
+
+                              <FormNumberInput
+                                control={control}
+                                name="chargeAmount"
+                                label="Charge Amount"
+                                placeholder="Enter charge amount"
+                                min="0.01"
+                                step="0.01"
+                              />
+
+                              <FileUploader
+                                ref={uploaderRef}
+                                max={MAX_FILES_DEFAULT}
+                                buttonLabel="Upload"
+                                value={uploaderItems}
+                                onChange={setUploaderItems}
+                                helpText="Optional charge-related documents."
+                              />
+                            </>
+                          )}
+                        </>
+                      )}
+
+                      {cLabel !== null && (
+                        <div>
+                          <FormTextArea
+                            control={control}
+                            name="comment"
+                            label={cLabel}
+                            rows={3}
+                            placeholder={`Enter ${cLabel.toLowerCase()}…`}
+                            maxLength={500}
+                          />
+                          <p className="text-xs text-gray-400 mt-1">{comment.length}/500</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </form>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="ghost" onPress={close}>
+                Cancel
+              </Button>
+              {!isTerminal && (
+                <Button
+                  variant="primary"
+                  type="submit"
+                  form="status-update-form"
+                  isDisabled={mutation.isPending || isBusy}
                 >
-                  Is Chargable
-                </Checkbox>
-              </Form.Item>
-
-              {isChargable && (
-                <>
-                  <Form.Item
-                    name="chargeSide"
-                    label="Charge Side"
-                    rules={[
-                      { required: true, message: "Please select Broker Side or Carrier Side" },
-                    ]}
-                  >
-                    <Radio.Group>
-                      <Radio value="broker">Broker Side</Radio>
-                      <Radio value="carrier">Carrier Side</Radio>
-                    </Radio.Group>
-                  </Form.Item>
-
-                  <Form.Item
-                    name="chargeAmount"
-                    label="Charge Amount"
-                    rules={[
-                      {
-                        validator: (_, v) =>
-                          typeof v === "number" && v > 0
-                            ? Promise.resolve()
-                            : Promise.reject(new Error("Charge Amount must be greater than 0")),
-                      },
-                    ]}
-                  >
-                    <InputNumber
-                      min={0.01}
-                      precision={2}
-                      prefix="€"
-                      style={{ width: "100%" }}
-                      placeholder="Enter charge amount"
-                    />
-                  </Form.Item>
-
-                  <Form.Item label="Documents">
-                    <FileUploader ref={uploaderRef} max={5} disabled={loading} />
-                  </Form.Item>
-                </>
+                  {mutation.isPending ? <Spinner size="sm" /> : "Update Status"}
+                </Button>
               )}
-            </>
-          )}
-
-          {commentFieldLabel !== null && (
-            <Form.Item
-              name="comment"
-              label={commentFieldLabel}
-              preserve={false}
-              rules={[
-                { required: true, message: `${commentFieldLabel} is required` },
-                { max: 500, message: "Comment cannot exceed 500 characters" },
-              ]}
-            >
-              <Input.TextArea
-                rows={3}
-                placeholder={`Enter ${commentFieldLabel.toLowerCase()}…`}
-                showCount
-                maxLength={500}
-              />
-            </Form.Item>
-          )}
-        </Form>
-      )}
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   );
 };

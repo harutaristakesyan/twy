@@ -1,22 +1,17 @@
-import { LockOutlined } from "@ant-design/icons";
-import { Button, Form, Input, Typography } from "antd";
+import { Button, FieldError, Input, Label, TextField } from "@heroui/react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
+import { z } from "zod";
 import { applyLogin } from "@/features/auth/api/authActions";
-import ApiClient from "@/libs/ApiClient.ts";
-import type { ApiResponse } from "@/libs/api-types.ts";
-
-const { Text } = Typography;
+import ApiClient from "@/libs/ApiClient";
+import type { ApiResponse } from "@/libs/api-types";
 
 interface SetPasswordFormProps {
   session: string;
   email: string;
   onSuccess: () => void;
-}
-
-interface SetPasswordFormValues {
-  newPassword: string;
-  confirmPassword: string;
 }
 
 interface TokenResponse {
@@ -25,17 +20,30 @@ interface TokenResponse {
   refreshToken: string;
 }
 
+const schema = z
+  .object({
+    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+type SetPasswordFormValues = z.infer<typeof schema>;
+
 const SetPasswordForm = ({ session, email, onSuccess }: SetPasswordFormProps) => {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
 
-  const onFinish = async ({ newPassword, confirmPassword }: SetPasswordFormValues) => {
-    if (newPassword !== confirmPassword) {
-      form.setFields([{ name: "confirmPassword", errors: ["Passwords do not match"] }]);
-      return;
-    }
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<SetPasswordFormValues>({ resolver: zodResolver(schema) });
 
+  const onSubmit = async ({ newPassword }: SetPasswordFormValues) => {
     setLoading(true);
     try {
       const res = await ApiClient.post<ApiResponse<TokenResponse>>(
@@ -53,7 +61,7 @@ const SetPasswordForm = ({ session, email, onSuccess }: SetPasswordFormProps) =>
         const message =
           (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
           "Failed to set password";
-        form.setFields([{ name: "newPassword", errors: [message] }]);
+        setError("newPassword", { message });
       }
     } finally {
       setLoading(false);
@@ -62,39 +70,40 @@ const SetPasswordForm = ({ session, email, onSuccess }: SetPasswordFormProps) =>
 
   if (sessionExpired) {
     return (
-      <Text>
+      <p className="text-sm text-gray-700">
         Your session has expired. Please <Link to="/login">log in again</Link>.
-      </Text>
+      </p>
     );
   }
 
   return (
-    <Form form={form} layout="vertical" onFinish={onFinish}>
-      <Form.Item
-        name="newPassword"
-        label="New Password"
-        rules={[
-          { required: true, message: "Please enter a new password" },
-          { min: 8, message: "Password must be at least 8 characters" },
-        ]}
-      >
-        <Input.Password prefix={<LockOutlined />} placeholder="New password" />
-      </Form.Item>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <TextField isInvalid={!!errors.newPassword}>
+        <Label>New Password</Label>
+        <Input type="password" placeholder="New password" {...register("newPassword")} />
+        <FieldError>{errors.newPassword?.message}</FieldError>
+      </TextField>
 
-      <Form.Item
-        name="confirmPassword"
-        label="Confirm Password"
-        rules={[{ required: true, message: "Please confirm your password" }]}
-      >
-        <Input.Password prefix={<LockOutlined />} placeholder="Confirm new password" />
-      </Form.Item>
+      <TextField isInvalid={!!errors.confirmPassword}>
+        <Label>Confirm Password</Label>
+        <Input
+          type="password"
+          placeholder="Confirm new password"
+          {...register("confirmPassword")}
+        />
+        <FieldError>{errors.confirmPassword?.message}</FieldError>
+      </TextField>
 
-      <Form.Item>
-        <Button block type="primary" htmlType="submit" loading={loading}>
-          Set Password
-        </Button>
-      </Form.Item>
-    </Form>
+      <Button
+        type="submit"
+        variant="primary"
+        className="w-full"
+        isPending={loading}
+        isDisabled={loading}
+      >
+        Set Password
+      </Button>
+    </form>
   );
 };
 

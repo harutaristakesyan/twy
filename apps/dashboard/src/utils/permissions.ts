@@ -86,11 +86,3 @@ export function normalizePermissionsMap(
   }
   return base;
 }
-
-export function canViewBrokerRequests(permissions: PermissionsMap): boolean {
-  return !!permissions.brokers_requests?.view;
-}
-
-export function canEditBrokerRequests(permissions: PermissionsMap): boolean {
-  return !!permissions.brokers_requests?.edit;
-}

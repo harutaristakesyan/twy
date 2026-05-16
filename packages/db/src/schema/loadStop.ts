@@ -15,8 +15,6 @@ export const loadStop = pgTable(
     sortOrder: integer().notNull(),
     cityZipCode: text(),
     phone: text(),
-    carrier: text().notNull(),
-    name: text().notNull(),
     address: text().notNull(),
   },
   (t) => [unique("load_stop_load_id_kind_sort_order_uq").on(t.loadId, t.kind, t.sortOrder)],

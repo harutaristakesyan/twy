@@ -13,8 +13,6 @@ const uuidField = z.uuid("Value must be a valid UUID");
 const locationSchema = z.object({
   cityZipCode: z.string().trim().nullable().optional(),
   phone: z.string().trim().nullable().optional(),
-  carrier: z.string().trim().min(1, "Carrier is required"),
-  name: z.string().trim().min(1, "Name is required"),
   address: z.string().trim().min(1, "Address is required"),
 });
 
@@ -26,15 +24,9 @@ const stopsArraySchema = z
   .max(MAX_STOPS_PER_LEG, `At most ${MAX_STOPS_PER_LEG} stops are allowed per leg`);
 
 const LoadBaseSchema = z.object({
-  customer: z.string().trim().min(1, "Customer is required"),
-  referenceNumber: z.string().trim().min(1, "Reference Number is required"),
+  brokerId: uuidField,
   customerRate: z.number().positive("Customer Rate must be greater than 0"),
-  contactName: z.string().trim().min(1, "Contact Name is required"),
-  paymentMethod: z.string().trim().min(1, "Payment Method is required"),
-  paymentTerms: z.string().trim().min(1, "Payment Terms is required"),
-  carrier: z.string().trim().nullable().optional(),
   carrierId: uuidField.nullable().optional(),
-  carrierPaymentMethod: z.string().trim().nullable().optional(),
   carrierRate: z.number().positive("Carrier Rate must be greater than 0"),
   chargeServiceFeeToOffice: z.boolean().optional().default(false),
   loadType: z.string().trim().min(1, "Load Type is required"),
@@ -68,7 +60,7 @@ export const loadSortFieldMap = {
   referenceNumber: "referenceNumber",
   status: "status",
   createdAt: "createdAt",
-  customer: "customer",
+  broker: "broker",
 } as const;
 
 export const loadSortOrderMap = {
@@ -181,3 +173,12 @@ export const DeleteLoadEventSchema = z.object({
 });
 
 export type DeleteLoadEvent = z.infer<typeof DeleteLoadEventSchema>;
+
+export const GetLoadEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    loadId: uuidField,
+  }),
+});
+
+export type GetLoadEvent = z.infer<typeof GetLoadEventSchema>;

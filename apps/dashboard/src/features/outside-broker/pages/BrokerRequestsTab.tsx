@@ -1,206 +1,60 @@
-import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
-import { useAntdTable, useRequest } from "ahooks";
-import { App, Button, Card, Drawer, Empty, Flex, Input, Table, Typography } from "antd";
 import type React from "react";
 import { useState } from "react";
-import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
-import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
+import { Outlet, useNavigate } from "react-router-dom";
+import { DataTable } from "@/components/DataTable";
+import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { getErrorMessage } from "@/utils/errorUtils";
-import { canEditBrokerRequests, canViewBrokerRequests } from "@/utils/permissions";
-import {
-  approveBrokerRequest,
-  listBrokerRequests,
-  rejectBrokerRequest,
-} from "../api/brokerRequestApi";
-import {
-  BrokerRequestDetails,
-  BrokerRequestReviewSummary,
-} from "../components/BrokerRequestDetails";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useServerTable } from "@/hooks/useServerTable";
+import { listBrokerRequests } from "../api/brokerRequestApi";
 import { useBrokerRequestColumns } from "../components/useBrokerRequestColumns";
-import { useBrokerRequestDrawer } from "../hooks/useBrokerRequestDrawer";
-
-const { Title } = Typography;
-
-const BOOL_OPTIONS = [
-  { label: "Yes", value: "true" },
-  { label: "No", value: "false" },
-];
-
-const FILTER_FIELDS: FilterField[] = [
-  {
-    key: "status",
-    label: "Status",
-    type: "select",
-    options: [
-      { label: "Pending", value: "pending" },
-      { label: "Approved", value: "approved" },
-      { label: "Rejected", value: "rejected" },
-    ],
-  },
-  { key: "creditLimitUnlimited", label: "Credit unlimited", type: "select", options: BOOL_OPTIONS },
-  { key: "creditLimit", label: "Credit limit", type: "numberRange" },
-];
+import type { BrokerRequest } from "../types/brokerRequest";
 
 const BrokerRequestsTab: React.FC = () => {
-  const { message } = App.useApp();
+  const navigate = useNavigate();
   const { permissions } = useCurrentUser();
-  const canView = canViewBrokerRequests(permissions);
-  const canReview = canEditBrokerRequests(permissions);
+  const canView = Boolean(permissions.brokers_requests?.view);
 
-  const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
-  const [activeQuery, setActiveQuery] = useState("");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
 
-  const {
-    record,
-    open,
-    showRejectInput,
-    rejectReason,
-    openView,
-    closeDrawer,
-    setShowRejectInput,
-    setRejectReason,
-  } = useBrokerRequestDrawer();
-
-  const { tableProps, refresh } = useAntdTable(
-    async ({ current, pageSize, sorter }) => {
-      const s = Array.isArray(sorter) ? sorter[0] : sorter;
+  const table = useServerTable<BrokerRequest>({
+    queryKey: ["broker-requests", debouncedSearch],
+    fetcher: async ({ page, pageSize }) => {
       const result = await listBrokerRequests({
-        page: current - 1,
+        page: page - 1,
         limit: pageSize,
-        sortField: (s?.field ?? "createdAt") as "createdAt" | "brokerName" | "mcNumber" | "status",
-        sortOrder: (s?.order ?? undefined) as "ascend" | "descend" | undefined,
-        query: activeQuery || undefined,
-        filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
+        query: debouncedSearch || undefined,
       });
-      return { total: result.total, list: result.requests };
+      return { items: result.requests, total: result.total };
     },
-    { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 10 },
-  );
+    initialPageSize: 10,
+  });
 
-  const columns = useBrokerRequestColumns(openView, canView);
+  const openRequest = (record: BrokerRequest) => navigate(record.id);
 
-  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
-    setActiveFilter(filter);
-    setActiveQuery(query ?? "");
-  };
-
-  const { loading: approving, run: approve } = useRequest(
-    (id: string) => approveBrokerRequest(id),
-    {
-      manual: true,
-      onSuccess: () => {
-        message.success("Request approved; broker is now active");
-        closeDrawer();
-        refresh();
-      },
-      onError: (e) => message.error(getErrorMessage(e)),
-    },
-  );
-
-  const { loading: rejecting, run: reject } = useRequest(
-    (id: string, reason?: string) => rejectBrokerRequest(id, { rejectionReason: reason }),
-    {
-      manual: true,
-      onSuccess: () => {
-        message.success("Request rejected");
-        closeDrawer();
-        refresh();
-      },
-      onError: (e) => message.error(getErrorMessage(e)),
-    },
-  );
-
-  const renderDrawerFooter = () => {
-    if (!record || record.status !== "pending" || !canReview) return null;
-    if (showRejectInput) {
-      return (
-        <Flex vertical gap="small">
-          <Input.TextArea
-            rows={3}
-            placeholder="Rejection reason"
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            autoFocus
-          />
-          <Flex gap="small" justify="flex-end">
-            <Button onClick={() => setShowRejectInput(false)}>Cancel</Button>
-            <Button
-              danger
-              loading={rejecting}
-              onClick={() => reject(record.id, rejectReason || undefined)}
-            >
-              Confirm reject
-            </Button>
-          </Flex>
-        </Flex>
-      );
-    }
-    return (
-      <Flex gap="small" justify="flex-end">
-        <Button danger icon={<CloseOutlined />} onClick={() => setShowRejectInput(true)}>
-          Reject
-        </Button>
-        <Button
-          type="primary"
-          icon={<CheckOutlined />}
-          loading={approving}
-          onClick={() => approve(record.id)}
-        >
-          Approve
-        </Button>
-      </Flex>
-    );
-  };
-
-  const drawerTitle = record ? `${record.brokerName} — ${record.mcNumber}` : "Broker request";
+  const { columns, renderCell } = useBrokerRequestColumns({ canView, onView: openRequest });
 
   return (
-    <div>
-      <Card>
-        <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
-          <Title level={4} style={{ margin: 0 }}>
-            Broker requests ({tableProps.pagination?.total ?? 0})
-          </Title>
-          <AdvancedFilterPopover
-            fields={FILTER_FIELDS}
-            initialFilter={activeFilter}
-            initialQuery={activeQuery}
-            onApply={handleFilterApply}
-          />
-        </Flex>
+    <div className="p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold">Broker Requests ({table.total})</h2>
+        <Search query={search} onQueryChange={setSearch} placeholder="Search requests..." />
+      </div>
 
-        <ActiveFilterChips
-          filter={activeFilter}
-          fields={FILTER_FIELDS}
-          query={activeQuery}
-          onChange={setActiveFilter}
-          onClearQuery={() => setActiveQuery("")}
-        />
+      <DataTable
+        ariaLabel="Broker requests"
+        items={table.items}
+        columns={columns}
+        renderCell={renderCell}
+        total={table.total}
+        page={table.page}
+        pageSize={table.pageSize}
+        isLoading={table.isLoading}
+        onPageChange={table.setPage}
+      />
 
-        <Table
-          rowKey="id"
-          columns={columns}
-          scroll={{ x: "max-content" }}
-          {...tableProps}
-          locale={{ emptyText: <Empty description="No broker requests yet" /> }}
-        />
-      </Card>
-
-      <Drawer
-        title={drawerTitle}
-        open={open}
-        onClose={closeDrawer}
-        size="large"
-        footer={renderDrawerFooter()}
-      >
-        {record && (
-          <Flex vertical gap="large">
-            <BrokerRequestDetails record={record} />
-            <BrokerRequestReviewSummary record={record} />
-          </Flex>
-        )}
-      </Drawer>
+      <Outlet />
     </div>
   );
 };

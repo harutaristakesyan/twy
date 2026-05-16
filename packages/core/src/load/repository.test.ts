@@ -5,11 +5,22 @@ const mockTransaction = vi.hoisted(() => vi.fn());
 
 vi.mock("@twy/db", () => ({
   db: { transaction: mockTransaction },
-  load: { id: {}, status: {}, financialsLockedAt: {} },
+  load: { id: {}, status: {}, financialsLockedAt: {}, brokerId: {}, carrierId: {} },
   loadComment: {},
   loadFiles: { loadId: {}, fileId: {} },
   loadStop: { loadId: {}, kind: {} },
+  loadRefSeq: { year: {}, lastValue: {} },
   branch: { id: {} },
+  carrier: { id: {}, carrierName: {}, mcDotNumber: {}, paymentMethod: {}, paymentTerms: {} },
+  outsideBroker: {
+    id: {},
+    brokerName: {},
+    contactName: {},
+    phone: {},
+    email: {},
+    paymentMethod: {},
+    paymentTerms: {},
+  },
   file: { id: {} },
   paymentOrder: {},
   users: {},

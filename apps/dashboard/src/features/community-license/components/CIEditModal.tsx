@@ -1,101 +1,121 @@
-import { useRequest } from "ahooks";
-import { App, Button, DatePicker, Form, Input, Modal, Space } from "antd";
-import dayjs from "dayjs";
-import type React from "react";
-import { getErrorMessage } from "@/utils/errorUtils";
-import { updateCommunityLicense } from "../api/ciApi";
-import type { CommunityLicense } from "../types/communityLicense";
+import { Button, Modal, Spinner, toast } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { z } from "zod";
+import { FormDateInput, FormTextField } from "@/components/form";
+import { useZodForm } from "@/libs/form";
+import { useApiMutation, useApiQuery } from "@/libs/query";
+import { getCommunityLicenseById, updateCommunityLicense } from "../api/ciApi";
 
-interface CIEditModalProps {
-  open: boolean;
-  communityLicense: CommunityLicense;
-  onCancel: () => void;
-  onSuccess: () => void;
-}
+const schema = z.object({
+  ciNumber: z
+    .string()
+    .min(1, "CI number is required")
+    .max(50, "CI number must be at most 50 characters"),
+  validFrom: z.string().min(1, "Valid from date is required"),
+  validTo: z.string().nullable().optional(),
+});
 
-const CIEditModal: React.FC<CIEditModalProps> = ({
-  open,
-  communityLicense,
-  onCancel,
-  onSuccess,
-}) => {
-  const { message } = App.useApp();
-  const [form] = Form.useForm();
+type FormValues = z.infer<typeof schema>;
 
-  const { loading, run: submit } = useRequest(
-    async (values: { ciNumber: string; validFrom: unknown; validTo: unknown }) => {
-      await updateCommunityLicense({
-        id: communityLicense.id,
-        ciNumber: values.ciNumber,
-        validFrom: dayjs(values.validFrom as Parameters<typeof dayjs>[0]).format("YYYY-MM-DD"),
-        validTo: values.validTo
-          ? dayjs(values.validTo as Parameters<typeof dayjs>[0]).format("YYYY-MM-DD")
-          : null,
-      });
-    },
-    {
-      manual: true,
-      onSuccess: () => {
-        message.success("Community license updated successfully");
-        onSuccess();
-      },
-      onError: (error) => {
-        message.error(getErrorMessage(error));
-      },
-    },
+const CIEditModal = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const close = () => navigate("/settings");
+  const { ciId } = useParams<{ ciId: string }>();
+
+  const { data: communityLicense, isLoading } = useApiQuery(
+    ["community-license", ciId],
+    () => getCommunityLicenseById(ciId),
+    { enabled: !!ciId },
   );
 
+  const { control, handleSubmit, reset } = useZodForm(schema, {
+    ciNumber: "",
+    validFrom: "",
+    validTo: null,
+  });
+
+  useEffect(() => {
+    if (communityLicense) {
+      reset({
+        ciNumber: communityLicense.ciNumber,
+        validFrom: communityLicense.validFrom,
+        validTo: communityLicense.validTo ?? null,
+      });
+    }
+  }, [communityLicense, reset]);
+
+  const mutation = useApiMutation(updateCommunityLicense, {
+    onSuccess: async () => {
+      toast.success("Community license updated successfully");
+      await queryClient.invalidateQueries({ queryKey: ["community-licenses"] });
+      await queryClient.invalidateQueries({ queryKey: ["community-license", ciId] });
+      close();
+    },
+  });
+
+  const onSubmit = handleSubmit((values: FormValues) => {
+    if (!communityLicense) return;
+    mutation.mutate({
+      id: communityLicense.id,
+      ciNumber: values.ciNumber,
+      validFrom: values.validFrom,
+      validTo: values.validTo || null,
+    });
+  });
+
   return (
-    <Modal
-      title="Edit Community License"
-      open={open}
-      onCancel={onCancel}
-      footer={null}
-      width={520}
-      destroyOnHidden
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={submit}
-        initialValues={{
-          ciNumber: communityLicense.ciNumber,
-          validFrom: dayjs(communityLicense.validFrom),
-          validTo: communityLicense.validTo ? dayjs(communityLicense.validTo) : undefined,
+    <Modal>
+      <Modal.Backdrop
+        isOpen
+        onOpenChange={(open) => {
+          if (!open) close();
         }}
       >
-        <Form.Item
-          name="ciNumber"
-          label="CI Number"
-          rules={[
-            { required: true, message: "CI number is required" },
-            { max: 50, message: "CI number must be at most 50 characters" },
-          ]}
-        >
-          <Input placeholder="e.g. CI-123456" />
-        </Form.Item>
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>Edit Community License</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="p-2">
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Spinner size="lg" />
+                </div>
+              ) : (
+                <form id="ci-edit-form" onSubmit={onSubmit} className="flex flex-col gap-4">
+                  <FormTextField
+                    control={control}
+                    name="ciNumber"
+                    label="CI Number"
+                    placeholder="e.g. CI-123456"
+                  />
 
-        <Form.Item
-          name="validFrom"
-          label="Valid From"
-          rules={[{ required: true, message: "Valid from date is required" }]}
-        >
-          <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
-        </Form.Item>
+                  <FormDateInput control={control} name="validFrom" label="Valid From" />
 
-        <Form.Item name="validTo" label="Valid To">
-          <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
-        </Form.Item>
-
-        <Form.Item>
-          <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={onCancel}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={loading}>
-              Update
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
+                  <FormDateInput control={control} name="validTo" label="Valid To" />
+                </form>
+              )}
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="ghost" onPress={close}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                form="ci-edit-form"
+                isPending={mutation.isPending}
+              >
+                {({ isPending }) => (isPending ? "Updating..." : "Update")}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   );
 };

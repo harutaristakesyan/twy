@@ -1,121 +1,129 @@
-import { useRequest } from "ahooks";
-import { App, Button, Form, Input, Modal, Select, Space } from "antd";
-import type React from "react";
-import { LabeledOption } from "@/components/LabeledOption";
+import { Button, Modal, toast } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Controller } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
+import { z } from "zod";
+import { FormTextArea, FormTextField } from "@/components/form";
 import CIAutocomplete from "@/features/community-license/components/CIAutocomplete";
-import type { User } from "@/features/user/types/user";
-import { getErrorMessage } from "@/utils/errorUtils";
+import UserSelect from "@/features/user/components/UserSelect";
+import { useZodForm } from "@/libs/form";
+import { useApiMutation } from "@/libs/query";
 import { createBranch } from "../api/branchApi";
-import type { BranchFormData } from "../types/branch";
 
-const { TextArea } = Input;
+const schema = z.object({
+  name: z.string().min(2, "Branch name must be at least 2 characters"),
+  contact: z.string().max(500, "Contact information cannot exceed 500 characters").optional(),
+  ciId: z.string().nullable().optional(),
+  owner: z.string().nullable().optional(),
+});
 
-interface BranchCreateModalProps {
-  open: boolean;
-  owners: User[];
-  loadingOwners: boolean;
-  onCancel: () => void;
-  onSuccess: () => void;
-}
+type FormValues = z.infer<typeof schema>;
 
-const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
-  open,
-  owners,
-  loadingOwners,
-  onCancel,
-  onSuccess,
-}) => {
-  const { message } = App.useApp();
-  const [form] = Form.useForm();
+const BranchCreateModal = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const close = () => navigate("..");
 
-  const { loading, run: submit } = useRequest(
-    async (values: BranchFormData) => {
-      await createBranch(values);
+  const { control, handleSubmit } = useZodForm(schema, {
+    name: "",
+    contact: "",
+    ciId: null,
+    owner: null,
+  });
+
+  const mutation = useApiMutation(createBranch, {
+    onSuccess: async () => {
+      toast.success("Branch created successfully");
+      await queryClient.invalidateQueries({ queryKey: ["branches"] });
+      close();
     },
-    {
-      manual: true,
-      onSuccess: () => {
-        message.success("Branch created successfully");
-        onSuccess();
-      },
-      onError: (error) => {
-        message.error(getErrorMessage(error));
-      },
-    },
-  );
+  });
+
+  const onSubmit = handleSubmit((values: FormValues) => {
+    mutation.mutate({
+      name: values.name,
+      contact: values.contact || undefined,
+      ciId: values.ciId ?? null,
+      owner: values.owner ?? null,
+    });
+  });
 
   return (
-    <Modal
-      title="Create New Branch"
-      open={open}
-      onCancel={onCancel}
-      footer={null}
-      width={600}
-      destroyOnHidden
-    >
-      <Form form={form} layout="vertical" onFinish={submit} id="branchCreateForm">
-        <Form.Item
-          name="name"
-          label="Branch Name"
-          rules={[
-            { required: true, message: "Please enter branch name" },
-            { min: 2, message: "Branch name must be at least 2 characters" },
-          ]}
-        >
-          <Input placeholder="Enter branch name" id="create-name" />
-        </Form.Item>
+    <Modal>
+      <Modal.Backdrop
+        isOpen
+        onOpenChange={(open) => {
+          if (!open) close();
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>Create New Branch</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="p-2">
+              <form id="branch-create-form" onSubmit={onSubmit} className="flex flex-col gap-4">
+                <FormTextField
+                  control={control}
+                  name="name"
+                  label="Branch Name"
+                  placeholder="Enter branch name"
+                />
 
-        <Form.Item
-          name="contact"
-          label="Contact Information"
-          rules={[{ max: 500, message: "Contact information cannot exceed 500 characters" }]}
-        >
-          <TextArea
-            placeholder="Enter contact information (phone, email, address, etc.)"
-            rows={3}
-            id="create-contact"
-          />
-        </Form.Item>
+                <FormTextArea
+                  control={control}
+                  name="contact"
+                  label="Contact Information"
+                  placeholder="Enter contact information (phone, email, address, etc.)"
+                  rows={3}
+                />
 
-        <Form.Item name="ciId" label="Community License">
-          <CIAutocomplete placeholder="Search by CI number" id="create-ciId" />
-        </Form.Item>
+                <Controller
+                  name="ciId"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <CIAutocomplete
+                      label="Community License"
+                      value={field.value ?? null}
+                      onChange={(uuid) => field.onChange(uuid)}
+                      placeholder="Search by CI number"
+                      isInvalid={!!fieldState.error}
+                    />
+                  )}
+                />
 
-        <Form.Item name="owner" label="Branch Owner">
-          <Select
-            placeholder="Select branch owner"
-            loading={loadingOwners}
-            allowClear
-            showSearch={{
-              filterOption: (input, option) => {
-                const label = String(option?.label ?? "");
-                const email = String(option?.email ?? "");
-                return (
-                  label.toLowerCase().includes(input.toLowerCase()) ||
-                  email.toLowerCase().includes(input.toLowerCase())
-                );
-              },
-            }}
-            options={owners.map((o) => ({
-              value: o.id,
-              label: `${o.firstName} ${o.lastName}`,
-              email: o.email,
-            }))}
-            optionRender={(option) => (
-              <LabeledOption label={option.label} description={option.data.email} />
-            )}
-          />
-        </Form.Item>
-
-        <Form.Item>
-          <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={onCancel}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={loading}>
-              Create Branch
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
+                <Controller
+                  name="owner"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <UserSelect
+                      label="Branch Owner"
+                      placeholder="Search users…"
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      isInvalid={!!fieldState.error}
+                    />
+                  )}
+                />
+              </form>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="ghost" onPress={close}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                form="branch-create-form"
+                isPending={mutation.isPending}
+              >
+                {({ isPending }) => (isPending ? "Creating..." : "Create Branch")}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   );
 };

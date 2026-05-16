@@ -1,220 +1,60 @@
-import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
-import { useAntdTable, useRequest } from "ahooks";
-import { Button, Card, Drawer, Empty, Flex, Input, message, Table, Typography } from "antd";
 import type React from "react";
 import { useState } from "react";
-import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
-import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
+import { Outlet, useNavigate } from "react-router-dom";
+import { DataTable } from "@/components/DataTable";
+import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { getErrorMessage } from "@/utils/errorUtils";
-import {
-  approveCarrierRequest,
-  listCarrierRequests,
-  rejectCarrierRequest,
-} from "../api/carrierRequestApi";
-import {
-  CarrierRequestDetails,
-  CarrierRequestReviewSummary,
-} from "../components/CarrierRequestDetails";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useServerTable } from "@/hooks/useServerTable";
+import { listCarrierRequests } from "../api/carrierRequestApi";
 import { useCarrierRequestColumns } from "../components/useCarrierRequestColumns";
-import { useCarrierRequestDrawer } from "../hooks/useCarrierRequestDrawer";
-import { InsuranceStatus } from "../types/carrier";
-
-const { Title } = Typography;
-
-const FILTER_FIELDS: FilterField[] = [
-  {
-    key: "kind",
-    label: "Kind",
-    type: "select",
-    options: [
-      { label: "Twy", value: "twy" },
-      { label: "Outside", value: "outside" },
-    ],
-  },
-  {
-    key: "status",
-    label: "Status",
-    type: "select",
-    options: [
-      { label: "Pending", value: "pending" },
-      { label: "Approved", value: "approved" },
-      { label: "Rejected", value: "rejected" },
-    ],
-  },
-  {
-    key: "insuranceStatus",
-    label: "Insurance status",
-    type: "select",
-    options: [
-      { label: "Valid", value: InsuranceStatus.VALID },
-      { label: "Expired", value: InsuranceStatus.EXPIRED },
-      { label: "Pending", value: InsuranceStatus.PENDING },
-    ],
-  },
-];
+import type { CarrierRequest } from "../types/carrierRequest";
 
 const CarrierRequestsTab: React.FC = () => {
+  const navigate = useNavigate();
   const { permissions } = useCurrentUser();
-  const canReview = permissions.carriers_requests?.edit;
+  const canView = Boolean(permissions.carriers_requests?.view);
 
-  const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
-  const [activeQuery, setActiveQuery] = useState("");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
 
-  const {
-    record,
-    open,
-    showRejectInput,
-    rejectReason,
-    openView,
-    closeDrawer,
-    setShowRejectInput,
-    setRejectReason,
-  } = useCarrierRequestDrawer();
-
-  const { tableProps, refresh } = useAntdTable(
-    async ({ current, pageSize, sorter }) => {
-      const s = Array.isArray(sorter) ? sorter[0] : sorter;
+  const table = useServerTable<CarrierRequest>({
+    queryKey: ["carrier-requests", debouncedSearch],
+    fetcher: async ({ page, pageSize }) => {
       const result = await listCarrierRequests({
-        page: current - 1,
+        page: page - 1,
         limit: pageSize,
-        sortField: (s?.field ?? "createdAt") as
-          | "createdAt"
-          | "carrierName"
-          | "mcDotNumber"
-          | "status",
-        sortOrder: (s?.order ?? undefined) as "ascend" | "descend" | undefined,
-        query: activeQuery || undefined,
-        filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
+        query: debouncedSearch || undefined,
       });
-      return { total: result.total, list: result.requests };
+      return { items: result.requests, total: result.total };
     },
-    { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 10 },
-  );
+    initialPageSize: 10,
+  });
 
-  const columns = useCarrierRequestColumns(openView);
+  const openRequest = (record: CarrierRequest) => navigate(record.id);
 
-  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
-    setActiveFilter(filter);
-    setActiveQuery(query ?? "");
-  };
-
-  const { loading: approving, run: approve } = useRequest(
-    (id: string) => approveCarrierRequest(id),
-    {
-      manual: true,
-      onSuccess: () => {
-        message.success("Request approved; carrier is now active");
-        closeDrawer();
-        refresh();
-      },
-      onError: (e) => message.error(getErrorMessage(e)),
-    },
-  );
-
-  const { loading: rejecting, run: reject } = useRequest(
-    (id: string, reason?: string) => rejectCarrierRequest(id, { rejectionReason: reason }),
-    {
-      manual: true,
-      onSuccess: () => {
-        message.success("Request rejected");
-        closeDrawer();
-        refresh();
-      },
-      onError: (e) => message.error(getErrorMessage(e)),
-    },
-  );
-
-  const renderDrawerFooter = () => {
-    if (!record || record.status !== "pending" || !canReview) return null;
-    if (showRejectInput) {
-      return (
-        <Flex vertical gap="small">
-          <Input.TextArea
-            rows={3}
-            placeholder="Rejection reason"
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            autoFocus
-          />
-          <Flex gap="small" justify="flex-end">
-            <Button onClick={() => setShowRejectInput(false)}>Cancel</Button>
-            <Button
-              danger
-              loading={rejecting}
-              onClick={() => reject(record.id, rejectReason || undefined)}
-            >
-              Confirm reject
-            </Button>
-          </Flex>
-        </Flex>
-      );
-    }
-    return (
-      <Flex gap="small" justify="flex-end">
-        <Button danger icon={<CloseOutlined />} onClick={() => setShowRejectInput(true)}>
-          Reject
-        </Button>
-        <Button
-          type="primary"
-          icon={<CheckOutlined />}
-          loading={approving}
-          onClick={() => approve(record.id)}
-        >
-          Approve
-        </Button>
-      </Flex>
-    );
-  };
-
-  const drawerTitle = record ? `${record.carrierName} — ${record.mcDotNumber}` : "Carrier request";
+  const { columns, renderCell } = useCarrierRequestColumns({ canView, onView: openRequest });
 
   return (
-    <div>
-      <Card>
-        <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
-          <Title level={4} style={{ margin: 0 }}>
-            Carrier requests ({tableProps.pagination?.total ?? 0})
-          </Title>
-          <AdvancedFilterPopover
-            fields={FILTER_FIELDS}
-            initialFilter={activeFilter}
-            initialQuery={activeQuery}
-            onApply={handleFilterApply}
-          />
-        </Flex>
+    <div className="p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold">Carrier Requests ({table.total})</h2>
+        <Search query={search} onQueryChange={setSearch} placeholder="Search requests..." />
+      </div>
 
-        <ActiveFilterChips
-          filter={activeFilter}
-          fields={FILTER_FIELDS}
-          query={activeQuery}
-          onChange={setActiveFilter}
-          onClearQuery={() => setActiveQuery("")}
-        />
+      <DataTable
+        ariaLabel="Carrier requests"
+        items={table.items}
+        columns={columns}
+        renderCell={renderCell}
+        total={table.total}
+        page={table.page}
+        pageSize={table.pageSize}
+        isLoading={table.isLoading}
+        onPageChange={table.setPage}
+      />
 
-        <Table
-          rowKey="id"
-          columns={columns}
-          scroll={{ x: "max-content" }}
-          {...tableProps}
-          locale={{ emptyText: <Empty description="No carrier requests yet" /> }}
-        />
-      </Card>
-
-      <Drawer
-        title={drawerTitle}
-        open={open}
-        onClose={closeDrawer}
-        size="large"
-        footer={renderDrawerFooter()}
-      >
-        {record && (
-          <Flex vertical gap="large">
-            <CarrierRequestDetails record={record} />
-            <CarrierRequestReviewSummary record={record} />
-          </Flex>
-        )}
-      </Drawer>
+      <Outlet />
     </div>
   );
 };

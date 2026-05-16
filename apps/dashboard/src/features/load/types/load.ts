@@ -9,21 +9,33 @@ export interface LoadFile {
 export interface Location {
   cityZipCode?: string | null;
   phone?: string | null;
-  carrier: string;
-  name: string;
   address: string;
+}
+
+export interface LoadBrokerSummary {
+  id: string;
+  brokerName: string;
+  contactName: string | null;
+  phone: string | null;
+  email: string | null;
+  paymentMethod: string | null;
+  paymentTerms: string | null;
+}
+
+export interface LoadCarrierSummary {
+  id: string;
+  carrierName: string;
+  mcDotNumber: string;
+  paymentMethod: string | null;
+  paymentTerms: string | null;
 }
 
 export interface Load {
   id: string;
-  customer: string;
   referenceNumber: string;
   customerRate?: number | null;
-  contactName: string;
-  paymentMethod: string;
-  paymentTerms: string;
-  carrier?: string | null;
-  carrierPaymentMethod?: string | null;
+  broker: LoadBrokerSummary;
+  carrier: LoadCarrierSummary | null;
   carrierRate?: number | null;
   chargeServiceFeeToOffice: boolean;
   isChargable: boolean;
@@ -50,14 +62,9 @@ export interface Load {
 }
 
 export interface CreateLoadDto {
-  customer: string;
-  referenceNumber: string;
+  brokerId: string;
   customerRate?: number | null;
-  contactName: string;
-  paymentMethod: string;
-  paymentTerms: string;
-  carrier?: string | null;
-  carrierPaymentMethod?: string | null;
+  carrierId?: string | null;
   carrierRate?: number | null;
   chargeServiceFeeToOffice: boolean;
   loadType: string;
@@ -108,7 +115,7 @@ export interface AddCommentDto {
 export interface GetLoadsParams {
   page?: number;
   limit?: number;
-  sortField?: "referenceNumber" | "status" | "createdAt" | "customer";
+  sortField?: "referenceNumber" | "status" | "createdAt" | "broker";
   sortOrder?: "ascend" | "descend";
   query?: string;
   filters?: string;

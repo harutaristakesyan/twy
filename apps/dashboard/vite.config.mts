@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import path from "node:path";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
@@ -9,7 +10,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ["src/test-setup.ts"],
   },
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   base: "/",
   server: {
     proxy: {
@@ -40,17 +41,19 @@ export default defineConfig({
     minify: true,
     rollupOptions: {
       output: {
-        globals: {
-          react: "React",
-          "react-dom": "ReactDOM",
-          antd: "antd",
-        },
         manualChunks: (id) => {
           if (id.includes("/node_modules/react/") || id.includes("/node_modules/react-dom/")) {
             return "react";
           }
-          if (id.includes("/node_modules/antd/") || id.includes("/node_modules/@ant-design/")) {
-            return "antd";
+          if (
+            id.includes("/node_modules/@heroui/") ||
+            id.includes("/node_modules/@react-aria/") ||
+            id.includes("/node_modules/@react-stately/")
+          ) {
+            return "heroui";
+          }
+          if (id.includes("/node_modules/@tanstack/")) {
+            return "tanstack";
           }
         },
       },

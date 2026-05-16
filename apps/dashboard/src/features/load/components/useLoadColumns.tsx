@@ -1,315 +1,104 @@
-import {
-  CheckCircleOutlined,
-  CommentOutlined,
-  DeleteOutlined,
-  DownloadOutlined,
-  EditOutlined,
-  MoreOutlined,
-} from "@ant-design/icons";
-import type { MenuProps } from "antd";
-import { App, Button, Dropdown, Space, Tag } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { filesApi } from "@/features/files";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { getErrorMessage } from "@/utils/errorUtils";
-import { formatCurrency } from "@/utils/formatters";
-import { useLoadModal } from "../providers/LoadModalProvider";
-import type { Load, Location } from "../types/load";
-import ChargeSideTag from "./ChargeSideTag";
+import { Chip } from "@heroui/react";
+import { ActionsMenu } from "@/components/ActionsMenu";
+import type { Load } from "@/features/load/types/load";
+import { getAllowedTransitions } from "@/features/load/utils/statusMachine";
 
-/** API list row during transition if cached JSON still has singular `pickup` / `dropoff`. */
-type LoadListRow = Load & { pickup?: Location; dropoff?: Location };
-
-const statusColorMap: Record<string, string> = {
-  Pending: "gold",
-  Approved: "green",
-  Delivered: "cyan",
-  Declined: "red",
-  Hold: "orange",
+export type LoadColumnDef = {
+  id: string;
+  label: string;
+  isRowHeader?: boolean;
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  rate_confirmation: "RateCon",
-  pod: "POD",
-  carrier_invoice: "Carrier Inv",
-  broker_invoice: "Broker Inv",
-  other: "Other",
+export const LOAD_COLUMNS: LoadColumnDef[] = [
+  { id: "referenceNumber", label: "Reference #", isRowHeader: true },
+  { id: "broker", label: "Broker" },
+  { id: "carrier", label: "Carrier" },
+  { id: "status", label: "Status" },
+  { id: "branch", label: "Branch" },
+  { id: "customerRate", label: "Customer Rate" },
+  { id: "carrierRate", label: "Carrier Rate" },
+  { id: "createdAt", label: "Created" },
+  { id: "actions", label: "Actions" },
+];
+
+const statusColor: Record<string, "warning" | "success" | "accent" | "danger" | "default"> = {
+  Pending: "warning",
+  Approved: "success",
+  Delivered: "accent",
+  Declined: "danger",
+  Hold: "warning",
 };
 
-/** Handles undefined arrays, stale cached list rows, or legacy single `pickup` / `dropoff` objects. */
-const resolveStops = (
-  record: LoadListRow,
-  key: "pickups" | "dropoffs",
-  legacyKey: "pickup" | "dropoff",
-): Load["pickups"] => {
-  const list = record[key];
-  if (Array.isArray(list) && list.length > 0) {
-    return list;
-  }
-  const legacy = record[legacyKey];
-  if (legacy && typeof legacy === "object") {
-    return [legacy];
-  }
-  return [];
+type UseLoadColumnsParams = {
+  canEdit: boolean;
+  canDelete: boolean;
+  isDeleting: boolean;
+  onEdit: (load: Load) => void;
+  onStatusUpdate: (load: Load) => void;
+  onDelete: (id: string) => void;
 };
 
-export function useLoadColumns(
-  refresh: () => void,
-  runDelete: (id: string) => void,
-): ColumnsType<Load> {
-  const { message, modal } = App.useApp();
-  const { openLoadEdit, openStatusUpdate, openComments } = useLoadModal();
-  const { permissions } = useCurrentUser();
-  const canEdit = permissions.loads.edit;
-
-  const handleFileDownload = async (fileId: string, fileName: string) => {
-    try {
-      message.loading({ content: "Downloading file...", key: "download" });
-      await filesApi.downloadFile(fileId, fileName);
-      message.success({ content: "File downloaded successfully", key: "download" });
-    } catch (error) {
-      message.error({ content: getErrorMessage(error), key: "download" });
+export function useLoadColumns({
+  canEdit,
+  canDelete,
+  isDeleting,
+  onEdit,
+  onStatusUpdate,
+  onDelete,
+}: UseLoadColumnsParams) {
+  const renderCell = (load: Load, colId: string) => {
+    switch (colId) {
+      case "referenceNumber":
+        return <span className="font-medium">{load.referenceNumber}</span>;
+      case "broker":
+        return load.broker?.brokerName ?? "—";
+      case "carrier":
+        return load.carrier?.carrierName ?? "—";
+      case "status":
+        return (
+          <Chip color={statusColor[load.status] ?? "default"} size="sm" variant="soft">
+            {load.status}
+          </Chip>
+        );
+      case "branch":
+        return load.branchName;
+      case "customerRate":
+        return load.customerRate != null ? `€${load.customerRate.toFixed(2)}` : "—";
+      case "carrierRate":
+        return load.carrierRate != null ? `€${load.carrierRate.toFixed(2)}` : "—";
+      case "createdAt":
+        return new Date(load.createdAt).toLocaleDateString();
+      case "actions": {
+        const canTransition = getAllowedTransitions(load.status).length > 0;
+        return (
+          <ActionsMenu
+            actions={[
+              {
+                header: "Actions",
+                items: [
+                  { type: "edit", hidden: !canEdit, onAction: () => onEdit(load) },
+                  { type: "status", hidden: !canTransition, onAction: () => onStatusUpdate(load) },
+                ],
+              },
+              {
+                header: "Danger zone",
+                items: [
+                  {
+                    type: "delete",
+                    hidden: !canDelete,
+                    disabled: isDeleting,
+                    onAction: () => onDelete(load.id),
+                  },
+                ],
+              },
+            ]}
+          />
+        );
+      }
+      default:
+        return null;
     }
   };
 
-  return [
-    {
-      title: "Reference #",
-      dataIndex: "referenceNumber",
-      key: "referenceNumber",
-      width: 130,
-      fixed: "left",
-      render: (text) => <strong>{text}</strong>,
-    },
-    {
-      title: "Branch",
-      dataIndex: "branchName",
-      key: "branchName",
-      width: 130,
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      width: 130,
-      sorter: true,
-      render: (status: Load["status"]) => (
-        <Tag color={statusColorMap[status] || "default"} style={{ textTransform: "capitalize" }}>
-          {status}
-        </Tag>
-      ),
-    },
-    {
-      title: "Broker",
-      dataIndex: "customer",
-      key: "customer",
-      width: 150,
-      sorter: true,
-    },
-    { title: "Contact", dataIndex: "contactName", key: "contactName", width: 130 },
-    {
-      title: "Carrier",
-      dataIndex: "carrier",
-      key: "carrier",
-      width: 130,
-      render: (text) => text || "—",
-    },
-    {
-      title: "Broker Receivable",
-      dataIndex: "customerRate",
-      key: "customerRate",
-      width: 150,
-      render: (value: number | null | undefined) =>
-        value != null ? <strong style={{ color: "#1890ff" }}>{formatCurrency(value)}</strong> : "—",
-    },
-    {
-      title: "Carrier Payable",
-      dataIndex: "carrierRate",
-      key: "carrierRate",
-      width: 140,
-      render: (value: number | null | undefined) =>
-        value != null ? <strong style={{ color: "#52c41a" }}>{formatCurrency(value)}</strong> : "—",
-    },
-    {
-      title: "Charges",
-      dataIndex: "chargeAmount",
-      key: "chargeAmount",
-      width: 110,
-      render: (value: number | null, record: Load) =>
-        record.isChargable && value != null ? formatCurrency(value) : "—",
-    },
-    {
-      title: "Charge Side",
-      dataIndex: "chargeSide",
-      key: "chargeSide",
-      width: 120,
-      render: (value: Load["chargeSide"]) => <ChargeSideTag value={value} />,
-    },
-    {
-      title: "Payment Method",
-      dataIndex: "paymentMethod",
-      key: "paymentMethod",
-      width: 140,
-      render: (text) => text || "—",
-    },
-    {
-      title: "Payment Terms",
-      dataIndex: "paymentTerms",
-      key: "paymentTerms",
-      width: 140,
-      render: (text) => text || "—",
-    },
-    {
-      title: "Load Type",
-      dataIndex: "loadType",
-      key: "loadType",
-      width: 120,
-      render: (text) => <Tag color="blue">{text}</Tag>,
-    },
-    { title: "Service Type", dataIndex: "serviceType", key: "serviceType", width: 120 },
-    { title: "Commodity", dataIndex: "commodity", key: "commodity", width: 130 },
-    { title: "Weight", dataIndex: "weight", key: "weight", width: 100 },
-    {
-      title: "Pickup",
-      key: "pickups",
-      width: 150,
-      render: (_, record) => {
-        const pickups = resolveStops(record, "pickups", "pickup");
-        const first = pickups[0];
-        const extra = pickups.length - 1;
-        if (!first) return "—";
-        return (
-          <div>
-            <div>{first.name}</div>
-            <div style={{ fontSize: "12px", color: "#666" }}>{first.cityZipCode || "N/A"}</div>
-            {extra > 0 && <div style={{ fontSize: "12px", color: "#888" }}>+{extra} more</div>}
-          </div>
-        );
-      },
-    },
-    {
-      title: "Dropoff",
-      key: "dropoffs",
-      width: 150,
-      render: (_, record) => {
-        const dropoffs = resolveStops(record, "dropoffs", "dropoff");
-        const first = dropoffs[0];
-        const extra = dropoffs.length - 1;
-        if (!first) return "—";
-        return (
-          <div>
-            <div>{first.name}</div>
-            <div style={{ fontSize: "12px", color: "#666" }}>{first.cityZipCode || "N/A"}</div>
-            {extra > 0 && <div style={{ fontSize: "12px", color: "#888" }}>+{extra} more</div>}
-          </div>
-        );
-      },
-    },
-    {
-      title: "Documents",
-      dataIndex: "files",
-      key: "files",
-      width: 130,
-      align: "center",
-      render: (files: Load["files"]) => {
-        if (!files || files.length === 0) return <Tag color="default">None</Tag>;
-        const menuItems: MenuProps["items"] = files.map((f) => ({
-          key: f.id,
-          label: (
-            <Space>
-              <DownloadOutlined />
-              <span>
-                {f.documentCategory
-                  ? (CATEGORY_LABELS[f.documentCategory] ?? f.documentCategory)
-                  : f.fileName}
-              </span>
-            </Space>
-          ),
-          onClick: () => handleFileDownload(f.id, f.fileName),
-        }));
-        return (
-          <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-            <Tag color="green" style={{ cursor: "pointer" }}>
-              {files.length} doc{files.length > 1 ? "s" : ""}
-            </Tag>
-          </Dropdown>
-        );
-      },
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      fixed: "end" as const,
-      width: 100,
-      align: "center" as const,
-      render: (_: unknown, record: Load) => {
-        const canEditNow = canEdit && record.status !== "Delivered" && record.status !== "Declined";
-        const canChangeStatusNow = canEdit && record.status !== "Declined";
-
-        const editTooltip =
-          record.status === "Declined"
-            ? "Declined loads cannot be edited."
-            : "Move this load back to Hold to edit it.";
-
-        const items: MenuProps["items"] = [
-          {
-            key: "comments",
-            icon: <CommentOutlined />,
-            label: "View Comments",
-            onClick: () => openComments({ load: record }),
-          },
-          ...(canEdit
-            ? [
-                { type: "divider" as const },
-                {
-                  key: "approve",
-                  icon: <CheckCircleOutlined />,
-                  label: "Change Status",
-                  onClick: () => {
-                    if (!canChangeStatusNow) {
-                      void message.info("Declined loads cannot have their status changed.");
-                      return;
-                    }
-                    openStatusUpdate({ load: record }, () => refresh());
-                  },
-                },
-                {
-                  key: "edit",
-                  icon: <EditOutlined />,
-                  label: "Edit",
-                  onClick: () => {
-                    if (!canEditNow) {
-                      void message.info(editTooltip);
-                      return;
-                    }
-                    openLoadEdit({ load: record }, () => refresh());
-                  },
-                },
-                { type: "divider" as const },
-                {
-                  key: "delete",
-                  icon: <DeleteOutlined />,
-                  label: "Delete",
-                  danger: true,
-                  onClick: () =>
-                    modal.confirm({
-                      title: "Delete Load",
-                      content: "Are you sure you want to delete this load?",
-                      okText: "Delete",
-                      okType: "danger",
-                      cancelText: "Cancel",
-                      onOk: () => runDelete(record.id),
-                    }),
-                },
-              ]
-            : []),
-        ];
-        return (
-          <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
-            <Button type="text" icon={<MoreOutlined />} />
-          </Dropdown>
-        );
-      },
-    },
-  ];
+  return { columns: LOAD_COLUMNS, renderCell };
 }

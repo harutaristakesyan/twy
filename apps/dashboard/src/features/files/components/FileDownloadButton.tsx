@@ -1,39 +1,36 @@
-import { DownloadOutlined } from "@ant-design/icons";
-import type { ButtonProps } from "antd";
-import { Button } from "antd";
+import { ArrowDownToLine } from "@gravity-ui/icons";
+import { Spinner } from "@heroui/react";
+import type React from "react";
 import { useFileDownload } from "../hooks/useFileDownload";
 
 export interface FileDownloadButtonProps {
   fileId: string;
   fileName: string;
-  size?: ButtonProps["size"];
-  type?: ButtonProps["type"];
   icon?: boolean;
   children?: React.ReactNode;
-  style?: React.CSSProperties;
 }
 
 const FileDownloadButton = ({
   fileId,
   fileName,
-  size = "small",
-  type = "link",
   icon = false,
   children,
-  style,
 }: FileDownloadButtonProps) => {
   const { download, isDownloading } = useFileDownload();
   return (
-    <Button
-      type={type}
-      size={size}
-      loading={isDownloading}
-      icon={icon && !isDownloading ? <DownloadOutlined /> : undefined}
+    <button
+      type="button"
+      className="flex items-center gap-1 text-sm text-primary hover:underline disabled:opacity-50"
+      disabled={isDownloading}
       onClick={() => void download(fileId, fileName)}
-      style={style}
     >
+      {isDownloading ? (
+        <Spinner size="sm" />
+      ) : icon ? (
+        <ArrowDownToLine className="h-3.5 w-3.5" />
+      ) : null}
       {children ?? fileName}
-    </Button>
+    </button>
   );
 };
 

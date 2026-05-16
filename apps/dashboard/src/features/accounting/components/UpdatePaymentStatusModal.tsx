@@ -1,10 +1,12 @@
-import { useRequest } from "ahooks";
-
-import { App, Button, Col, DatePicker, Form, InputNumber, Modal, Row, Select, Space } from "antd";
-import dayjs from "dayjs";
-import { useCallback, useState } from "react";
-
+import { Button, Modal, Spinner, toast } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { z } from "zod";
+import { FormDateInput, FormNumberInput, FormSelect } from "@/components/form";
 import { AttachedFilesField } from "@/features/files";
+import { useZodForm } from "@/libs/form";
+import { useApiMutation } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { getDirtyFields } from "@/utils/getDirtyFields";
 import { paymentOrderApi } from "../api/paymentOrderApi";
@@ -19,6 +21,23 @@ type NormalizedPayload = {
   brokerReceivedDate: string | null;
 };
 
+const STATUS_OPTIONS = (Object.keys(STATUS_LABEL) as PaymentStatus[]).map((value) => ({
+  value,
+  label: STATUS_LABEL[value],
+}));
+
+const statusItems = STATUS_OPTIONS.map((o) => ({ id: o.value, label: o.label }));
+
+const schema = z.object({
+  paymentStatus: z.string().min(1, "Payment status is required"),
+  carrierPaidAmount: z.number().nullable(),
+  carrierPaidDate: z.string(),
+  brokerReceivedAmount: z.number().nullable(),
+  brokerReceivedDate: z.string(),
+});
+
+type FormValues = z.infer<typeof schema>;
+
 const toOriginalPayload = (po: PaymentOrder): NormalizedPayload => ({
   paymentStatus: po.paymentStatus,
   carrierPaidAmount: po.carrierPaidAmount,
@@ -27,214 +46,214 @@ const toOriginalPayload = (po: PaymentOrder): NormalizedPayload => ({
   brokerReceivedDate: po.brokerReceivedDate,
 });
 
-const toCurrentPayload = (values: FormValues): NormalizedPayload => ({
-  paymentStatus: values.paymentStatus,
+const toPayloadFromValues = (values: FormValues): NormalizedPayload => ({
+  paymentStatus: values.paymentStatus as PaymentStatus,
   carrierPaidAmount: values.carrierPaidAmount,
-  carrierPaidDate: values.carrierPaidDate?.format("YYYY-MM-DD") ?? null,
+  carrierPaidDate: values.carrierPaidDate || null,
   brokerReceivedAmount: values.brokerReceivedAmount,
-  brokerReceivedDate: values.brokerReceivedDate?.format("YYYY-MM-DD") ?? null,
+  brokerReceivedDate: values.brokerReceivedDate || null,
 });
 
-const STATUS_OPTIONS = (Object.keys(STATUS_LABEL) as PaymentStatus[]).map((value) => ({
-  value,
-  label: STATUS_LABEL[value],
-}));
+export default function UpdatePaymentStatusModal() {
+  const { paymentOrderId } = useParams<{ paymentOrderId: string }>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-interface FormValues {
-  paymentStatus: PaymentStatus;
-  carrierPaidAmount: number | null;
-  carrierPaidDate: dayjs.Dayjs | null;
-  brokerReceivedAmount: number | null;
-  brokerReceivedDate: dayjs.Dayjs | null;
-}
-
-interface Props {
-  paymentOrder: PaymentOrder | null;
-  open: boolean;
-  mode?: "edit" | "view";
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-export default function UpdatePaymentStatusModal({
-  paymentOrder,
-  open,
-  mode = "edit",
-  onClose,
-  onSuccess,
-}: Props) {
+  const mode = (searchParams.get("mode") ?? "view") as "edit" | "view";
   const readOnly = mode === "view";
-  const { message } = App.useApp();
-  const [form] = Form.useForm<FormValues>();
-  const [isDirty, setIsDirty] = useState(false);
 
-  const handleClose = () => {
-    setIsDirty(false);
-    onClose();
-  };
+  const close = () => navigate("..");
 
-  const handleValuesChange = useCallback(() => {
-    if (!paymentOrder) return;
-    setIsDirty(
-      Object.keys(
-        getDirtyFields(toOriginalPayload(paymentOrder), toCurrentPayload(form.getFieldsValue())),
-      ).length > 0,
-    );
-  }, [paymentOrder, form]);
+  // Look up the payment order from the React Query cache (populated by useServerTable).
+  const cached = queryClient.getQueriesData<{ items: PaymentOrder[]; total: number }>({
+    queryKey: ["payment-orders"],
+  });
+  const paymentOrder: PaymentOrder | undefined = cached
+    .flatMap(([, data]) => data?.items ?? [])
+    .find((r) => r.id === paymentOrderId);
 
-  const initialValues: Partial<FormValues> = paymentOrder
-    ? {
+  const { control, handleSubmit, reset, watch } = useZodForm<FormValues>(schema, {
+    paymentStatus: "Pending",
+    carrierPaidAmount: null,
+    carrierPaidDate: "",
+    brokerReceivedAmount: null,
+    brokerReceivedDate: "",
+  });
+
+  useEffect(() => {
+    if (paymentOrder) {
+      reset({
         paymentStatus: paymentOrder.paymentStatus,
         carrierPaidAmount: paymentOrder.carrierPaidAmount,
-        carrierPaidDate: paymentOrder.carrierPaidDate ? dayjs(paymentOrder.carrierPaidDate) : null,
+        carrierPaidDate: paymentOrder.carrierPaidDate ?? "",
         brokerReceivedAmount: paymentOrder.brokerReceivedAmount,
-        brokerReceivedDate: paymentOrder.brokerReceivedDate
-          ? dayjs(paymentOrder.brokerReceivedDate)
-          : null,
-      }
-    : {};
+        brokerReceivedDate: paymentOrder.brokerReceivedDate ?? "",
+      });
+    }
+  }, [paymentOrder, reset]);
 
-  const { loading, run: save } = useRequest(
+  const currentValues = watch();
+  const isDirty = paymentOrder
+    ? Object.keys(
+        getDirtyFields(toOriginalPayload(paymentOrder), toPayloadFromValues(currentValues)),
+      ).length > 0
+    : false;
+
+  const mutation = useApiMutation(
     async (values: FormValues) => {
-      if (!paymentOrder) return false;
-      const dirty = getDirtyFields(toOriginalPayload(paymentOrder), toCurrentPayload(values));
-      if (Object.keys(dirty).length === 0) return false;
+      if (!paymentOrder) return;
+      const dirty = getDirtyFields(toOriginalPayload(paymentOrder), toPayloadFromValues(values));
+      if (Object.keys(dirty).length === 0) return;
       await paymentOrderApi.update(paymentOrder.id, dirty);
-      return true;
     },
     {
-      manual: true,
-      onSuccess: () => {
-        message.success("Payment order updated");
-        onSuccess();
-        handleClose();
+      onSuccess: async () => {
+        toast.success("Payment order updated");
+        await queryClient.invalidateQueries({ queryKey: ["payment-orders"] });
+        close();
       },
-      onError: (err) => message.error(getErrorMessage(err)),
+      onError: (err) => toast.danger(getErrorMessage(err)),
     },
   );
 
+  const onSubmit = handleSubmit((values) => mutation.mutate(values));
+
+  const handleFilesChanged = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["payment-orders"] });
+  };
+
   return (
-    <Modal
-      title={`${readOnly ? "View" : "Edit"} Payment Order — ${paymentOrder?.referenceNumber ?? ""}`}
-      open={open}
-      onCancel={handleClose}
-      width={640}
-      footer={
-        readOnly ? (
-          <Button onClick={handleClose}>Close</Button>
-        ) : (
-          <Space>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button
-              type="primary"
-              loading={loading}
-              disabled={!isDirty}
-              onClick={() => form.submit()}
-            >
-              Save
-            </Button>
-          </Space>
-        )
-      }
-      destroyOnHidden
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={save}
-        initialValues={initialValues}
-        style={{ marginTop: 16 }}
-        onValuesChange={readOnly ? undefined : handleValuesChange}
+    <Modal>
+      <Modal.Backdrop
+        isOpen
+        onOpenChange={(isOpen) => {
+          if (!isOpen) close();
+        }}
       >
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item label="Broker Receivable">
-              <InputNumber
-                style={{ width: "100%" }}
-                value={paymentOrder?.brokerReceivable ?? undefined}
-                precision={2}
-                prefix="€"
-                disabled
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item label="Carrier Payable">
-              <InputNumber
-                style={{ width: "100%" }}
-                value={paymentOrder?.carrierPayable}
-                precision={2}
-                prefix="€"
-                disabled
-              />
-            </Form.Item>
-          </Col>
-        </Row>
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>
+                {readOnly ? "View" : "Edit"} Payment Order — {paymentOrder?.referenceNumber ?? ""}
+              </Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="p-2">
+              {!paymentOrder ? (
+                <p className="py-4 text-center text-sm text-default-500">
+                  Payment order not found. Open it from the list.
+                </p>
+              ) : (
+                <form
+                  id="update-payment-status-form"
+                  onSubmit={onSubmit}
+                  className="flex flex-col gap-4 mt-2"
+                >
+                  <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-3">
+                    <div>
+                      <p className="block text-sm font-medium text-gray-700 mb-1">
+                        Broker Receivable
+                      </p>
+                      <p className="text-sm font-medium">
+                        {paymentOrder.brokerReceivable != null
+                          ? `€${paymentOrder.brokerReceivable.toFixed(2)}`
+                          : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="block text-sm font-medium text-gray-700 mb-1">
+                        Carrier Payable
+                      </p>
+                      <p className="text-sm font-medium">
+                        {paymentOrder.carrierPayable != null
+                          ? `€${paymentOrder.carrierPayable.toFixed(2)}`
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
 
-        <Form.Item name="paymentStatus" label="Payment Status" rules={[{ required: true }]}>
-          <Select options={STATUS_OPTIONS} disabled={readOnly} />
-        </Form.Item>
+                  <FormSelect
+                    control={control}
+                    name="paymentStatus"
+                    label="Payment Status"
+                    items={statusItems}
+                    isDisabled={readOnly}
+                  />
 
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="carrierPaidAmount" label="Carrier Paid">
-              <InputNumber
-                style={{ width: "100%" }}
-                min={0}
-                precision={2}
-                prefix="€"
-                disabled={readOnly}
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="carrierPaidDate" label="Carrier Paid Date">
-              <DatePicker style={{ width: "100%" }} disabled={readOnly} />
-            </Form.Item>
-          </Col>
-        </Row>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormNumberInput
+                      control={control}
+                      name="carrierPaidAmount"
+                      label="Carrier Paid (€)"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      isDisabled={readOnly}
+                    />
+                    <FormDateInput
+                      control={control}
+                      name="carrierPaidDate"
+                      label="Carrier Paid Date"
+                      isDisabled={readOnly}
+                    />
+                    <FormNumberInput
+                      control={control}
+                      name="brokerReceivedAmount"
+                      label="Broker Received (€)"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      isDisabled={readOnly}
+                    />
+                    <FormDateInput
+                      control={control}
+                      name="brokerReceivedDate"
+                      label="Broker Received Date"
+                      isDisabled={readOnly}
+                    />
+                  </div>
 
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="brokerReceivedAmount" label="Broker Received">
-              <InputNumber
-                style={{ width: "100%" }}
-                min={0}
-                precision={2}
-                prefix="€"
-                disabled={readOnly}
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="brokerReceivedDate" label="Broker Received Date">
-              <DatePicker style={{ width: "100%" }} disabled={readOnly} />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item label="Invoices">
-          <AttachedFilesField
-            files={(paymentOrder?.invoices ?? []).map((inv) => ({
-              fileId: inv.fileId,
-              fileName: inv.fileName,
-            }))}
-            onAdd={(file) =>
-              paymentOrder
-                ? paymentOrderApi.addInvoice(paymentOrder.id, file)
-                : Promise.reject(new Error("Payment order missing"))
-            }
-            onRemove={
-              paymentOrder
-                ? (fileId) => paymentOrderApi.removeInvoice(paymentOrder.id, fileId)
-                : undefined
-            }
-            onChanged={onSuccess}
-            readOnly={readOnly}
-            buttonLabel="Upload Invoice"
-          />
-        </Form.Item>
-      </Form>
+                  <div>
+                    <AttachedFilesField
+                      files={(paymentOrder.invoices ?? []).map((inv) => ({
+                        fileId: inv.fileId,
+                        fileName: inv.fileName,
+                      }))}
+                      onAdd={(file) => paymentOrderApi.addInvoice(paymentOrder.id, file)}
+                      onRemove={(fileId) => paymentOrderApi.removeInvoice(paymentOrder.id, fileId)}
+                      onChanged={handleFilesChanged}
+                      readOnly={readOnly}
+                      buttonLabel="Upload Invoice"
+                    />
+                  </div>
+                </form>
+              )}
+            </Modal.Body>
+            <Modal.Footer>
+              {readOnly ? (
+                <Button variant="ghost" onPress={close}>
+                  Close
+                </Button>
+              ) : (
+                <>
+                  <Button variant="ghost" onPress={close}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    form="update-payment-status-form"
+                    isDisabled={!isDirty || mutation.isPending}
+                  >
+                    {mutation.isPending ? <Spinner size="sm" /> : "Save"}
+                  </Button>
+                </>
+              )}
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   );
 }

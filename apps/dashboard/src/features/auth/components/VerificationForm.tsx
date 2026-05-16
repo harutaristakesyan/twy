@@ -1,63 +1,74 @@
-import { CheckOutlined } from "@ant-design/icons";
-import { useRequest } from "ahooks";
-import { App, Button, Form, Input } from "antd";
+import { Button, FieldError, Input, Label, TextField, toast } from "@heroui/react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router-dom";
-import ResendCode from "@/features/auth/components/ResendCode.tsx";
-import ApiClient from "@/libs/ApiClient.ts";
+import { z } from "zod";
+import ResendCode from "@/features/auth/components/ResendCode";
+import ApiClient from "@/libs/ApiClient";
 import { getErrorMessage } from "@/utils/errorUtils";
 
-interface VerificationFormValues {
-  code: string;
-}
+const schema = z.object({
+  code: z.string().min(6, "Please enter the 6-digit code").max(6),
+});
+
+type VerificationFormValues = z.infer<typeof schema>;
 
 const VerificationForm = () => {
-  const { message } = App.useApp();
-  const [form] = Form.useForm();
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email;
+  const email = location.state?.email as string | undefined;
   const isSignUpFlow = location.state?.signUp === true;
+  const [loading, setLoading] = useState(false);
 
-  const { loading, run: submit } = useRequest(
-    async (values: VerificationFormValues) => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<VerificationFormValues>({ resolver: zodResolver(schema) });
+
+  const onSubmit = async (values: VerificationFormValues) => {
+    setLoading(true);
+    try {
       await ApiClient.post<{ userSub: string; message: string }>(
         "/verify",
         { email, code: values.code },
         true,
       );
-      return values.code;
-    },
-    {
-      manual: true,
-      onSuccess: (code: string) => {
-        if (isSignUpFlow) {
-          navigate("/login", { state: { email } });
-        } else {
-          navigate("/create-password", { state: { email, code } });
-        }
-      },
-      onError: (err) => message.error(getErrorMessage(err)),
-    },
-  );
+      if (isSignUpFlow) {
+        navigate("/login", { state: { email } });
+      } else {
+        navigate("/create-password", { state: { email, code: values.code } });
+      }
+    } catch (err) {
+      toast.danger(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <Form layout="vertical" form={form} onFinish={submit}>
-      <Form.Item
-        name="code"
-        rules={[{ required: true, message: "Please enter the 6-digit code" }]}
-        style={{ textAlign: "center" }}
-      >
-        <Input.OTP length={6} size="large" />
-      </Form.Item>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <div className="flex justify-center">
+        <TextField isInvalid={!!errors.code} className="w-full max-w-xs text-center">
+          <Label>Verification Code</Label>
+          <Input placeholder="6-digit code" maxLength={6} {...register("code")} />
+          <FieldError>{errors.code?.message}</FieldError>
+        </TextField>
+      </div>
 
-      <Form.Item>
-        <Button block type="primary" htmlType="submit" icon={<CheckOutlined />} loading={loading}>
-          Verify Code
-        </Button>
-      </Form.Item>
+      <Button
+        type="submit"
+        variant="primary"
+        className="w-full"
+        isPending={loading}
+        isDisabled={loading}
+      >
+        Verify Code
+      </Button>
 
       <ResendCode />
-    </Form>
+    </form>
   );
 };
 

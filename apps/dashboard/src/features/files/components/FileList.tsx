@@ -1,4 +1,3 @@
-import { Flex, Typography } from "antd";
 import { FileDownloadButton } from "./FileDownloadButton";
 
 export interface FileListItem {
@@ -13,19 +12,14 @@ export interface FileListProps {
 
 const FileList = ({ files, emptyText = "No files" }: FileListProps) => {
   if (files.length === 0) {
-    return <Typography.Text type="secondary">{emptyText}</Typography.Text>;
+    return <span className="text-sm text-gray-500">{emptyText}</span>;
   }
   return (
-    <Flex vertical gap={4}>
+    <div className="flex flex-col gap-1">
       {files.map((f) => (
-        <FileDownloadButton
-          key={f.id}
-          fileId={f.id}
-          fileName={f.fileName}
-          style={{ padding: 0, height: "auto" }}
-        />
+        <FileDownloadButton key={f.id} fileId={f.id} fileName={f.fileName} />
       ))}
-    </Flex>
+    </div>
   );
 };
 

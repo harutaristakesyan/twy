@@ -1,25 +1,21 @@
-import { App } from "antd";
-import { useCallback, useState } from "react";
+import { toast } from "@heroui/react";
+import { useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { filesApi } from "../api/filesApi";
 
 export const useFileDownload = () => {
-  const { message } = App.useApp();
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const download = useCallback(
-    async (fileId: string, fileName?: string) => {
-      setIsDownloading(true);
-      try {
-        await filesApi.downloadFile(fileId, fileName);
-      } catch (err: unknown) {
-        message.error(getErrorMessage(err));
-      } finally {
-        setIsDownloading(false);
-      }
-    },
-    [message],
-  );
+  const download = async (fileId: string, fileName?: string) => {
+    setIsDownloading(true);
+    try {
+      await filesApi.downloadFile(fileId, fileName);
+    } catch (err: unknown) {
+      toast.danger(getErrorMessage(err));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return { download, isDownloading };
 };

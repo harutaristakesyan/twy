@@ -11,6 +11,7 @@ import {
 import { branch } from "./branch.js";
 import { carrier } from "./carrier.js";
 import { file } from "./file.js";
+import { outsideBroker } from "./outsideBroker.js";
 import { users } from "./users.js";
 
 export const loadStatusValues = ["Pending", "Approved", "Delivered", "Declined", "Hold"] as const;
@@ -22,16 +23,14 @@ export type ChargeSide = (typeof chargeSideValues)[number];
 export const load = pgTable("load", {
   id: uuid().primaryKey(),
 
-  customer: text(),
   referenceNumber: text().notNull().unique(),
   customerRate: numeric({ precision: 10, scale: 2 }),
-  contactName: text().notNull(),
-  paymentMethod: text(),
-  paymentTerms: text(),
 
-  carrier: text(),
+  brokerId: uuid()
+    .notNull()
+    .references(() => outsideBroker.id, { onDelete: "restrict" }),
+
   carrierId: uuid().references(() => carrier.id, { onDelete: "restrict" }),
-  carrierPaymentMethod: text(),
   carrierRate: numeric({ precision: 10, scale: 2 }).notNull(),
   chargeServiceFeeToOffice: boolean().default(false),
   isChargable: boolean().notNull().default(false),

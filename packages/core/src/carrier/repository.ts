@@ -17,6 +17,8 @@ export interface CarrierRecord {
   phone: string | null;
   email: string | null;
   notes: string | null;
+  paymentMethod: string | null;
+  paymentTerms: string | null;
   status: CarrierStatus;
   createdAt: string;
   updatedAt: string;
@@ -42,6 +44,8 @@ export interface NewCarrierInput {
   phone?: string | null;
   email?: string | null;
   notes?: string | null;
+  paymentMethod?: string | null;
+  paymentTerms?: string | null;
   status?: string;
   createdBy: string;
 }
@@ -55,6 +59,8 @@ export interface UpdateCarrierInput {
   phone?: string | null;
   email?: string | null;
   notes?: string | null;
+  paymentMethod?: string | null;
+  paymentTerms?: string | null;
   status?: string;
 }
 
@@ -96,6 +102,8 @@ const mapRow = (row: {
   phone: string | null;
   email: string | null;
   notes: string | null;
+  paymentMethod: string | null;
+  paymentTerms: string | null;
   status: CarrierStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -110,6 +118,8 @@ const mapRow = (row: {
   phone: row.phone,
   email: row.email,
   notes: row.notes,
+  paymentMethod: row.paymentMethod,
+  paymentTerms: row.paymentTerms,
   status: row.status,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
@@ -143,6 +153,8 @@ export const listCarriers = async (input: ListCarriersInput) => {
         phone: carrier.phone,
         email: carrier.email,
         notes: carrier.notes,
+        paymentMethod: carrier.paymentMethod,
+        paymentTerms: carrier.paymentTerms,
         status: carrier.status,
         createdAt: carrier.createdAt,
         updatedAt: carrier.updatedAt,
@@ -174,6 +186,8 @@ export const getCarrierById = async (carrierId: string): Promise<CarrierRecord |
       phone: carrier.phone,
       email: carrier.email,
       notes: carrier.notes,
+      paymentMethod: carrier.paymentMethod,
+      paymentTerms: carrier.paymentTerms,
       status: carrier.status,
       createdAt: carrier.createdAt,
       updatedAt: carrier.updatedAt,
@@ -197,6 +211,8 @@ export const createCarrier = async (input: NewCarrierInput): Promise<string> => 
     phone: input.phone ?? null,
     email: input.email ?? null,
     notes: input.notes ?? null,
+    paymentMethod: input.paymentMethod ?? null,
+    paymentTerms: input.paymentTerms ?? null,
     status: (input.status ?? "approved") as CarrierStatus,
     createdBy: input.createdBy,
   });
@@ -229,6 +245,8 @@ export const updateCarrier = async (
   if (Object.hasOwn(input, "phone")) payload.phone = input.phone ?? null;
   if (Object.hasOwn(input, "email")) payload.email = input.email ?? null;
   if (Object.hasOwn(input, "notes")) payload.notes = input.notes ?? null;
+  if (Object.hasOwn(input, "paymentMethod")) payload.paymentMethod = input.paymentMethod ?? null;
+  if (Object.hasOwn(input, "paymentTerms")) payload.paymentTerms = input.paymentTerms ?? null;
 
   if (Object.keys(payload).length > 0) {
     await db

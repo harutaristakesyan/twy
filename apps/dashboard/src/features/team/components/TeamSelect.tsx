@@ -1,71 +1,73 @@
-import { useDebounceFn, useInfiniteScroll } from "ahooks";
-import { Select, Spin } from "antd";
-import { useRef, useState } from "react";
-import { createPopupScrollHandler } from "@/utils/selectUtils";
+import { ComboBox, Input, type Key, Label, ListBox } from "@heroui/react";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { useApiQuery } from "@/libs/query";
 import { getTeams } from "../api/teamApi";
-import type { Team } from "../types/team";
 
 interface TeamSelectProps {
   value?: string | null;
   onChange?: (value: string | null) => void;
+  label?: string;
   placeholder?: string;
-  allowClear?: boolean;
   disabled?: boolean;
   initialOption?: { value: string; label: string };
+  variant?: "primary" | "secondary";
+  isInvalid?: boolean;
 }
 
 const TeamSelect: React.FC<TeamSelectProps> = ({
   value,
   onChange,
-  placeholder = "Search and select team",
-  allowClear = true,
+  label = "Team",
+  placeholder = "Search teams…",
   disabled,
   initialOption,
+  variant,
+  isInvalid,
 }) => {
-  const [query, setQuery] = useState("");
-  const queryRef = useRef(query);
-  queryRef.current = query;
+  const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
 
-  const { data, loading, loadMore } = useInfiniteScroll(
-    async (currentData) => {
-      const limit = 20;
-      const nextPage = Math.floor((currentData?.list?.length ?? 0) / limit);
-      const response = await getTeams({
-        page: nextPage,
-        limit: 20,
-        query: queryRef.current || undefined,
-      });
-      return { list: response.teams as Team[], total: response.total };
-    },
-    {
-      reloadDeps: [query],
-      isNoMore: (d) => (d ? d.list.length >= d.total : false),
-    },
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(search), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data } = useApiQuery(["teams-select", debounced], () =>
+    getTeams({ page: 0, limit: 30, query: debounced || undefined }),
   );
 
-  const { run: onSearch } = useDebounceFn((val: string) => setQuery(val), { wait: 300 });
-
-  const handlePopupScroll = createPopupScrollHandler(loadMore);
-
-  const fetched = data?.list?.map((t) => ({ value: t.id, label: t.name })) ?? [];
-  const options =
-    initialOption && !fetched.find((o) => o.value === initialOption.value)
-      ? [initialOption, ...fetched]
+  const fetched = data?.teams ?? [];
+  const items =
+    initialOption && !fetched.find((t) => t.id === initialOption.value)
+      ? [{ id: initialOption.value, name: initialOption.label }, ...fetched]
       : fetched;
 
   return (
-    <Select
-      value={value ?? undefined}
-      onChange={(val) => onChange?.(val ?? null)}
-      placeholder={placeholder}
-      allowClear={allowClear}
-      disabled={disabled}
-      showSearch={{ filterOption: false, onSearch }}
-      onPopupScroll={handlePopupScroll}
-      loading={loading}
-      notFoundContent={loading ? <Spin size="small" /> : "No teams found"}
-      options={options}
-    />
+    <ComboBox
+      allowsEmptyCollection
+      isDisabled={disabled}
+      isInvalid={isInvalid}
+      value={value ?? null}
+      onChange={(key: Key | null) => onChange?.(key ? String(key) : null)}
+      onInputChange={setSearch}
+    >
+      <Label>{label}</Label>
+      <ComboBox.InputGroup>
+        <Input variant={variant} placeholder={placeholder} />
+        <ComboBox.Trigger />
+      </ComboBox.InputGroup>
+      <ComboBox.Popover>
+        <ListBox>
+          {items.map((item) => (
+            <ListBox.Item key={item.id} id={item.id} textValue={item.name}>
+              {item.name}
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </ComboBox.Popover>
+    </ComboBox>
   );
 };
 

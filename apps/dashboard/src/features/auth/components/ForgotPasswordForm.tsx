@@ -1,56 +1,59 @@
-import { ArrowRightOutlined } from "@ant-design/icons";
-import { useRequest } from "ahooks";
-import { App, Button, Form, Input } from "antd";
+import { Button, FieldError, Input, Label, TextField, toast } from "@heroui/react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import ApiClient from "@/libs/ApiClient.ts";
+import { z } from "zod";
+import ApiClient from "@/libs/ApiClient";
 import { getErrorMessage } from "@/utils/errorUtils";
 
-const ForgotPasswordForm = () => {
-  const { message } = App.useApp();
-  const [form] = Form.useForm();
-  const navigate = useNavigate();
+const schema = z.object({
+  email: z.string().email("Enter a valid email"),
+});
 
-  const { loading, run: submit } = useRequest(
-    async ({ email }: { email: string }) => {
+type ForgotPasswordFormValues = z.infer<typeof schema>;
+
+const ForgotPasswordForm = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ForgotPasswordFormValues>({ resolver: zodResolver(schema) });
+
+  const onSubmit = async ({ email }: ForgotPasswordFormValues) => {
+    setLoading(true);
+    try {
       await ApiClient.post("/forgot-password", { email });
-      return email;
-    },
-    {
-      manual: true,
-      onSuccess: (email: string) => {
-        message.success("Verification code sent");
-        navigate("/create-password", { state: { email, signUp: false } });
-      },
-      onError: (error) => message.error(getErrorMessage(error)),
-    },
-  );
+      toast.success("Verification code sent");
+      navigate("/create-password", { state: { email, signUp: false } });
+    } catch (error) {
+      toast.danger(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <Form layout="vertical" form={form} onFinish={submit}>
-      <Form.Item
-        label="Email Address"
-        name="email"
-        rules={[
-          { required: true, message: "Please enter your email" },
-          { type: "email", message: "Enter a valid email" },
-        ]}
-      >
-        <Input placeholder="you@example.com" />
-      </Form.Item>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <TextField isInvalid={!!errors.email}>
+        <Label>Email Address</Label>
+        <Input type="email" placeholder="you@example.com" {...register("email")} />
+        <FieldError>{errors.email?.message}</FieldError>
+      </TextField>
 
-      <Form.Item>
-        <Button
-          block
-          type="primary"
-          htmlType="submit"
-          iconPosition="end"
-          icon={<ArrowRightOutlined />}
-          loading={loading}
-        >
-          Send Recovery Code
-        </Button>
-      </Form.Item>
-    </Form>
+      <Button
+        type="submit"
+        variant="primary"
+        className="w-full"
+        isPending={loading}
+        isDisabled={loading}
+      >
+        Send Recovery Code
+      </Button>
+    </form>
   );
 };
 

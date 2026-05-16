@@ -1,152 +1,110 @@
-import {
-  CarOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  SafetyOutlined,
-} from "@ant-design/icons";
-import { Button, Flex, Popconfirm, Space, Tag, Tooltip, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useCarrierModal } from "../providers/CarrierModalProvider";
-import type { Carrier, CarrierKind } from "../types/carrier";
+import { Chip } from "@heroui/react";
+import { ActionsMenu } from "@/components/ActionsMenu";
+import type { Carrier } from "../types/carrier";
 import { CarrierStatus } from "../types/carrier";
 import { deriveInsuranceStatus } from "../utils/insuranceStatus";
 
-const { Text } = Typography;
+export type CarrierColumnDef = {
+  id: string;
+  label: string;
+  isRowHeader?: boolean;
+};
 
-const carrierStatusColor: Record<CarrierStatus, string> = {
+export const CARRIER_COLUMNS: CarrierColumnDef[] = [
+  { id: "carrierName", label: "Carrier Name", isRowHeader: true },
+  { id: "mcDotNumber", label: "MC / DOT Number" },
+  { id: "equipmentType", label: "Equipment Type" },
+  { id: "insurance", label: "Insurance Status" },
+  { id: "status", label: "Status" },
+  { id: "contact", label: "Contact Info" },
+  { id: "createdAt", label: "Created" },
+  { id: "actions", label: "Actions" },
+];
+
+const statusColor: Record<CarrierStatus, "success" | "danger"> = {
   [CarrierStatus.APPROVED]: "success",
-  [CarrierStatus.DENIED]: "error",
+  [CarrierStatus.DENIED]: "danger",
 };
 
-const carrierStatusLabel: Record<CarrierStatus, string> = {
-  [CarrierStatus.APPROVED]: "Approved",
-  [CarrierStatus.DENIED]: "Denied",
+const insuranceColor: Record<string, "success" | "danger" | "warning"> = {
+  Valid: "success",
+  Expired: "danger",
+  Pending: "warning",
 };
 
-export function useCarrierColumns(
-  refresh: () => void,
-  runDelete: (id: string) => void,
-  kind: CarrierKind,
-): ColumnsType<Carrier> {
-  const { permissions } = useCurrentUser();
-  const { openCarrierEdit } = useCarrierModal();
-  const editResource = kind === "twy" ? "carriers_twy" : "carriers_outside";
-  const canUpdate = permissions[editResource]?.edit;
-  const canDelete = permissions[editResource]?.edit;
+type UseCarrierColumnsParams = {
+  canEdit: boolean;
+  canDelete: boolean;
+  isDeleting: boolean;
+  onEdit: (carrier: Carrier) => void;
+  onDelete: (id: string) => void;
+};
 
-  return [
-    {
-      title: "Carrier Name",
-      dataIndex: "carrierName",
-      key: "carrierName",
-      render: (name: string) => (
-        <Space>
-          <CarOutlined />
-          <span style={{ fontWeight: 500 }}>{name}</span>
-        </Space>
-      ),
-      sorter: true,
-    },
-    {
-      title: "MC / DOT Number",
-      dataIndex: "mcDotNumber",
-      key: "mcDotNumber",
-      render: (mcDotNumber: string) => <Text code>{mcDotNumber}</Text>,
-      sorter: true,
-    },
-    {
-      title: "Equipment Type",
-      dataIndex: "equipmentType",
-      key: "equipmentType",
-      render: (equipmentType: string | null) =>
-        equipmentType ? <Text>{equipmentType}</Text> : <Tag color="default">Not Specified</Tag>,
-    },
-    {
-      title: "Insurance Status",
-      dataIndex: "insuranceStatus",
-      key: "insuranceStatus",
-      sorter: true,
-      render: (_, record) => {
-        const { color, label } = deriveInsuranceStatus(record.insuranceExpiry);
+export function useCarrierColumns({
+  canEdit,
+  canDelete,
+  isDeleting,
+  onEdit,
+  onDelete,
+}: UseCarrierColumnsParams) {
+  const renderCell = (carrier: Carrier, colId: string) => {
+    switch (colId) {
+      case "carrierName":
+        return <span className="font-medium">{carrier.carrierName}</span>;
+      case "mcDotNumber":
         return (
-          <Tag color={color}>
-            <SafetyOutlined style={{ marginRight: 4 }} />
-            {label}
-          </Tag>
+          <Chip size="sm" variant="soft">
+            {carrier.mcDotNumber}
+          </Chip>
         );
-      },
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (status: CarrierStatus) => (
-        <Tag color={carrierStatusColor[status]}>{carrierStatusLabel[status]}</Tag>
-      ),
-      sorter: true,
-    },
-    {
-      title: "Contact Info",
-      key: "contact",
-      render: (_, record) => (
-        <Flex vertical gap="small">
-          {record.phone && (
-            <Space size="small">
-              <PhoneOutlined />
-              <Text>{record.phone}</Text>
-            </Space>
-          )}
-          {record.email && (
-            <Space size="small">
-              <MailOutlined />
-              <Text type="secondary" style={{ fontSize: "12px" }}>
-                {record.email}
-              </Text>
-            </Space>
-          )}
-          {!record.phone && !record.email && <Tag color="default">No Contact Info</Tag>}
-        </Flex>
-      ),
-    },
-    {
-      title: "Created Date",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (date: string) => (date ? new Date(date).toLocaleDateString() : "N/A"),
-      sorter: true,
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Space>
-          {canUpdate && (
-            <Tooltip title="Edit Carrier">
-              <Button
-                type="text"
-                icon={<EditOutlined />}
-                onClick={() => openCarrierEdit({ carrier: record }, () => refresh())}
-              />
-            </Tooltip>
-          )}
-          {canDelete && (
-            <Popconfirm
-              title="Are you sure you want to delete this carrier?"
-              description="This action cannot be undone."
-              onConfirm={() => runDelete(record.id)}
-              okText="Yes"
-              cancelText="No"
-            >
-              <Tooltip title="Delete Carrier">
-                <Button type="text" danger icon={<DeleteOutlined />} />
-              </Tooltip>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
-    },
-  ];
+      case "equipmentType":
+        return (
+          carrier.equipmentType ?? <span className="text-xs text-default-400">Not specified</span>
+        );
+      case "insurance": {
+        const { label } = deriveInsuranceStatus(carrier.insuranceExpiry);
+        return (
+          <Chip color={insuranceColor[label] ?? "default"} size="sm" variant="soft">
+            {label}
+          </Chip>
+        );
+      }
+      case "status":
+        return (
+          <Chip color={statusColor[carrier.status] ?? "default"} size="sm" variant="soft">
+            {carrier.status === CarrierStatus.APPROVED ? "Approved" : "Denied"}
+          </Chip>
+        );
+      case "contact":
+        return (
+          <div className="flex flex-col gap-0.5 text-xs">
+            {carrier.phone && <span>{carrier.phone}</span>}
+            {carrier.email && <span className="text-default-500">{carrier.email}</span>}
+            {!carrier.phone && !carrier.email && (
+              <span className="text-default-400">No contact info</span>
+            )}
+          </div>
+        );
+      case "createdAt":
+        return carrier.createdAt ? new Date(carrier.createdAt).toLocaleDateString() : "N/A";
+      case "actions":
+        return (
+          <ActionsMenu
+            actions={[
+              { type: "edit", hidden: !canEdit, onAction: () => onEdit(carrier) },
+              {
+                type: "delete",
+                hidden: !canDelete,
+                disabled: isDeleting,
+                onAction: () => onDelete(carrier.id),
+              },
+            ]}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return { columns: CARRIER_COLUMNS, renderCell };
 }

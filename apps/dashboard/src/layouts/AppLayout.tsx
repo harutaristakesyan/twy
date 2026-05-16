@@ -1,24 +1,14 @@
-import { Grid, Layout } from "antd";
 import { Outlet } from "react-router-dom";
-import AppHeader from "@/layouts/AppHeader.tsx";
-import Sidebar from "@/layouts/Sidebar.tsx";
-
-const { useBreakpoint } = Grid;
-const { Content } = Layout;
+import Sidebar from "@/layouts/Sidebar";
 
 const AppLayout = () => {
-  const screens = useBreakpoint();
-
   return (
-    <Layout hasSider={!screens.xs} style={{ minHeight: "100vh" }}>
+    <div className="flex h-screen bg-background">
       <Sidebar />
-      <Layout>
-        <AppHeader />
-        <Content style={{ padding: 20 }}>
-          <Outlet />
-        </Content>
-      </Layout>
-    </Layout>
+      <main className="flex min-w-0 flex-1 flex-col overflow-auto p-3">
+        <Outlet />
+      </main>
+    </div>
   );
 };
 

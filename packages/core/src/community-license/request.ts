@@ -94,3 +94,12 @@ export const DeleteCommunityLicenseEventSchema = z.object({
 });
 
 export type DeleteCommunityLicenseEvent = z.infer<typeof DeleteCommunityLicenseEventSchema>;
+
+export const GetCommunityLicenseEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    ciId: z.uuid("ciId must be a valid UUID"),
+  }),
+});
+
+export type GetCommunityLicenseEvent = z.infer<typeof GetCommunityLicenseEventSchema>;

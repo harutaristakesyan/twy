@@ -1,23 +1,21 @@
-import { ArrowLeftOutlined } from "@ant-design/icons";
-import { Button, Flex } from "antd";
+import { Button } from "@heroui/react";
 import { useNavigate } from "react-router-dom";
-import Logo from "@/components/Logo.tsx";
+import Logo from "@/components/Logo";
 
 const CardHeader = () => {
   const navigate = useNavigate();
 
   return (
-    <div style={{ position: "relative", marginBottom: 24 }}>
+    <div className="relative mb-6 flex items-center justify-center">
       <Button
-        type="text"
-        icon={<ArrowLeftOutlined />}
-        onClick={() => navigate(-1)}
+        variant="ghost"
         aria-label="Go back"
-        style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}
-      />
-      <Flex justify="center" align="center">
-        <Logo style={{ width: "200px", height: "40px", margin: 0, textAlign: "center" }} />
-      </Flex>
+        className="absolute left-0"
+        onPress={() => navigate(-1)}
+      >
+        ←
+      </Button>
+      <Logo />
     </div>
   );
 };

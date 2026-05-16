@@ -77,10 +77,12 @@ const CarrierBaseSchema = z.object({
   mcDotNumber: z.string().trim().min(1, "MC/DOT number is required"),
   equipmentType: z.string().trim().min(1, "Equipment type is required"),
   insuranceStatus: insuranceStatusEnum.optional(),
-  insuranceExpiry: z.string().datetime().nullable().optional(),
+  insuranceExpiry: z.iso.date().nullable().optional(),
   phone: z.string().trim().min(1, "Phone is required"),
-  email: z.string().trim().email("Please enter a valid email address"),
+  email: z.email("Please enter a valid email address").trim(),
   notes: z.string().trim().optional(),
+  paymentMethod: z.string().trim().nullable().optional(),
+  paymentTerms: z.string().trim().nullable().optional(),
   status: carrierStatusEnum.optional(),
 });
 
@@ -97,10 +99,12 @@ const UpdateCarrierPayloadSchema = z
     mcDotNumber: z.string().trim().min(1).optional(),
     equipmentType: z.string().trim().nullable().optional(),
     insuranceStatus: insuranceStatusEnum.nullable().optional(),
-    insuranceExpiry: z.string().datetime().nullable().optional(),
+    insuranceExpiry: z.iso.date().nullable().optional(),
     phone: z.string().trim().nullable().optional(),
-    email: z.string().trim().email().nullable().optional(),
+    email: z.email().trim().nullable().optional(),
     notes: z.string().trim().nullable().optional(),
+    paymentMethod: z.string().trim().nullable().optional(),
+    paymentTerms: z.string().trim().nullable().optional(),
     status: carrierStatusEnum.optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {

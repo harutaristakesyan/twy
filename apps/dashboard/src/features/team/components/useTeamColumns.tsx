@@ -1,123 +1,98 @@
-import { DeleteOutlined, EditOutlined, TeamOutlined } from "@ant-design/icons";
-import { Button, Popconfirm, Space, Tag, Tooltip, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { useMemo } from "react";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { Persons } from "@gravity-ui/icons";
+import { Chip } from "@heroui/react";
+import { ActionsMenu } from "@/components/ActionsMenu";
 import { TWY_TEAM_ID } from "../constants";
-import { useTeamModal } from "../providers/TeamModalProvider";
 import type { Team } from "../types/team";
 
-const { Text } = Typography;
+export type TeamColumnDef = {
+  id: string;
+  label: string;
+  isRowHeader?: boolean;
+};
 
-export function useTeamColumns(
-  refresh: () => void,
-  runDelete: (id: string) => void,
-): ColumnsType<Team> {
-  const { permissions } = useCurrentUser();
-  const { openTeamEdit } = useTeamModal();
-  const canEdit = permissions.teams.edit;
+export const TEAM_COLUMNS: TeamColumnDef[] = [
+  { id: "name", label: "Name", isRowHeader: true },
+  { id: "description", label: "Description" },
+  { id: "scope", label: "Scope" },
+  { id: "memberCount", label: "Members" },
+  { id: "createdAt", label: "Created" },
+  { id: "actions", label: "Actions" },
+];
 
-  return useMemo(
-    () => [
-      {
-        title: "Name",
-        dataIndex: "name",
-        key: "name",
-        render: (name: string) => (
-          <Space>
-            <TeamOutlined />
-            <Text strong>{name}</Text>
-          </Space>
-        ),
-        sorter: true,
-      },
-      {
-        title: "Description",
-        dataIndex: "description",
-        key: "description",
-        render: (desc: string | null) =>
-          desc ? <Text>{desc}</Text> : <Tag color="default">No description</Tag>,
-      },
-      {
-        title: "Scope",
-        key: "scope",
-        render: (_, record) => (
-          <Space>
-            {record.branchRestricted && <Tag color="orange">Branch-restricted</Tag>}
-            {record.onlyOwnData && <Tag color="purple">Own data only</Tag>}
-            {!record.branchRestricted && !record.onlyOwnData && (
-              <Tag color="green">Unrestricted</Tag>
+type UseTeamColumnsParams = {
+  canEdit: boolean;
+  canDelete: boolean;
+  onEdit: (team: Team) => void;
+  onDelete: (id: string) => void;
+};
+
+export function useTeamColumns({ canEdit, canDelete, onEdit, onDelete }: UseTeamColumnsParams) {
+  const renderCell = (record: Team, colId: string) => {
+    switch (colId) {
+      case "name":
+        return (
+          <div className="flex items-center gap-2">
+            <Persons className="h-4 w-4 text-default-500" />
+            <span className="font-medium">{record.name}</span>
+          </div>
+        );
+      case "description":
+        return record.description ? (
+          <span className="text-sm">{record.description}</span>
+        ) : (
+          <Chip size="sm" variant="soft">
+            No description
+          </Chip>
+        );
+      case "scope":
+        return (
+          <div className="flex flex-wrap gap-1">
+            {record.branchRestricted && (
+              <Chip color="warning" size="sm" variant="soft">
+                Branch-restricted
+              </Chip>
             )}
-          </Space>
-        ),
-      },
-      {
-        title: "Members",
-        dataIndex: "memberCount",
-        key: "memberCount",
-        render: (count: number) => (
-          <Tag>
-            {count} member{count !== 1 ? "s" : ""}
-          </Tag>
-        ),
-      },
-      {
-        title: "Created",
-        dataIndex: "createdAt",
-        key: "createdAt",
-        render: (date: string) => (date ? new Date(date).toLocaleDateString() : "—"),
-        sorter: true,
-      },
-      {
-        title: "Actions",
-        key: "actions",
-        render: (_, record) => {
-          const isSystemTeam = record.id === TWY_TEAM_ID;
-          return (
-            <Space>
-              {canEdit && (
-                <Tooltip title="Edit Team">
-                  <Button
-                    type="text"
-                    icon={<EditOutlined />}
-                    onClick={() => openTeamEdit(record, refresh)}
-                  />
-                </Tooltip>
-              )}
-              {canEdit && !isSystemTeam && (
-                <Popconfirm
-                  title="Delete team?"
-                  description={
-                    record.memberCount > 0
-                      ? `This team has ${record.memberCount} member(s). Remove them first.`
-                      : "This action cannot be undone."
-                  }
-                  onConfirm={() => runDelete(record.id)}
-                  okText="Yes"
-                  cancelText="No"
-                  disabled={record.memberCount > 0}
-                >
-                  <Tooltip
-                    title={
-                      record.memberCount > 0
-                        ? "Edit the team to remove members first"
-                        : "Delete Team"
-                    }
-                  >
-                    <Button
-                      type="text"
-                      danger
-                      icon={<DeleteOutlined />}
-                      disabled={record.memberCount > 0}
-                    />
-                  </Tooltip>
-                </Popconfirm>
-              )}
-            </Space>
-          );
-        },
-      },
-    ],
-    [canEdit, openTeamEdit, refresh, runDelete],
-  );
+            {record.onlyOwnData && (
+              <Chip color="accent" size="sm" variant="soft">
+                Own data only
+              </Chip>
+            )}
+            {!record.branchRestricted && !record.onlyOwnData && (
+              <Chip color="success" size="sm" variant="soft">
+                Unrestricted
+              </Chip>
+            )}
+          </div>
+        );
+      case "memberCount":
+        return (
+          <Chip size="sm" variant="soft">
+            {record.memberCount} member{record.memberCount !== 1 ? "s" : ""}
+          </Chip>
+        );
+      case "createdAt":
+        return record.createdAt ? new Date(record.createdAt).toLocaleDateString() : "—";
+      case "actions": {
+        const isSystemTeam = record.id === TWY_TEAM_ID;
+        const deleteBlocked = record.memberCount > 0;
+        return (
+          <ActionsMenu
+            actions={[
+              { type: "edit", hidden: !canEdit, onAction: () => onEdit(record) },
+              {
+                type: "delete",
+                hidden: !canDelete || isSystemTeam,
+                disabled: deleteBlocked,
+                onAction: () => onDelete(record.id),
+              },
+            ]}
+          />
+        );
+      }
+      default:
+        return null;
+    }
+  };
+
+  return { columns: TEAM_COLUMNS, renderCell };
 }

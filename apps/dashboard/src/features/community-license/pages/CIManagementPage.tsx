@@ -1,133 +1,102 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { useAntdTable, useRequest } from "ahooks";
-import { App, Button, Card, Flex, Popconfirm, Space, Table, Tag, Tooltip, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { Plus } from "@gravity-ui/icons";
+import { Button, toast } from "@heroui/react";
 import type React from "react";
+import { Outlet, useNavigate } from "react-router-dom";
+import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { DataTable } from "@/components/DataTable";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { getErrorMessage } from "@/utils/errorUtils";
+import { useServerTable } from "@/hooks/useServerTable";
+import { useApiMutation } from "@/libs/query";
 import { deleteCommunityLicense, getCommunityLicenses } from "../api/ciApi";
-import { CIModalProvider, useCIModal } from "../providers/CIModalProvider";
+import { useCIColumns } from "../components/useCIColumns";
 import type { CommunityLicense } from "../types/communityLicense";
 
-const { Title } = Typography;
+type SortField = "ciNumber" | "validFrom" | "createdAt";
 
-type SortField = "ciNumber" | "validFrom" | "createdAt" | undefined;
-
-const CIManagementTable: React.FC = () => {
-  const { message } = App.useApp();
-  const { openCICreate, openCIEdit } = useCIModal();
+const CIManagementPage: React.FC = () => {
+  const navigate = useNavigate();
   const { permissions } = useCurrentUser();
   const canAdd = permissions.settings.add;
   const canEdit = permissions.settings.edit;
+  const canDelete = permissions.settings.delete;
 
-  const { tableProps, refresh } = useAntdTable(
-    async ({ current, pageSize, sorter }) => {
-      const s = Array.isArray(sorter) ? sorter[0] : sorter;
-      const result = await getCommunityLicenses({
-        page: current - 1,
-        limit: pageSize,
-        sortField: s?.field as SortField,
-        sortOrder: (s?.order ?? undefined) as "ascend" | "descend" | undefined,
-      });
-      return { total: result.total, list: result.communityLicenses };
-    },
-    { defaultPageSize: 10 },
-  );
+  const { items, total, page, pageSize, isLoading, setPage, refetch } =
+    useServerTable<CommunityLicense>({
+      queryKey: ["community-licenses"],
+      fetcher: async ({ page: p, pageSize: ps, sort }) => {
+        const result = await getCommunityLicenses({
+          page: p - 1,
+          limit: ps,
+          sortField: sort?.column as SortField | undefined,
+          sortOrder:
+            sort?.direction === "ascending"
+              ? "ascend"
+              : sort?.direction === "descending"
+                ? "descend"
+                : undefined,
+        });
+        return { items: result.communityLicenses, total: result.total };
+      },
+      initialPageSize: 10,
+    });
 
-  const { run: runDelete } = useRequest(deleteCommunityLicense, {
-    manual: true,
+  const deleteMutation = useApiMutation(deleteCommunityLicense, {
     onSuccess: () => {
-      message.success("Community license deleted successfully");
-      refresh();
+      toast.success("Community license deleted successfully");
+      refetch();
     },
-    onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const columns: ColumnsType<CommunityLicense> = [
-    {
-      title: "CI Number",
-      dataIndex: "ciNumber",
-      key: "ciNumber",
-      sorter: true,
-      render: (v: string) => <span style={{ fontWeight: 500 }}>{v}</span>,
-    },
-    {
-      title: "Valid From",
-      dataIndex: "validFrom",
-      key: "validFrom",
-      sorter: true,
-      render: (v: string) => v ?? "—",
-    },
-    {
-      title: "Valid To",
-      dataIndex: "validTo",
-      key: "validTo",
-      render: (v: string | null) => (v ? v : <Tag color="blue">Open-ended</Tag>),
-    },
-    {
-      title: "Created",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (v: string) => new Date(v).toLocaleDateString(),
-      sorter: true,
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Space>
-          {canEdit && (
-            <Tooltip title="Edit">
-              <Button
-                type="text"
-                icon={<EditOutlined />}
-                onClick={() => openCIEdit(record, () => refresh())}
-              />
-            </Tooltip>
-          )}
-          {canEdit && (
-            <Popconfirm
-              title="Delete this community license?"
-              description="This action cannot be undone. Branches using this CI must be updated first."
-              onConfirm={() => runDelete(record.id)}
-              okText="Yes"
-              cancelText="No"
-            >
-              <Tooltip title="Delete">
-                <Button type="text" danger icon={<DeleteOutlined />} />
-              </Tooltip>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
-    },
-  ];
+  const handleCreate = () => navigate("community-licenses/create");
+  const handleEdit = (ci: CommunityLicense) => navigate(`community-licenses/${ci.id}/edit`);
+
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
+
+  const handleDelete = (id: string) => {
+    confirm({
+      title: "Delete this community license?",
+      description: "This action cannot be undone. Branches using this CI must be updated first.",
+      confirmLabel: "Delete",
+      status: "danger",
+      onConfirm: () => deleteMutation.mutate(id),
+    });
+  };
+
+  const { columns, renderCell } = useCIColumns({
+    canEdit,
+    canDelete,
+    isDeleting: deleteMutation.isPending,
+    onEdit: handleEdit,
+    onDelete: handleDelete,
+  });
 
   return (
-    <Card>
-      <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>
-          Community Licenses ({tableProps.pagination.total ?? 0})
-        </Title>
+    <div className="p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold">Community Licenses ({total})</h2>
         {canAdd && (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => openCICreate(() => refresh())}
-          >
+          <Button variant="primary" onPress={handleCreate}>
+            <Plus className="h-4 w-4" />
             Add Community License
           </Button>
         )}
-      </Flex>
-      <Table columns={columns} rowKey="id" scroll={{ x: 700 }} {...tableProps} />
-    </Card>
+      </div>
+
+      <DataTable
+        ariaLabel="Community Licenses"
+        items={items}
+        columns={columns}
+        renderCell={renderCell}
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        isLoading={isLoading}
+        onPageChange={setPage}
+      />
+      <Outlet />
+      {confirmDialog}
+    </div>
   );
 };
-
-const CIManagementPage: React.FC = () => (
-  <CIModalProvider>
-    <CIManagementTable />
-  </CIModalProvider>
-);
 
 export default CIManagementPage;

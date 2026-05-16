@@ -1,52 +1,71 @@
-import { Card, Tabs, Typography } from "antd";
+import { Tabs } from "@heroui/react";
 import { useSearchParams } from "react-router-dom";
 import { usePermission } from "@/hooks/usePermission";
 import LoadPaymentOrdersTab from "../components/LoadPaymentOrdersTab";
 import OfficeExpensePOTab from "../components/OfficeExpensePOTab";
+
+type Tab = "load" | "office-expense";
 
 export default function PaymentOrdersPage() {
   const canViewLoad = usePermission("load_payment_order", "view");
   const canViewOfficeExpense = usePermission("office_expense_payment_order", "view");
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const tabItems = [
-    ...(canViewLoad
-      ? [{ key: "load", label: "Load Payment Orders", children: <LoadPaymentOrdersTab /> }]
-      : []),
+  const defaultTab: Tab = canViewLoad ? "load" : "office-expense";
+  const rawTab = searchParams.get("tab");
+  const activeTab: Tab = rawTab === "load" || rawTab === "office-expense" ? rawTab : defaultTab;
+
+  const handleTabChange = (key: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", key);
+      return next;
+    });
+  };
+
+  const tabs: { key: Tab; label: string }[] = [
+    ...(canViewLoad ? [{ key: "load" as Tab, label: "Load Payment Orders" }] : []),
     ...(canViewOfficeExpense
-      ? [
-          {
-            key: "office-expense",
-            label: "Office Expense Payment Orders",
-            children: <OfficeExpensePOTab />,
-          },
-        ]
+      ? [{ key: "office-expense" as Tab, label: "Office Expense Payment Orders" }]
       : []),
   ];
 
-  if (tabItems.length === 0) {
+  if (tabs.length === 0) {
     return (
-      <Card>
-        <Typography.Text type="secondary">
+      <div className="p-6">
+        <p className="text-sm text-default-500">
           You don&apos;t have permission to view payment orders.
-        </Typography.Text>
-      </Card>
+        </p>
+      </div>
     );
   }
 
-  const defaultActiveKey = canViewLoad ? "load" : "office-expense";
-  const urlTab = searchParams.get("tab");
-  const activeKey = urlTab && tabItems.some((t) => t.key === urlTab) ? urlTab : defaultActiveKey;
-
-  const handleTabChange = (key: string) => {
-    const next = new URLSearchParams(searchParams);
-    next.set("tab", key);
-    setSearchParams(next, { replace: true });
-  };
-
   return (
-    <Card>
-      <Tabs items={tabItems} activeKey={activeKey} onChange={handleTabChange} />
-    </Card>
+    <div className="p-6">
+      <Tabs
+        selectedKey={activeTab}
+        onSelectionChange={(key) => handleTabChange(key as string)}
+        aria-label="Payment orders"
+      >
+        <Tabs.List>
+          {tabs.map((tab) => (
+            <Tabs.Tab key={tab.key} id={tab.key}>
+              {tab.label}
+              <Tabs.Indicator />
+            </Tabs.Tab>
+          ))}
+        </Tabs.List>
+        {canViewLoad && (
+          <Tabs.Panel id="load">
+            <LoadPaymentOrdersTab />
+          </Tabs.Panel>
+        )}
+        {canViewOfficeExpense && (
+          <Tabs.Panel id="office-expense">
+            <OfficeExpensePOTab />
+          </Tabs.Panel>
+        )}
+      </Tabs>
+    </div>
   );
 }

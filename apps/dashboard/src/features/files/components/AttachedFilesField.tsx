@@ -1,12 +1,11 @@
-import { UploadOutlined } from "@ant-design/icons";
-import { App, Button, Upload } from "antd";
-import type { UploadFile, UploadProps } from "antd/es/upload/interface";
-import { useEffect, useState } from "react";
+import { ArrowDownToLine, ArrowUpFromLine, Xmark } from "@gravity-ui/icons";
+import { Button, Spinner, toast } from "@heroui/react";
+import { useRef, useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { filesApi } from "../api/filesApi";
 
 export interface AttachedFile {
-  /** Server-issued file id. Used as the AntD `uid`. */
+  /** Server-issued file id. */
   fileId: string;
   fileName: string;
 }
@@ -22,10 +21,10 @@ export interface AttachedFilesFieldProps {
   buttonLabel?: string;
 }
 
-const toUploadList = (files: AttachedFile[]): UploadFile[] =>
-  files.map((f) => ({ uid: f.fileId, name: f.fileName, status: "done" as const }));
-
-const getFileId = (file: UploadFile): string => (file.response as string | undefined) ?? file.uid;
+interface LocalFile extends AttachedFile {
+  uploading?: boolean;
+  error?: boolean;
+}
 
 const AttachedFilesField = ({
   files,
@@ -37,67 +36,148 @@ const AttachedFilesField = ({
   multiple = true,
   buttonLabel = "Upload file",
 }: AttachedFilesFieldProps) => {
-  const { message } = App.useApp();
-  const [fileList, setFileList] = useState<UploadFile[]>(() => toUploadList(files));
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [localFiles, setLocalFiles] = useState<LocalFile[]>(() => files.map((f) => ({ ...f })));
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setFileList(toUploadList(files));
-  }, [files]);
-
-  const customRequest: UploadProps["customRequest"] = async ({ file, onSuccess: ok, onError }) => {
-    if (readOnly) return;
-    try {
-      const fileId = await onAdd(file as File);
-      ok?.(fileId);
-    } catch (err: unknown) {
-      onError?.(err instanceof Error ? err : new Error(String(err)));
-    }
-  };
-
-  const onChange: UploadProps["onChange"] = ({ file, fileList: next }) => {
-    setFileList(next);
-    onUploadingChange?.(next.some((f) => f.status === "uploading"));
-    if (file.status === "done") {
-      message.success(`${file.name} uploaded`);
-      onChanged?.();
-    } else if (file.status === "error") {
-      message.error(`${file.name} failed to upload`);
-    }
-  };
-
-  const handleRemove: UploadProps["onRemove"] = async (file) => {
-    if (readOnly || !onRemove) return false;
-    try {
-      await onRemove(getFileId(file));
-      message.success(`${file.name} removed`);
-      setFileList((cur) => cur.filter((f) => f.uid !== file.uid));
-      onChanged?.();
-      return true;
-    } catch (err: unknown) {
-      message.error(getErrorMessage(err));
-      return false;
-    }
-  };
-
-  const handleDownload: UploadProps["onDownload"] = (file) => {
-    void filesApi.downloadFile(getFileId(file), file.name).catch((err: unknown) => {
-      message.error(getErrorMessage(err));
+  // Sync when external files change
+  // We use a ref pattern to avoid re-render on every parent update
+  const prevFilesRef = useRef<AttachedFile[]>(files);
+  if (prevFilesRef.current !== files) {
+    prevFilesRef.current = files;
+    // Merge: keep uploading items, replace done items from props
+    setLocalFiles((cur) => {
+      const uploading = cur.filter((f) => f.uploading);
+      const fromProps = files.map((f) => ({ ...f }));
+      return [...fromProps, ...uploading];
     });
+  }
+
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || readOnly) return;
+    const fileArray = Array.from(e.target.files);
+    e.target.value = "";
+
+    for (const file of fileArray) {
+      const tempId = `uploading-${Date.now()}-${Math.random()}`;
+      const tempItem: LocalFile = { fileId: tempId, fileName: file.name, uploading: true };
+      setLocalFiles((cur) => [...cur, tempItem]);
+      onUploadingChange?.(true);
+      try {
+        await onAdd(file);
+        toast.success(`${file.name} uploaded`);
+        onChanged?.();
+      } catch (err: unknown) {
+        toast.danger(`${file.name} failed to upload: ${getErrorMessage(err)}`);
+        setLocalFiles((cur) => cur.filter((f) => f.fileId !== tempId));
+      } finally {
+        setLocalFiles((cur) => cur.filter((f) => f.fileId !== tempId));
+        onUploadingChange?.(false);
+      }
+    }
   };
+
+  const handleRemove = async (fileId: string, fileName: string) => {
+    if (readOnly || !onRemove) return;
+    setRemovingId(fileId);
+    try {
+      await onRemove(fileId);
+      toast.success(`${fileName} removed`);
+      setLocalFiles((cur) => cur.filter((f) => f.fileId !== fileId));
+      onChanged?.();
+    } catch (err: unknown) {
+      toast.danger(getErrorMessage(err));
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const handleDownload = async (fileId: string, fileName: string) => {
+    setDownloadingId(fileId);
+    try {
+      await filesApi.downloadFile(fileId, fileName);
+    } catch (err: unknown) {
+      toast.danger(getErrorMessage(err));
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const doneFiles = localFiles.filter((f) => !f.uploading);
 
   return (
-    <Upload
-      multiple={multiple}
-      disabled={readOnly}
-      fileList={fileList}
-      customRequest={customRequest}
-      onChange={onChange}
-      onRemove={readOnly ? undefined : handleRemove}
-      onDownload={handleDownload}
-      showUploadList={{ showDownloadIcon: true, showRemoveIcon: !readOnly }}
-    >
-      {!readOnly && <Button icon={<UploadOutlined />}>{buttonLabel}</Button>}
-    </Upload>
+    <div className="flex flex-col gap-2">
+      {doneFiles.length > 0 && (
+        <ul className="flex flex-col gap-1">
+          {doneFiles.map((f) => (
+            <li
+              key={f.fileId}
+              className="flex items-center justify-between gap-2 text-sm px-3 py-1.5 rounded bg-gray-50 border border-gray-200"
+            >
+              <span className="flex-1 truncate text-gray-800">{f.fileName}</span>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  className="text-gray-500 hover:text-primary"
+                  onPress={() => void handleDownload(f.fileId, f.fileName)}
+                  isDisabled={downloadingId === f.fileId}
+                  aria-label="Download"
+                >
+                  {downloadingId === f.fileId ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <ArrowDownToLine className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+                {!readOnly && onRemove && (
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="ghost"
+                    className="text-gray-400 hover:text-red-500"
+                    onPress={() => void handleRemove(f.fileId, f.fileName)}
+                    isDisabled={removingId === f.fileId}
+                    aria-label="Remove"
+                  >
+                    {removingId === f.fileId ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <Xmark className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {localFiles.some((f) => f.uploading) && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 px-3 py-1.5">
+          <Spinner size="sm" />
+          <span>Uploading…</span>
+        </div>
+      )}
+
+      {!readOnly && (
+        <>
+          <input
+            ref={inputRef}
+            type="file"
+            multiple={multiple}
+            className="hidden"
+            onChange={(e) => void handleInputChange(e)}
+          />
+          <Button variant="outline" onPress={() => inputRef.current?.click()}>
+            <ArrowUpFromLine className="h-4 w-4" />
+            {buttonLabel}
+          </Button>
+        </>
+      )}
+    </div>
   );
 };
 

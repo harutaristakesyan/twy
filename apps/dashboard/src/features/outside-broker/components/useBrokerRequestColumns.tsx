@@ -1,63 +1,71 @@
-import { EyeOutlined } from "@ant-design/icons";
-import { Button, Tag, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { Chip } from "@heroui/react";
+import { ActionsMenu } from "@/components/ActionsMenu";
 import type { BrokerRequest } from "../types/brokerRequest";
 
-const { Text } = Typography;
-
-const statusColors: Record<string, string> = {
-  pending: "processing",
-  approved: "success",
-  rejected: "error",
+export type BrokerRequestColumnDef = {
+  id: string;
+  label: string;
+  isRowHeader?: boolean;
 };
 
-export function useBrokerRequestColumns(
-  openView: (record: BrokerRequest) => void,
-  canView: boolean,
-): ColumnsType<BrokerRequest> {
-  return [
-    { title: "Broker name", dataIndex: "brokerName", key: "brokerName", sorter: true },
-    {
-      title: "MC number",
-      dataIndex: "mcNumber",
-      key: "mcNumber",
-      render: (v: string) => <Text code>{v}</Text>,
-      sorter: true,
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      width: 110,
-      render: (st: string) => <Tag color={statusColors[st] ?? "default"}>{st}</Tag>,
-      sorter: true,
-    },
-    {
-      title: "Submitted",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      width: 120,
-      render: (d: string) => (d ? new Date(d).toLocaleDateString() : "—"),
-      sorter: true,
-    },
-    {
-      title: "Reviewed by",
-      key: "reviewedBy",
-      width: 140,
-      render: (_, r) =>
-        r.reviewedByName ? <Text>{r.reviewedByName}</Text> : <Text type="secondary">—</Text>,
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 90,
-      fixed: "right",
-      render: (_, row) =>
-        canView ? (
-          <Button size="small" icon={<EyeOutlined />} onClick={() => openView(row)}>
-            View
-          </Button>
-        ) : null,
-    },
-  ];
+export const BROKER_REQUEST_COLUMNS: BrokerRequestColumnDef[] = [
+  { id: "brokerName", label: "Broker Name", isRowHeader: true },
+  { id: "mcNumber", label: "MC Number" },
+  { id: "status", label: "Status" },
+  { id: "submittedBy", label: "Submitted By" },
+  { id: "creditLimit", label: "Credit Limit" },
+  { id: "createdAt", label: "Submitted" },
+  { id: "actions", label: "Actions" },
+];
+
+const statusColor: Record<string, "success" | "warning" | "danger"> = {
+  approved: "success",
+  pending: "warning",
+  rejected: "danger",
+};
+
+type UseBrokerRequestColumnsParams = {
+  canView: boolean;
+  onView: (request: BrokerRequest) => void;
+};
+
+export function useBrokerRequestColumns({ canView, onView }: UseBrokerRequestColumnsParams) {
+  const renderCell = (req: BrokerRequest, colId: string) => {
+    switch (colId) {
+      case "brokerName":
+        return <span className="font-medium">{req.brokerName}</span>;
+      case "mcNumber":
+        return (
+          <Chip size="sm" variant="soft">
+            {req.mcNumber}
+          </Chip>
+        );
+      case "status":
+        return (
+          <Chip color={statusColor[req.status] ?? "default"} size="sm" variant="soft">
+            {req.status}
+          </Chip>
+        );
+      case "submittedBy":
+        return req.submittedByName ?? "—";
+      case "creditLimit":
+        return req.creditLimitUnlimited
+          ? "Unlimited"
+          : req.creditLimit != null
+            ? `€${req.creditLimit.toFixed(2)}`
+            : "—";
+      case "createdAt":
+        return new Date(req.createdAt).toLocaleDateString();
+      case "actions":
+        return (
+          <ActionsMenu
+            actions={[{ type: "view", hidden: !canView, onAction: () => onView(req) }]}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return { columns: BROKER_REQUEST_COLUMNS, renderCell };
 }

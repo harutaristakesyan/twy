@@ -44,6 +44,15 @@ export const ListUsersEventSchema = z.object({
 
 export type ListUsersEvent = z.infer<typeof ListUsersEventSchema>;
 
+export const GetUserEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    userId: z.uuid("userId must be a valid Cognito user identifier"),
+  }),
+});
+
+export type GetUserEvent = z.infer<typeof GetUserEventSchema>;
+
 const UpdateUserPayloadSchema = z
   .object({
     branch: z.uuid("branch must be a valid UUID").nullable().optional(),

@@ -1,5 +1,6 @@
-import type { ModalFuncProps } from "antd";
 import type { AxiosError } from "axios";
+
+type ModalFuncProps = { title: string; content: string };
 
 type ApiError = {
   response?: {

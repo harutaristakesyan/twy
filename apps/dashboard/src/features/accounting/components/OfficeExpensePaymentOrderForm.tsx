@@ -1,19 +1,6 @@
-import {
-  Col,
-  DatePicker,
-  Form,
-  type FormInstance,
-  type FormProps,
-  Input,
-  InputNumber,
-  Row,
-  Select,
-  Space,
-  Switch,
-} from "antd";
-import type { Dayjs } from "dayjs";
-import dayjs from "dayjs";
-import { useState } from "react";
+import { Checkbox, Input, Label, ListBox, Select, TextArea, TextField } from "@heroui/react";
+import type React from "react";
+import { DateInputBlock } from "@/components/form/DateFieldBlock";
 import { AttachedFilesField } from "@/features/files";
 import { officeExpenseApi } from "../api/officeExpensePaymentOrderApi";
 import {
@@ -26,154 +13,193 @@ import {
   type OfficeExpenseService,
 } from "../types/officeExpensePaymentOrder";
 
-const { TextArea } = Input;
-
-const CURRENCY_SYMBOL: Record<Currency, string> = { USD: "$", EUR: "€", AMD: "֏" };
-
 export interface OfficeExpenseFormValues {
-  serviceName: OfficeExpenseService;
+  serviceName: OfficeExpenseService | "";
   paymentPurpose: string;
-  date: Dayjs | null;
-  dateRange: [Dayjs, Dayjs] | null;
+  isRange: boolean;
+  date: string;
+  dateStart: string;
+  dateEnd: string;
   currency: Currency;
-  amount: number;
+  amount: string;
   paymentStatus: OfficeExpensePaymentStatus;
 }
 
-interface Props {
-  form: FormInstance<OfficeExpenseFormValues>;
-  order: OfficeExpensePaymentOrder;
-  readOnly: boolean;
-  onFinish: (values: OfficeExpenseFormValues) => void;
-  onFilesChanged: () => void;
-  onUploadingChange: (uploading: boolean) => void;
-  onValuesChange?: FormProps<OfficeExpenseFormValues>["onValuesChange"];
-}
-
-const buildInitialValues = (order: OfficeExpensePaymentOrder): OfficeExpenseFormValues => {
+export function buildInitialValues(order: OfficeExpensePaymentOrder): OfficeExpenseFormValues {
   const sameDay = order.periodStart === order.periodEnd;
   return {
     serviceName: order.serviceName,
     paymentPurpose: order.paymentPurpose,
-    date: sameDay ? dayjs(order.periodStart) : null,
-    dateRange: sameDay ? null : [dayjs(order.periodStart), dayjs(order.periodEnd)],
+    isRange: !sameDay,
+    date: sameDay ? order.periodStart : "",
+    dateStart: sameDay ? "" : order.periodStart,
+    dateEnd: sameDay ? "" : order.periodEnd,
     currency: order.currency,
-    amount: order.amount,
+    amount: String(order.amount),
     paymentStatus: order.paymentStatus,
   };
-};
+}
 
-export default function OfficeExpensePaymentOrderForm({
-  form,
+export interface UpdateOfficeExpensePeriod {
+  periodStart: string;
+  periodEnd: string;
+}
+
+export function formValuesToPeriod(
+  values: OfficeExpenseFormValues,
+): UpdateOfficeExpensePeriod | null {
+  if (values.isRange) {
+    if (!values.dateStart || !values.dateEnd) return null;
+    return { periodStart: values.dateStart, periodEnd: values.dateEnd };
+  }
+  if (!values.date) return null;
+  return { periodStart: values.date, periodEnd: values.date };
+}
+
+interface Props {
+  values: OfficeExpenseFormValues;
+  onChange: (values: OfficeExpenseFormValues) => void;
+  order: OfficeExpensePaymentOrder;
+  readOnly: boolean;
+  onFilesChanged: () => void | Promise<void>;
+  onUploadingChange: (uploading: boolean) => void;
+}
+
+const OfficeExpensePaymentOrderForm: React.FC<Props> = ({
+  values,
+  onChange,
   order,
   readOnly,
-  onFinish,
   onFilesChanged,
   onUploadingChange,
-  onValuesChange,
-}: Props) {
-  const [isRange, setIsRange] = useState(() => order.periodStart !== order.periodEnd);
+}) => {
+  const set = <K extends keyof OfficeExpenseFormValues>(key: K, val: OfficeExpenseFormValues[K]) =>
+    onChange({ ...values, [key]: val });
 
-  const watchedCurrency = Form.useWatch("currency", form);
-  const amountPrefix = CURRENCY_SYMBOL[(watchedCurrency ?? order.currency) as Currency];
+  const currencySymbol = values.currency === "EUR" ? "€" : "$";
 
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      disabled={readOnly}
-      initialValues={buildInitialValues(order)}
-      onFinish={(values: OfficeExpenseFormValues) => {
-        if (readOnly) return;
-        onFinish(values);
-      }}
-      onValuesChange={onValuesChange}
-      style={{ marginTop: 16 }}
-    >
-      <Form.Item
-        name="serviceName"
-        label="Service name"
-        rules={[{ required: true, message: "Service name is required" }]}
+    <div className="mt-2 flex flex-col gap-4">
+      <Select
+        value={values.serviceName}
+        onChange={(key) => set("serviceName", key as OfficeExpenseService)}
+        isDisabled={readOnly}
+        fullWidth
       >
-        <Select
-          options={OFFICE_EXPENSE_SERVICE_OPTIONS}
-          placeholder="Select service"
-          disabled={readOnly}
+        <Label>Service Name</Label>
+        <Select.Trigger />
+        <Select.Popover>
+          <ListBox>
+            {OFFICE_EXPENSE_SERVICE_OPTIONS.map((opt) => (
+              <ListBox.Item key={opt.value} id={opt.value}>
+                {opt.label}
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+      </Select>
+
+      <TextField isDisabled={readOnly} fullWidth>
+        <Label>Payment Purpose</Label>
+        <TextArea
+          rows={3}
+          value={values.paymentPurpose}
+          onChange={(e) => set("paymentPurpose", e.target.value)}
         />
-      </Form.Item>
+      </TextField>
 
-      <Form.Item
-        name="paymentPurpose"
-        label="Payment purpose"
-        rules={[{ required: true, message: "Payment purpose is required" }]}
-      >
-        <TextArea rows={3} disabled={readOnly} />
-      </Form.Item>
-
-      <Form.Item label="Date">
-        <Space align="center" style={{ marginBottom: 8 }}>
-          <span style={{ fontSize: 13 }}>Single date</span>
-          <Switch
-            size="small"
-            checked={isRange}
-            disabled={readOnly}
-            onChange={(checked) => {
-              setIsRange(checked);
-              form.setFieldsValue({ date: null, dateRange: null });
-            }}
-          />
-          <span style={{ fontSize: 13 }}>Date range</span>
-        </Space>
-        {isRange ? (
-          <Form.Item
-            name="dateRange"
-            noStyle
-            rules={[{ required: true, message: "Date range is required" }]}
-          >
-            <DatePicker.RangePicker style={{ width: "100%" }} disabled={readOnly} />
-          </Form.Item>
-        ) : (
-          <Form.Item name="date" noStyle rules={[{ required: true, message: "Date is required" }]}>
-            <DatePicker style={{ width: "100%" }} disabled={readOnly} />
-          </Form.Item>
-        )}
-      </Form.Item>
-
-      <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item name="currency" label="Currency" rules={[{ required: true }]}>
-            <Select options={CURRENCY_OPTIONS} style={{ width: "100%" }} disabled={readOnly} />
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item
-            name="amount"
-            label="Amount"
-            rules={[
-              { required: true, message: "Amount is required" },
-              { type: "number", min: 0.01, message: "Amount must be greater than 0" },
-            ]}
-          >
-            <InputNumber
-              style={{ width: "100%" }}
-              min={0.01}
-              precision={2}
-              prefix={amountPrefix}
-              disabled={readOnly}
+      <div>
+        <div className="mb-2 flex items-center gap-3">
+          <Label>Date</Label>
+          {!readOnly && (
+            <Checkbox isSelected={values.isRange} onChange={(checked) => set("isRange", checked)}>
+              <Checkbox.Control>
+                <Checkbox.Indicator />
+              </Checkbox.Control>
+              <Checkbox.Content>
+                <Label>Date range</Label>
+              </Checkbox.Content>
+            </Checkbox>
+          )}
+        </div>
+        {values.isRange ? (
+          <div className="grid grid-cols-2 gap-2">
+            <DateInputBlock
+              ariaLabel="Date start"
+              value={values.dateStart}
+              onChange={(v) => set("dateStart", v)}
+              isDisabled={readOnly}
             />
-          </Form.Item>
-        </Col>
-      </Row>
+            <DateInputBlock
+              ariaLabel="Date end"
+              value={values.dateEnd}
+              onChange={(v) => set("dateEnd", v)}
+              isDisabled={readOnly}
+            />
+          </div>
+        ) : (
+          <DateInputBlock
+            ariaLabel="Date"
+            value={values.date}
+            onChange={(v) => set("date", v)}
+            isDisabled={readOnly}
+          />
+        )}
+      </div>
 
-      <Form.Item
-        name="paymentStatus"
-        label="Payment status"
-        rules={[{ required: true, message: "Status is required" }]}
+      <div className="grid grid-cols-2 gap-4">
+        <Select
+          value={values.currency}
+          onChange={(key) => set("currency", key as Currency)}
+          isDisabled={readOnly}
+          fullWidth
+        >
+          <Label>Currency</Label>
+          <Select.Trigger />
+          <Select.Popover>
+            <ListBox>
+              {CURRENCY_OPTIONS.map((opt) => (
+                <ListBox.Item key={opt.value} id={opt.value}>
+                  {opt.label}
+                </ListBox.Item>
+              ))}
+            </ListBox>
+          </Select.Popover>
+        </Select>
+        <TextField isDisabled={readOnly} fullWidth>
+          <Label>Amount ({currencySymbol})</Label>
+          <Input
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={values.amount}
+            onChange={(e) => set("amount", e.target.value)}
+            placeholder="0.00"
+          />
+        </TextField>
+      </div>
+
+      <Select
+        value={values.paymentStatus}
+        onChange={(key) => set("paymentStatus", key as OfficeExpensePaymentStatus)}
+        isDisabled={readOnly}
+        fullWidth
       >
-        <Select options={OFFICE_EXPENSE_STATUS_OPTIONS} disabled={readOnly} />
-      </Form.Item>
+        <Label>Payment Status</Label>
+        <Select.Trigger />
+        <Select.Popover>
+          <ListBox>
+            {OFFICE_EXPENSE_STATUS_OPTIONS.map((opt) => (
+              <ListBox.Item key={opt.value} id={opt.value}>
+                {opt.label}
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+      </Select>
 
-      <Form.Item label="Documents">
+      <div>
+        <Label>Documents</Label>
         <AttachedFilesField
           files={order.files.map((f) => ({ fileId: f.fileId, fileName: f.fileName }))}
           onAdd={(file) => officeExpenseApi.addFile(order.id, file)}
@@ -183,7 +209,9 @@ export default function OfficeExpensePaymentOrderForm({
           readOnly={readOnly}
           buttonLabel="Upload file"
         />
-      </Form.Item>
-    </Form>
+      </div>
+    </div>
   );
-}
+};
+
+export default OfficeExpensePaymentOrderForm;

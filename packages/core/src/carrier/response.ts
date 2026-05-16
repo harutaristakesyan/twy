@@ -11,6 +11,8 @@ export interface CarrierResponse {
   phone: string | null;
   email: string | null;
   notes: string | null;
+  paymentMethod: string | null;
+  paymentTerms: string | null;
   status: CarrierStatus;
   createdAt: string;
   updatedAt: string;

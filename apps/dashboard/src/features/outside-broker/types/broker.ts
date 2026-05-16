@@ -13,6 +13,8 @@ export interface OutsideBroker {
   email: string | null;
   address: string | null;
   notes: string | null;
+  paymentMethod: string | null;
+  paymentTerms: string | null;
   status: BrokerStatus;
   creditLimitUnlimited: boolean;
   creditLimit: number | null;
@@ -28,6 +30,8 @@ export interface OutsideBrokerFormData {
   email?: string;
   address?: string;
   notes?: string;
+  paymentMethod?: string;
+  paymentTerms?: string;
   /** Present when editing an approved broker */
   status?: BrokerStatus;
   creditLimitUnlimited: boolean;
@@ -43,6 +47,8 @@ export interface UpdateOutsideBrokerRequest {
   email?: string;
   address?: string;
   notes?: string;
+  paymentMethod?: string;
+  paymentTerms?: string;
   status?: BrokerStatus;
   creditLimitUnlimited?: boolean;
   creditLimit?: number | null;
