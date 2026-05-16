@@ -51,7 +51,7 @@ export function useLoadColumns({
       case "referenceNumber":
         return <span className="font-medium">{load.referenceNumber}</span>;
       case "broker":
-        return load.broker.brokerName;
+        return load.broker?.brokerName ?? "—";
       case "carrier":
         return load.carrier?.carrierName ?? "—";
       case "status":

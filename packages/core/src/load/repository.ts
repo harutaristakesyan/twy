@@ -419,13 +419,13 @@ const normalizeJoinedRow = (row: {
     mcDotNumber: string | null;
     paymentMethod: string | null;
     paymentTerms: string | null;
-  };
+  } | null;
 }): LoadJoinedRow => ({
   load: row.load,
   branchName: row.branchName,
   broker: row.broker,
   carrier:
-    row.carrier.id && row.carrier.carrierName && row.carrier.mcDotNumber
+    row.carrier && row.carrier.id && row.carrier.carrierName && row.carrier.mcDotNumber
       ? {
           id: row.carrier.id,
           carrierName: row.carrier.carrierName,
