@@ -1,21 +1,10 @@
-import {
-  Button,
-  FieldError,
-  Input,
-  Label,
-  ListBox,
-  Modal,
-  Select,
-  Spinner,
-  TextField,
-  toast,
-} from "@heroui/react";
+import { Button, Label, ListBox, Modal, Select, Spinner, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Controller } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
-import { FormTextArea, FormTextField } from "@/components/form";
+import { FormDateInput, FormTextArea, FormTextField } from "@/components/form";
 import { useZodForm } from "@/libs/form";
 import { useApiMutation, useApiQuery } from "@/libs/query";
 import { getCarrierById, updateCarrier } from "../api/carrierApi";
@@ -152,21 +141,10 @@ const CarrierEditModal = () => {
                       label="Equipment Type"
                       placeholder="Enter equipment type"
                     />
-                    <Controller
-                      name="insuranceExpiry"
+                    <FormDateInput
                       control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField
-                          value={field.value ?? ""}
-                          onChange={field.onChange}
-                          isInvalid={!!fieldState.error}
-                          fullWidth
-                        >
-                          <Label>Insurance Expiry</Label>
-                          <Input type="date" />
-                          {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
-                        </TextField>
-                      )}
+                      name="insuranceExpiry"
+                      label="Insurance Expiry"
                     />
                     <FormTextField
                       control={control}

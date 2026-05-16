@@ -1,9 +1,8 @@
-import { Button, FieldError, Input, Label, Modal, TextField, toast } from "@heroui/react";
+import { Button, Modal, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Controller } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { FormTextField } from "@/components/form";
+import { FormDateInput, FormTextField } from "@/components/form";
 import { useZodForm } from "@/libs/form";
 import { useApiMutation } from "@/libs/query";
 import { createCommunityLicense } from "../api/ciApi";
@@ -42,7 +41,7 @@ const CICreateModal = () => {
     mutation.mutate({
       ciNumber: values.ciNumber,
       validFrom: values.validFrom,
-      validTo: values.validTo ?? null,
+      validTo: values.validTo || null,
     });
   });
 
@@ -69,39 +68,9 @@ const CICreateModal = () => {
                   placeholder="e.g. CI-123456"
                 />
 
-                <Controller
-                  name="validFrom"
-                  control={control}
-                  render={({ field, fieldState }) => (
-                    <TextField
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      isInvalid={!!fieldState.error}
-                      fullWidth
-                    >
-                      <Label>Valid From</Label>
-                      <Input type="date" />
-                      {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
-                    </TextField>
-                  )}
-                />
+                <FormDateInput control={control} name="validFrom" label="Valid From" />
 
-                <Controller
-                  name="validTo"
-                  control={control}
-                  render={({ field, fieldState }) => (
-                    <TextField
-                      value={field.value ?? ""}
-                      onChange={(v) => field.onChange(v || null)}
-                      isInvalid={!!fieldState.error}
-                      fullWidth
-                    >
-                      <Label>Valid To</Label>
-                      <Input type="date" />
-                      {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
-                    </TextField>
-                  )}
-                />
+                <FormDateInput control={control} name="validTo" label="Valid To" />
               </form>
             </Modal.Body>
             <Modal.Footer>

@@ -1,9 +1,8 @@
-import { Button, FieldError, Input, Label, Modal, Spinner, TextField, toast } from "@heroui/react";
+import { Button, Modal, Spinner, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Controller } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { FormTextArea, FormTextField } from "@/components/form";
+import { FormDateInput, FormTextArea, FormTextField } from "@/components/form";
 import { useZodForm } from "@/libs/form";
 import { useApiMutation } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -99,21 +98,10 @@ const CarrierCreateModal = ({ kind }: Props) => {
                     label="Equipment Type"
                     placeholder="e.g. Flatbed, Dry Van, Refrigerated"
                   />
-                  <Controller
-                    name="insuranceExpiry"
+                  <FormDateInput
                     control={control}
-                    render={({ field, fieldState }) => (
-                      <TextField
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        isInvalid={!!fieldState.error}
-                        fullWidth
-                      >
-                        <Label>Insurance Expiry</Label>
-                        <Input type="date" />
-                        {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
-                      </TextField>
-                    )}
+                    name="insuranceExpiry"
+                    label="Insurance Expiry"
                   />
                   <FormTextField
                     control={control}

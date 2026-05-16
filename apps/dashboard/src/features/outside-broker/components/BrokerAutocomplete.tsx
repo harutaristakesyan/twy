@@ -1,4 +1,12 @@
-import { ComboBox, Input, type Key, Label, ListBox } from "@heroui/react";
+import {
+  Autocomplete,
+  Description,
+  EmptyState,
+  type Key,
+  Label,
+  ListBox,
+  SearchField,
+} from "@heroui/react";
 import type React from "react";
 import { useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -20,7 +28,7 @@ const BrokerAutocomplete: React.FC<BrokerAutocompleteProps> = ({
   value,
   onChange,
   label = "Broker",
-  placeholder = "Search broker…",
+  placeholder = "Select broker",
   disabled,
   initialOption,
   variant,
@@ -40,13 +48,15 @@ const BrokerAutocomplete: React.FC<BrokerAutocompleteProps> = ({
       : fetched;
 
   return (
-    <ComboBox
-      allowsEmptyCollection
+    <Autocomplete
+      selectionMode="single"
       isDisabled={disabled}
       isInvalid={isInvalid}
+      variant={variant}
+      placeholder={placeholder}
       value={value ?? null}
-      onChange={(key: Key | null) => {
-        if (!key) {
+      onChange={(key: Key | Key[] | null) => {
+        if (key === null || Array.isArray(key)) {
           onChange?.(null, null);
           return;
         }
@@ -54,30 +64,40 @@ const BrokerAutocomplete: React.FC<BrokerAutocompleteProps> = ({
         const item = items.find((b) => b.id === id);
         onChange?.(id, item?.brokerName ?? null);
       }}
-      inputValue={inputValue}
-      onInputChange={setInputValue}
     >
       <Label>{label}</Label>
-      <ComboBox.InputGroup>
-        <Input variant={variant} placeholder={placeholder} />
-        <ComboBox.Trigger />
-      </ComboBox.InputGroup>
-      <ComboBox.Popover>
-        <ListBox>
-          {items.map((broker) => (
-            <ListBox.Item key={broker.id} id={broker.id} textValue={broker.brokerName}>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">{broker.brokerName}</span>
-                {broker.mcNumber && (
-                  <span className="text-xs text-default-500">{broker.mcNumber}</span>
-                )}
-              </div>
-              <ListBox.ItemIndicator />
-            </ListBox.Item>
-          ))}
-        </ListBox>
-      </ComboBox.Popover>
-    </ComboBox>
+      <Autocomplete.Trigger>
+        <Autocomplete.Value />
+        <Autocomplete.ClearButton />
+        <Autocomplete.Indicator />
+      </Autocomplete.Trigger>
+      <Autocomplete.Popover>
+        <Autocomplete.Filter
+          filter={() => true}
+          inputValue={inputValue}
+          onInputChange={setInputValue}
+        >
+          <SearchField autoFocus variant="secondary">
+            <SearchField.Group>
+              <SearchField.SearchIcon />
+              <SearchField.Input placeholder="Search broker…" />
+              <SearchField.ClearButton />
+            </SearchField.Group>
+          </SearchField>
+          <ListBox renderEmptyState={() => <EmptyState>No brokers found</EmptyState>}>
+            {items.map((broker) => (
+              <ListBox.Item key={broker.id} id={broker.id} textValue={broker.brokerName}>
+                <div className="flex flex-col">
+                  <Label>{broker.brokerName}</Label>
+                  {broker.mcNumber && <Description>{broker.mcNumber}</Description>}
+                </div>
+                <ListBox.ItemIndicator />
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Autocomplete.Filter>
+      </Autocomplete.Popover>
+    </Autocomplete>
   );
 };
 

@@ -1,4 +1,5 @@
 import { Checkbox, Input, Label, ListBox, Select, TextField } from "@heroui/react";
+import { DateInputBlock } from "@/components/form/DateFieldBlock";
 import type { FilterField } from "./types.js";
 
 interface Props {
@@ -73,28 +74,24 @@ export function FilterControl({ field, value, onChange, onReset }: Props) {
     const pair = (value as [string | null, string | null] | undefined) ?? [null, null];
     return (
       <div className="grid grid-cols-2 gap-2">
-        <TextField value={pair[0] ?? ""} fullWidth>
-          <Label className="sr-only">From</Label>
-          <Input
-            type="date"
-            onChange={(e) => {
-              const next: [string | null, string | null] = [e.target.value || null, pair[1]];
-              if (next[0] || next[1]) onChange(next);
-              else onReset();
-            }}
-          />
-        </TextField>
-        <TextField value={pair[1] ?? ""} fullWidth>
-          <Label className="sr-only">To</Label>
-          <Input
-            type="date"
-            onChange={(e) => {
-              const next: [string | null, string | null] = [pair[0], e.target.value || null];
-              if (next[0] || next[1]) onChange(next);
-              else onReset();
-            }}
-          />
-        </TextField>
+        <DateInputBlock
+          ariaLabel="From"
+          value={pair[0]}
+          onChange={(v) => {
+            const next: [string | null, string | null] = [v || null, pair[1]];
+            if (next[0] || next[1]) onChange(next);
+            else onReset();
+          }}
+        />
+        <DateInputBlock
+          ariaLabel="To"
+          value={pair[1]}
+          onChange={(v) => {
+            const next: [string | null, string | null] = [pair[0], v || null];
+            if (next[0] || next[1]) onChange(next);
+            else onReset();
+          }}
+        />
       </div>
     );
   }

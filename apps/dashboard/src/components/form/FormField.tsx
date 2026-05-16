@@ -19,6 +19,7 @@ import {
   type Path,
   type RegisterOptions,
 } from "react-hook-form";
+import { DateInputBlock } from "./DateFieldBlock";
 
 interface FormTextFieldProps<T extends FieldValues>
   extends Omit<ComponentProps<typeof Input>, "name"> {
@@ -473,9 +474,6 @@ interface FormDateInputProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
   label?: string;
-  min?: string;
-  max?: string;
-  variant?: "primary" | "secondary";
   isDisabled?: boolean;
 }
 
@@ -483,9 +481,6 @@ export function FormDateInput<T extends FieldValues>({
   control,
   name,
   label,
-  min,
-  max,
-  variant,
   isDisabled,
 }: FormDateInputProps<T>) {
   return (
@@ -493,19 +488,14 @@ export function FormDateInput<T extends FieldValues>({
       name={name}
       control={control}
       render={({ field, fieldState }) => (
-        <TextField isInvalid={!!fieldState.error} isDisabled={isDisabled} fullWidth>
-          {label && <Label>{label}</Label>}
-          <Input
-            type="date"
-            variant={variant}
-            value={field.value ?? ""}
-            onChange={(e) => field.onChange(e.target.value)}
-            onBlur={field.onBlur}
-            min={min}
-            max={max}
-          />
-          {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
-        </TextField>
+        <DateInputBlock
+          value={field.value}
+          onChange={field.onChange}
+          label={label}
+          isDisabled={isDisabled}
+          isInvalid={!!fieldState.error}
+          errorMessage={fieldState.error?.message}
+        />
       )}
     />
   );

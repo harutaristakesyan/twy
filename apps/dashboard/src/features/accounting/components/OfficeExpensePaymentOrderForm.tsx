@@ -1,5 +1,6 @@
 import { Checkbox, Input, Label, ListBox, Select, TextArea, TextField } from "@heroui/react";
 import type React from "react";
+import { DateInputBlock } from "@/components/form/DateFieldBlock";
 import { AttachedFilesField } from "@/features/files";
 import { officeExpenseApi } from "../api/officeExpensePaymentOrderApi";
 import {
@@ -123,25 +124,26 @@ const OfficeExpensePaymentOrderForm: React.FC<Props> = ({
         </div>
         {values.isRange ? (
           <div className="grid grid-cols-2 gap-2">
-            <TextField isDisabled={readOnly} fullWidth>
-              <Input
-                type="date"
-                value={values.dateStart}
-                onChange={(e) => set("dateStart", e.target.value)}
-              />
-            </TextField>
-            <TextField isDisabled={readOnly} fullWidth>
-              <Input
-                type="date"
-                value={values.dateEnd}
-                onChange={(e) => set("dateEnd", e.target.value)}
-              />
-            </TextField>
+            <DateInputBlock
+              ariaLabel="Date start"
+              value={values.dateStart}
+              onChange={(v) => set("dateStart", v)}
+              isDisabled={readOnly}
+            />
+            <DateInputBlock
+              ariaLabel="Date end"
+              value={values.dateEnd}
+              onChange={(v) => set("dateEnd", v)}
+              isDisabled={readOnly}
+            />
           </div>
         ) : (
-          <TextField isDisabled={readOnly} fullWidth>
-            <Input type="date" value={values.date} onChange={(e) => set("date", e.target.value)} />
-          </TextField>
+          <DateInputBlock
+            ariaLabel="Date"
+            value={values.date}
+            onChange={(v) => set("date", v)}
+            isDisabled={readOnly}
+          />
         )}
       </div>
 
