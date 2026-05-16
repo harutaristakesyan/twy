@@ -35,18 +35,13 @@ const locationSchema = z.object({
 });
 
 const schema = z.object({
-  customer: z.string().min(1, "Customer is required"),
-  referenceNumber: z.string().min(1, "Reference number is required"),
+  brokerId: z.string().uuid("Broker is required"),
   customerRate: z
     .number({ invalid_type_error: "Customer rate is required" })
     .positive("Customer rate must be greater than 0")
     .nullable()
     .refine((v): v is number => v !== null, "Customer rate is required"),
-  contactName: z.string().min(1, "Contact name is required"),
-  paymentMethod: z.string().min(1, "Payment method is required"),
-  paymentTerms: z.string().min(1, "Payment terms is required"),
-  carrier: z.string().nullable().optional(),
-  carrierPaymentMethod: z.string().nullable().optional(),
+  carrierId: z.string().uuid().nullable().optional(),
   carrierRate: z
     .number({ invalid_type_error: "Carrier rate is required" })
     .positive("Carrier rate must be greater than 0")
@@ -68,17 +63,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const STEP_FIELDS: Record<number, (keyof FormValues)[]> = {
-  0: [
-    "customer",
-    "referenceNumber",
-    "customerRate",
-    "contactName",
-    "paymentMethod",
-    "paymentTerms",
-    "carrier",
-    "carrierPaymentMethod",
-    "carrierRate",
-  ],
+  0: ["brokerId", "customerRate", "carrierId", "carrierRate"],
   1: [
     "chargeServiceFeeToOffice",
     "loadType",
@@ -112,14 +97,9 @@ const CreateLoadPage: React.FC = () => {
   const isBusy = uploaderItems.some((i) => i.status === "uploading");
 
   const { control, handleSubmit, trigger } = useZodForm<FormValues>(schema, {
-    customer: "",
-    referenceNumber: "",
+    brokerId: "",
     customerRate: null,
-    contactName: "",
-    paymentMethod: "",
-    paymentTerms: "",
-    carrier: "",
-    carrierPaymentMethod: "",
+    carrierId: null,
     carrierRate: null,
     chargeServiceFeeToOffice: false,
     loadType: "",
@@ -151,9 +131,9 @@ const CreateLoadPage: React.FC = () => {
   };
 
   const mutation = useApiMutation(async (payload: CreateLoadDto) => loadApi.create(payload), {
-    onSuccess: () => {
+    onSuccess: (result) => {
       uploaderRef.current?.commit();
-      toast.success("Load created successfully");
+      toast.success(`Load ${result.referenceNumber} created`);
       navigate("/loads");
     },
     onError: (err: unknown) => toast.danger(getErrorMessage(err)),
@@ -177,14 +157,9 @@ const CreateLoadPage: React.FC = () => {
       return v.trim().length ? v.trim() : null;
     };
     mutation.mutate({
-      customer: values.customer,
-      referenceNumber: values.referenceNumber,
+      brokerId: values.brokerId,
       customerRate: values.customerRate,
-      contactName: values.contactName,
-      paymentMethod: values.paymentMethod,
-      paymentTerms: values.paymentTerms,
-      carrier: toNull(values.carrier),
-      carrierPaymentMethod: toNull(values.carrierPaymentMethod),
+      carrierId: values.carrierId ?? null,
       carrierRate: values.carrierRate,
       chargeServiceFeeToOffice: values.chargeServiceFeeToOffice,
       loadType: values.loadType,
@@ -218,22 +193,25 @@ const CreateLoadPage: React.FC = () => {
       case 0:
         return (
           <div className="flex flex-col gap-4">
-            <p className="text-sm font-semibold text-gray-600 border-b pb-1">Customer</p>
+            <p className="text-sm font-semibold text-gray-600 border-b pb-1">Broker</p>
+            <p className="text-xs text-gray-500">
+              Contact name, payment method and terms are managed on the broker page.
+            </p>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Controller
-                  name="customer"
+                  name="brokerId"
                   control={control}
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <BrokerAutocomplete
-                      value={field.value}
-                      onChange={(_, name) => field.onChange(name)}
-                      placeholder="Enter customer name"
+                      value={field.value || null}
+                      onChange={(id) => field.onChange(id ?? "")}
+                      placeholder="Select broker"
+                      isInvalid={!!fieldState.error}
                     />
                   )}
                 />
               </div>
-              <FormTextField control={control} name="referenceNumber" label="Reference Number *" />
               <FormNumberInput
                 control={control}
                 name="customerRate"
@@ -241,30 +219,25 @@ const CreateLoadPage: React.FC = () => {
                 min="0"
                 step="0.01"
               />
-              <FormTextField control={control} name="contactName" label="Contact Name *" />
-              <FormTextField control={control} name="paymentMethod" label="Payment Method *" />
-              <FormTextField control={control} name="paymentTerms" label="Payment Terms *" />
             </div>
             <p className="text-sm font-semibold text-gray-600 border-b pb-1 mt-2">Carrier</p>
+            <p className="text-xs text-gray-500">
+              Carrier payment method and terms are managed on the carrier page.
+            </p>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Controller
-                  name="carrier"
+                  name="carrierId"
                   control={control}
                   render={({ field }) => (
                     <CarrierAutocomplete
-                      value={field.value ?? ""}
-                      onChange={(_, name) => field.onChange(name)}
-                      placeholder="Enter carrier"
+                      value={field.value ?? null}
+                      onChange={(id) => field.onChange(id ?? null)}
+                      placeholder="Select carrier"
                     />
                   )}
                 />
               </div>
-              <FormTextField
-                control={control}
-                name="carrierPaymentMethod"
-                label="Carrier Payment Method"
-              />
               <FormNumberInput
                 control={control}
                 name="carrierRate"

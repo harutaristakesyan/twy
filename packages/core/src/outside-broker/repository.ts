@@ -15,6 +15,8 @@ export interface OutsideBrokerRecord {
   email: string | null;
   address: string | null;
   notes: string | null;
+  paymentMethod: string | null;
+  paymentTerms: string | null;
   status: BrokerStatus;
   creditLimitUnlimited: boolean;
   creditLimit: number | null;
@@ -39,6 +41,8 @@ export interface NewBrokerInput {
   email?: string | null;
   address?: string | null;
   notes?: string | null;
+  paymentMethod?: string | null;
+  paymentTerms?: string | null;
   status?: string;
   creditLimitUnlimited: boolean;
   creditLimit?: number | null;
@@ -53,6 +57,8 @@ export interface UpdateBrokerInput {
   email?: string | null;
   address?: string | null;
   notes?: string | null;
+  paymentMethod?: string | null;
+  paymentTerms?: string | null;
   status?: string;
   creditLimitUnlimited?: boolean;
   creditLimit?: number | null;
@@ -94,6 +100,8 @@ const mapRow = (row: {
   email: string | null;
   address: string | null;
   notes: string | null;
+  paymentMethod: string | null;
+  paymentTerms: string | null;
   status: BrokerStatus;
   creditLimitUnlimited: boolean;
   creditLimit: string | null;
@@ -108,6 +116,8 @@ const mapRow = (row: {
   email: row.email,
   address: row.address,
   notes: row.notes,
+  paymentMethod: row.paymentMethod,
+  paymentTerms: row.paymentTerms,
   status: row.status,
   creditLimitUnlimited: row.creditLimitUnlimited,
   creditLimit: row.creditLimit !== null ? Number(row.creditLimit) : null,
@@ -142,6 +152,8 @@ export const listBrokers = async (input: ListBrokersInput) => {
         email: outsideBroker.email,
         address: outsideBroker.address,
         notes: outsideBroker.notes,
+        paymentMethod: outsideBroker.paymentMethod,
+        paymentTerms: outsideBroker.paymentTerms,
         status: outsideBroker.status,
         creditLimitUnlimited: outsideBroker.creditLimitUnlimited,
         creditLimit: outsideBroker.creditLimit,
@@ -173,6 +185,8 @@ export const createBroker = async (input: NewBrokerInput): Promise<string> => {
     email: input.email ?? null,
     address: input.address ?? null,
     notes: input.notes ?? null,
+    paymentMethod: input.paymentMethod ?? null,
+    paymentTerms: input.paymentTerms ?? null,
     status: (input.status ?? "approved") as BrokerStatus,
     creditLimitUnlimited: input.creditLimitUnlimited,
     creditLimit:
@@ -206,6 +220,8 @@ export const updateBroker = async (
   if (Object.hasOwn(input, "email")) payload.email = input.email ?? null;
   if (Object.hasOwn(input, "address")) payload.address = input.address ?? null;
   if (Object.hasOwn(input, "notes")) payload.notes = input.notes ?? null;
+  if (Object.hasOwn(input, "paymentMethod")) payload.paymentMethod = input.paymentMethod ?? null;
+  if (Object.hasOwn(input, "paymentTerms")) payload.paymentTerms = input.paymentTerms ?? null;
   if (typeof input.status !== "undefined") payload.status = input.status as BrokerStatus;
 
   if (typeof input.creditLimitUnlimited !== "undefined") {

@@ -14,14 +14,9 @@ import createError from "http-errors";
 
 const createLoad = async (event: CreateLoadEvent): Promise<CreateLoadResponse> => {
   const {
-    customer,
-    referenceNumber,
+    brokerId,
     customerRate,
-    contactName,
-    paymentMethod,
-    paymentTerms,
-    carrier,
-    carrierPaymentMethod,
+    carrierId,
     carrierRate,
     chargeServiceFeeToOffice,
     loadType,
@@ -59,15 +54,10 @@ const createLoad = async (event: CreateLoadEvent): Promise<CreateLoadResponse> =
     fileName: file.fileName,
   }));
 
-  const loadId = await createLoadRecord({
-    customer,
-    referenceNumber,
+  const { loadId, referenceNumber } = await createLoadRecord({
+    brokerId,
     customerRate,
-    contactName,
-    paymentMethod,
-    paymentTerms,
-    carrier,
-    carrierPaymentMethod,
+    carrierId,
     carrierRate,
     chargeServiceFeeToOffice,
     loadType,
@@ -88,6 +78,7 @@ const createLoad = async (event: CreateLoadEvent): Promise<CreateLoadResponse> =
   return {
     message: "Load created successfully",
     loadId,
+    referenceNumber,
   };
 };
 

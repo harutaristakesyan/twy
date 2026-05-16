@@ -11,7 +11,7 @@ export type LoadColumnDef = {
 
 export const LOAD_COLUMNS: LoadColumnDef[] = [
   { id: "referenceNumber", label: "Reference #", isRowHeader: true },
-  { id: "customer", label: "Customer" },
+  { id: "broker", label: "Broker" },
   { id: "carrier", label: "Carrier" },
   { id: "status", label: "Status" },
   { id: "branch", label: "Branch" },
@@ -50,10 +50,10 @@ export function useLoadColumns({
     switch (colId) {
       case "referenceNumber":
         return <span className="font-medium">{load.referenceNumber}</span>;
-      case "customer":
-        return load.customer;
+      case "broker":
+        return load.broker.brokerName;
       case "carrier":
-        return load.carrier ?? "—";
+        return load.carrier?.carrierName ?? "—";
       case "status":
         return (
           <Chip color={statusColor[load.status] ?? "default"} size="sm" variant="soft">

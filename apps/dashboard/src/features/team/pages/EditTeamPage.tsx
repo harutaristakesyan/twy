@@ -55,11 +55,9 @@ const EditTeamPage = () => {
 
   const close = () => navigate("/user-management/teams");
 
-  const { data: team, isLoading } = useApiQuery(
-    ["team", teamId],
-    () => getTeamById(teamId as string),
-    { enabled: !!teamId },
-  );
+  const { data: team, isLoading } = useApiQuery(["team", teamId], () => getTeamById(teamId), {
+    enabled: !!teamId,
+  });
 
   const { control, handleSubmit, reset } = useZodForm(schema, {
     name: "",

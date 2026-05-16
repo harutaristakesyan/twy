@@ -26,15 +26,9 @@ const stopsArraySchema = z
   .max(MAX_STOPS_PER_LEG, `At most ${MAX_STOPS_PER_LEG} stops are allowed per leg`);
 
 const LoadBaseSchema = z.object({
-  customer: z.string().trim().min(1, "Customer is required"),
-  referenceNumber: z.string().trim().min(1, "Reference Number is required"),
+  brokerId: uuidField,
   customerRate: z.number().positive("Customer Rate must be greater than 0"),
-  contactName: z.string().trim().min(1, "Contact Name is required"),
-  paymentMethod: z.string().trim().min(1, "Payment Method is required"),
-  paymentTerms: z.string().trim().min(1, "Payment Terms is required"),
-  carrier: z.string().trim().nullable().optional(),
   carrierId: uuidField.nullable().optional(),
-  carrierPaymentMethod: z.string().trim().nullable().optional(),
   carrierRate: z.number().positive("Carrier Rate must be greater than 0"),
   chargeServiceFeeToOffice: z.boolean().optional().default(false),
   loadType: z.string().trim().min(1, "Load Type is required"),
@@ -68,7 +62,7 @@ export const loadSortFieldMap = {
   referenceNumber: "referenceNumber",
   status: "status",
   createdAt: "createdAt",
-  customer: "customer",
+  broker: "broker",
 } as const;
 
 export const loadSortOrderMap = {

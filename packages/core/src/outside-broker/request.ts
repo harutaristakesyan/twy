@@ -58,6 +58,8 @@ const UpdateBrokerPayloadSchema = z
     email: z.string().trim().email().nullable().optional(),
     address: z.string().trim().nullable().optional(),
     notes: z.string().trim().nullable().optional(),
+    paymentMethod: z.string().trim().nullable().optional(),
+    paymentTerms: z.string().trim().nullable().optional(),
     status: brokerStatusEnum.optional(),
     creditLimitUnlimited: z.boolean().optional(),
     creditLimit: z.number().positive().nullable().optional(),

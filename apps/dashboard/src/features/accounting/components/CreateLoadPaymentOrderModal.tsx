@@ -146,12 +146,12 @@ const CreateLoadPaymentOrderModal = () => {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                       <span className="text-gray-500">Load</span>
                       <span>
-                        #{selected.referenceNumber} — {selected.customer}
+                        #{selected.referenceNumber} — {selected.broker.brokerName}
                       </span>
                       <span className="text-gray-500">Branch</span>
                       <span>{selected.branchName}</span>
                       <span className="text-gray-500">Carrier</span>
-                      <span>{selected.carrier ?? "—"}</span>
+                      <span>{selected.carrier?.carrierName ?? "—"}</span>
                       <span className="text-gray-500">Broker Receivable</span>
                       <span>{renderCurrency(financials.brokerReceivable)}</span>
                       <span className="text-gray-500">Carrier Payable</span>

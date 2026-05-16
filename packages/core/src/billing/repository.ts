@@ -4,6 +4,7 @@ import {
   db,
   file,
   load,
+  outsideBroker,
   type PaymentStatus,
   paymentOrder,
   paymentOrderFiles,
@@ -44,7 +45,7 @@ function buildFilterConditions(filter: AdvancedFilter, scopeBranchId?: string): 
   const dateCond = buildDateRangeCondition(filter, "createdAt", paymentOrder.createdAt);
   if (dateCond) conds.push(dateCond);
 
-  if (filter.broker) conds.push(ilike(load.customer, `%${filter.broker}%`));
+  if (filter.broker) conds.push(ilike(outsideBroker.brokerName, `%${filter.broker}%`));
 
   return conds;
 }
@@ -102,6 +103,7 @@ export const listExternalBillingByBranch = async (
     .from(paymentOrder)
     .innerJoin(load, eq(load.id, paymentOrder.loadId))
     .innerJoin(branch, eq(branch.id, paymentOrder.branchId))
+    .innerJoin(outsideBroker, eq(outsideBroker.id, load.brokerId))
     .leftJoin(carrier, eq(carrier.id, paymentOrder.carrierId))
     .where(whereClause)
     .groupBy(branch.id, branch.name)
@@ -151,6 +153,7 @@ export const listExternalBillingLoadsForBranch = async (
     })
     .from(paymentOrder)
     .innerJoin(load, eq(load.id, paymentOrder.loadId))
+    .innerJoin(outsideBroker, eq(outsideBroker.id, load.brokerId))
     .leftJoin(carrier, eq(carrier.id, paymentOrder.carrierId))
     .leftJoin(users, eq(users.id, load.createdBy))
     .where(whereClause)
@@ -208,6 +211,7 @@ export const listInternalBillingByBranch = async (
     .from(paymentOrder)
     .innerJoin(load, eq(load.id, paymentOrder.loadId))
     .innerJoin(branch, eq(branch.id, paymentOrder.branchId))
+    .innerJoin(outsideBroker, eq(outsideBroker.id, load.brokerId))
     .leftJoin(carrier, eq(carrier.id, paymentOrder.carrierId))
     .where(whereClause)
     .groupBy(branch.id, branch.name)
@@ -247,6 +251,7 @@ export const listInternalBillingLoadsForBranch = async (
     })
     .from(paymentOrder)
     .innerJoin(load, eq(load.id, paymentOrder.loadId))
+    .innerJoin(outsideBroker, eq(outsideBroker.id, load.brokerId))
     .leftJoin(carrier, eq(carrier.id, paymentOrder.carrierId))
     .where(whereClause)
     .orderBy(load.referenceNumber);

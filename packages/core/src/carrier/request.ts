@@ -81,6 +81,8 @@ const CarrierBaseSchema = z.object({
   phone: z.string().trim().min(1, "Phone is required"),
   email: z.string().trim().email("Please enter a valid email address"),
   notes: z.string().trim().optional(),
+  paymentMethod: z.string().trim().nullable().optional(),
+  paymentTerms: z.string().trim().nullable().optional(),
   status: carrierStatusEnum.optional(),
 });
 
@@ -101,6 +103,8 @@ const UpdateCarrierPayloadSchema = z
     phone: z.string().trim().nullable().optional(),
     email: z.string().trim().email().nullable().optional(),
     notes: z.string().trim().nullable().optional(),
+    paymentMethod: z.string().trim().nullable().optional(),
+    paymentTerms: z.string().trim().nullable().optional(),
     status: carrierStatusEnum.optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {

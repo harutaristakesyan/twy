@@ -7,7 +7,6 @@ import { z } from "zod";
 import { FormNumberInput, FormTextArea, FormTextField } from "@/components/form";
 import { useZodForm } from "@/libs/form";
 import { useApiMutation, useApiQuery } from "@/libs/query";
-import { getErrorMessage } from "@/utils/errorUtils";
 import { getOutsideBrokerById, updateOutsideBroker } from "../api/brokerApi";
 import { BrokerStatus } from "../types/broker";
 
@@ -23,6 +22,8 @@ const schema = z
       .refine((v) => !v || /\S+@\S+\.\S+/.test(v), { message: "Invalid email address" }),
     address: z.string().optional(),
     notes: z.string().optional(),
+    paymentMethod: z.string().optional(),
+    paymentTerms: z.string().optional(),
     status: z.nativeEnum(BrokerStatus),
     creditLimitUnlimited: z.boolean(),
     creditLimit: z.number().nullable().optional(),
@@ -51,7 +52,7 @@ const OutsideBrokerEditModal = () => {
 
   const { data: broker, isLoading } = useApiQuery(
     ["outside-broker", brokerId],
-    () => getOutsideBrokerById(brokerId ?? ""),
+    () => getOutsideBrokerById(brokerId),
     { enabled: !!brokerId },
   );
 
@@ -63,6 +64,8 @@ const OutsideBrokerEditModal = () => {
     email: "",
     address: "",
     notes: "",
+    paymentMethod: "",
+    paymentTerms: "",
     status: BrokerStatus.PENDING,
     creditLimitUnlimited: true,
     creditLimit: null,
@@ -78,6 +81,8 @@ const OutsideBrokerEditModal = () => {
         email: broker.email ?? "",
         address: broker.address ?? "",
         notes: broker.notes ?? "",
+        paymentMethod: broker.paymentMethod ?? "",
+        paymentTerms: broker.paymentTerms ?? "",
         status: broker.status,
         creditLimitUnlimited: broker.creditLimitUnlimited ?? true,
         creditLimit: broker.creditLimit ?? null,
@@ -87,17 +92,14 @@ const OutsideBrokerEditModal = () => {
 
   const isUnlimited = watch("creditLimitUnlimited");
 
-  const mutation = useApiMutation(
-    (data: Parameters<typeof updateOutsideBroker>[0]) => updateOutsideBroker(data),
-    {
-      onSuccess: async () => {
-        toast.success("Outside broker updated successfully");
-        await queryClient.invalidateQueries({ queryKey: ["outside-brokers"] });
-        close();
-      },
-      onError: (err: unknown) => toast.danger(getErrorMessage(err)),
+  const mutation = useApiMutation(updateOutsideBroker, {
+    onSuccess: async () => {
+      toast.success("Outside broker updated successfully");
+      await queryClient.invalidateQueries({ queryKey: ["outside-brokers"] });
+      await queryClient.invalidateQueries({ queryKey: ["outside-broker", brokerId] });
+      close();
     },
-  );
+  });
 
   const onSubmit = handleSubmit((values: FormValues) => {
     if (!broker) return;
@@ -110,6 +112,8 @@ const OutsideBrokerEditModal = () => {
       email: values.email?.trim() || undefined,
       address: values.address?.trim() || undefined,
       notes: values.notes?.trim() || undefined,
+      paymentMethod: values.paymentMethod?.trim() || undefined,
+      paymentTerms: values.paymentTerms?.trim() || undefined,
       status: values.status,
       creditLimitUnlimited: values.creditLimitUnlimited,
       creditLimit: values.creditLimitUnlimited ? null : (values.creditLimit ?? null),
@@ -190,6 +194,18 @@ const OutsideBrokerEditModal = () => {
                           </Select.Popover>
                         </Select>
                       )}
+                    />
+                    <FormTextField
+                      control={control}
+                      name="paymentMethod"
+                      label="Payment Method"
+                      placeholder="e.g. ACH, Wire, Check"
+                    />
+                    <FormTextField
+                      control={control}
+                      name="paymentTerms"
+                      label="Payment Terms"
+                      placeholder="e.g. Net 30, Quick Pay"
                     />
                     <div className="col-span-2">
                       <FormTextArea

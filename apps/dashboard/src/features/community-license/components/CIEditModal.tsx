@@ -28,7 +28,7 @@ const CIEditModal = () => {
 
   const { data: communityLicense, isLoading } = useApiQuery(
     ["community-license", ciId],
-    () => getCommunityLicenseById(ciId ?? ""),
+    () => getCommunityLicenseById(ciId),
     { enabled: !!ciId },
   );
 
@@ -52,6 +52,7 @@ const CIEditModal = () => {
     onSuccess: async () => {
       toast.success("Community license updated successfully");
       await queryClient.invalidateQueries({ queryKey: ["community-licenses"] });
+      await queryClient.invalidateQueries({ queryKey: ["community-license", ciId] });
       close();
     },
   });

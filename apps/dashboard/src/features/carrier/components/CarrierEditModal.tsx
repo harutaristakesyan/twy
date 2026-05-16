@@ -18,7 +18,6 @@ import { z } from "zod";
 import { FormTextArea, FormTextField } from "@/components/form";
 import { useZodForm } from "@/libs/form";
 import { useApiMutation, useApiQuery } from "@/libs/query";
-import { getErrorMessage } from "@/utils/errorUtils";
 import { getCarrierById, updateCarrier } from "../api/carrierApi";
 import { CarrierStatus } from "../types/carrier";
 
@@ -33,6 +32,8 @@ const schema = z.object({
     .optional()
     .refine((v) => !v || /\S+@\S+\.\S+/.test(v), { message: "Invalid email address" }),
   notes: z.string().optional(),
+  paymentMethod: z.string().optional(),
+  paymentTerms: z.string().optional(),
   status: z.nativeEnum(CarrierStatus),
 });
 
@@ -51,7 +52,7 @@ const CarrierEditModal = () => {
 
   const { data: carrier, isLoading } = useApiQuery(
     ["carrier", carrierId],
-    () => getCarrierById(carrierId ?? ""),
+    () => getCarrierById(carrierId),
     { enabled: !!carrierId },
   );
 
@@ -63,6 +64,8 @@ const CarrierEditModal = () => {
     phone: "",
     email: "",
     notes: "",
+    paymentMethod: "",
+    paymentTerms: "",
     status: CarrierStatus.APPROVED,
   });
 
@@ -76,22 +79,21 @@ const CarrierEditModal = () => {
         phone: carrier.phone ?? "",
         email: carrier.email ?? "",
         notes: carrier.notes ?? "",
+        paymentMethod: carrier.paymentMethod ?? "",
+        paymentTerms: carrier.paymentTerms ?? "",
         status: carrier.status,
       });
     }
   }, [carrier, reset]);
 
-  const mutation = useApiMutation(
-    (data: Parameters<typeof updateCarrier>[0]) => updateCarrier(data),
-    {
-      onSuccess: async () => {
-        toast.success("Carrier updated successfully");
-        await queryClient.invalidateQueries({ queryKey: ["carriers"] });
-        close();
-      },
-      onError: (err: unknown) => toast.danger(getErrorMessage(err)),
+  const mutation = useApiMutation(updateCarrier, {
+    onSuccess: async () => {
+      toast.success("Carrier updated successfully");
+      await queryClient.invalidateQueries({ queryKey: ["carriers"] });
+      await queryClient.invalidateQueries({ queryKey: ["carrier", carrierId] });
+      close();
     },
-  );
+  });
 
   const onSubmit = handleSubmit((values: FormValues) => {
     if (!carrier) return;
@@ -104,6 +106,8 @@ const CarrierEditModal = () => {
       phone: values.phone?.trim() || undefined,
       email: values.email?.trim() || undefined,
       notes: values.notes?.trim() || undefined,
+      paymentMethod: values.paymentMethod?.trim() || undefined,
+      paymentTerms: values.paymentTerms?.trim() || undefined,
       status: values.status,
     });
   });
@@ -198,6 +202,18 @@ const CarrierEditModal = () => {
                           </Select.Popover>
                         </Select>
                       )}
+                    />
+                    <FormTextField
+                      control={control}
+                      name="paymentMethod"
+                      label="Payment Method"
+                      placeholder="e.g. ACH, Wire, Check"
+                    />
+                    <FormTextField
+                      control={control}
+                      name="paymentTerms"
+                      label="Payment Terms"
+                      placeholder="e.g. Net 30, Quick Pay"
                     />
                     <div className="col-span-2">
                       <FormTextArea

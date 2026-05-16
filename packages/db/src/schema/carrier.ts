@@ -21,6 +21,8 @@ export const carrier = pgTable("carrier", {
   phone: text(),
   email: text(),
   notes: text(),
+  paymentMethod: text(),
+  paymentTerms: text(),
   status: text().$type<CarrierStatus>().notNull().default("approved"),
   createdBy: uuid().references(() => users.id, { onDelete: "restrict" }),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

@@ -9,16 +9,30 @@ export interface LoadLocationResponse {
   address: string;
 }
 
+export interface LoadBrokerSummary {
+  id: string;
+  brokerName: string;
+  contactName: string | null;
+  phone: string | null;
+  email: string | null;
+  paymentMethod: string | null;
+  paymentTerms: string | null;
+}
+
+export interface LoadCarrierSummary {
+  id: string;
+  carrierName: string;
+  mcDotNumber: string;
+  paymentMethod: string | null;
+  paymentTerms: string | null;
+}
+
 export interface LoadResponse {
   id: string;
-  customer: string;
   referenceNumber: string;
   customerRate: number | null;
-  contactName: string;
-  paymentMethod: string;
-  paymentTerms: string;
-  carrier: string | null;
-  carrierPaymentMethod: string | null;
+  broker: LoadBrokerSummary;
+  carrier: LoadCarrierSummary | null;
   carrierRate: number;
   chargeServiceFeeToOffice: boolean;
   isChargable: boolean;
@@ -44,6 +58,7 @@ export interface LoadResponse {
 
 export interface CreateLoadResponse extends MessageResponse {
   loadId: string;
+  referenceNumber: string;
 }
 
 export interface ChangeLoadStatusResponse extends MessageResponse {

@@ -22,6 +22,8 @@ export interface Carrier {
   phone: string | null;
   email: string | null;
   notes: string | null;
+  paymentMethod: string | null;
+  paymentTerms: string | null;
   status: CarrierStatus;
   createdAt?: string;
   updatedAt?: string;
@@ -36,6 +38,8 @@ export interface CarrierFormData {
   phone?: string;
   email?: string;
   notes?: string;
+  paymentMethod?: string;
+  paymentTerms?: string;
   status: CarrierStatus;
 }
 
@@ -48,6 +52,8 @@ export interface UpdateCarrierRequest {
   phone?: string;
   email?: string;
   notes?: string;
+  paymentMethod?: string;
+  paymentTerms?: string;
   status?: CarrierStatus;
 }
 

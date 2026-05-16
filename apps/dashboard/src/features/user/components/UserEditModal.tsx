@@ -27,7 +27,7 @@ const UserEditModal = () => {
 
   const { data: user, isLoading: userLoading } = useApiQuery(
     ["user", userId],
-    () => getUserById(userId as string),
+    () => getUserById(userId),
     { enabled: !!userId },
   );
 
@@ -51,6 +51,7 @@ const UserEditModal = () => {
     onSuccess: async () => {
       toast.success("User updated successfully");
       await queryClient.invalidateQueries({ queryKey: ["users"] });
+      await queryClient.invalidateQueries({ queryKey: ["user", userId] });
       close();
     },
   });

@@ -28,7 +28,7 @@ const BranchEditModal = () => {
 
   const { data: branch, isLoading: branchLoading } = useApiQuery(
     ["branch", branchId],
-    () => getBranchById(branchId as string),
+    () => getBranchById(branchId),
     { enabled: !!branchId },
   );
 
@@ -54,6 +54,7 @@ const BranchEditModal = () => {
     onSuccess: async () => {
       toast.success("Branch updated successfully");
       await queryClient.invalidateQueries({ queryKey: ["branches"] });
+      await queryClient.invalidateQueries({ queryKey: ["branch", branchId] });
       close();
     },
   });

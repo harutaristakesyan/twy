@@ -17,6 +17,7 @@ interface MessageResponse {
 
 interface CreateLoadResponse extends MessageResponse {
   loadId: string;
+  referenceNumber: string;
 }
 
 interface ChangeStatusResponse extends MessageResponse {

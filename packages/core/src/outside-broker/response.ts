@@ -9,6 +9,8 @@ export interface OutsideBrokerResponse {
   email: string | null;
   address: string | null;
   notes: string | null;
+  paymentMethod: string | null;
+  paymentTerms: string | null;
   status: BrokerStatus;
   creditLimitUnlimited: boolean;
   creditLimit: number | null;

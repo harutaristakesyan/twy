@@ -141,6 +141,13 @@
       "when": 1778846871295,
       "tag": "0019_flaky_otto_octavius",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1778952988848,
+      "tag": "0020_motionless_daredevil",
+      "breakpoints": true
     }
   ]
 }
