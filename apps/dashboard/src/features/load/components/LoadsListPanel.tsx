@@ -53,7 +53,7 @@ export const LoadsListPanel: React.FC = () => {
   const handleSelect = (loadId: string) => navigate(`/loads/${loadId}`);
 
   return (
-    <div className="flex h-full w-full flex-col gap-3 border-default-200 bg-white p-4 lg:w-115 lg:border-r">
+    <div className="flex h-full w-full flex-col gap-3 border-default-200 bg-white p-4 lg:w-125 lg:border-r">
       <div className="flex items-baseline justify-between">
         <h2 className="text-lg font-semibold">Tracking loads</h2>
         <span className="text-xs text-default-500">{total}</span>

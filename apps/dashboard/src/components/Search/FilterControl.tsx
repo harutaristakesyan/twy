@@ -1,4 +1,4 @@
-import { Checkbox, Input, Label, ListBox, Select, TextField } from "@heroui/react";
+import { Input, Label, ListBox, Select, TextField } from "@heroui/react";
 import { DateInputBlock } from "@/components/form/DateFieldBlock";
 import type { FilterField } from "./types.js";
 
@@ -47,26 +47,32 @@ export function FilterControl({ field, value, onChange, onReset }: Props) {
   if (field.type === "multiSelect") {
     const selected = (value as string[] | undefined) ?? [];
     return (
-      <div className="flex flex-wrap gap-2">
-        {field.options?.map((opt) => {
-          const checked = selected.includes(opt.value);
-          return (
-            <Checkbox
-              key={opt.value}
-              isSelected={checked}
-              onChange={(isSelected) => {
-                const next = isSelected
-                  ? [...selected, opt.value]
-                  : selected.filter((v) => v !== opt.value);
-                if (next.length > 0) onChange(next);
-                else onReset();
-              }}
-            >
-              {opt.label}
-            </Checkbox>
-          );
-        })}
-      </div>
+      <Select
+        className="w-full"
+        placeholder={field.placeholder ?? `Select ${field.label.toLowerCase()}`}
+        selectionMode="multiple"
+        value={selected}
+        onChange={(keys) => {
+          const next = (keys as string[] | null) ?? [];
+          if (next.length > 0) onChange(next);
+          else onReset();
+        }}
+      >
+        <Select.Trigger>
+          <Select.Value />
+          <Select.Indicator />
+        </Select.Trigger>
+        <Select.Popover>
+          <ListBox selectionMode="multiple">
+            {field.options?.map((opt) => (
+              <ListBox.Item key={opt.value} id={opt.value} textValue={opt.label}>
+                {opt.label}
+                <ListBox.ItemIndicator />
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+      </Select>
     );
   }
 
