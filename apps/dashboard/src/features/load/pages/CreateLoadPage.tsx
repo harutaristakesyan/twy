@@ -1,5 +1,6 @@
 import { ArrowLeft } from "@gravity-ui/icons";
 import { Button, Spinner, toast } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { useRef, useState } from "react";
 import { Controller, useFieldArray } from "react-hook-form";
@@ -89,6 +90,7 @@ const emptyStop = (): Location => ({
 
 const CreateLoadPage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStepVisited, setMaxStepVisited] = useState(0);
   const [stepErrors, setStepErrors] = useState<string[]>([]);
@@ -131,9 +133,10 @@ const CreateLoadPage: React.FC = () => {
   };
 
   const mutation = useApiMutation(async (payload: CreateLoadDto) => loadApi.create(payload), {
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       uploaderRef.current?.commit();
       toast.success(`Load ${result.referenceNumber} created`);
+      await queryClient.invalidateQueries({ queryKey: ["loads"] });
       navigate("/loads");
     },
     onError: (err: unknown) => toast.danger(getErrorMessage(err)),
