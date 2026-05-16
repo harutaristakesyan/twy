@@ -1,10 +1,22 @@
-import { Button, Label, ListBox, Modal, Select, Spinner, toast } from "@heroui/react";
+import {
+  Button,
+  Label,
+  ListBox,
+  Modal,
+  Radio,
+  RadioGroup,
+  Select,
+  Spinner,
+  toast,
+} from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { FormCheckbox, FormNumberInput, FormTextArea } from "@/components/form";
+import type { FileUploaderHandle, FileUploaderValueItem } from "@/features/files";
+import { FileUploader, MAX_FILES_DEFAULT } from "@/features/files";
 import { loadApi } from "@/features/load/api/loadApi";
 import type { LoadStatus } from "@/features/load/types/load";
 import { getAllowedTransitions } from "@/features/load/utils/statusMachine";
@@ -28,12 +40,13 @@ const commentLabel = (status: LoadStatus | undefined, chargable: boolean): strin
   return null;
 };
 
-// Cross-field validation (chargeAmount, comment) is handled imperatively in handleSubmit
-// because effectiveStatus is derived from the loaded record, not stored in the form.
+// Cross-field validation (chargeAmount, chargeSide, comment) is handled imperatively in
+// handleSubmit because effectiveStatus is derived from the loaded record, not stored in the form.
 const schema = z.object({
   selectedStatus: z.string().nullable(),
   isChargable: z.boolean(),
   chargeAmount: z.number().nullable(),
+  chargeSide: z.enum(["broker", "carrier"]).nullable(),
   comment: z.string(),
 });
 
@@ -65,10 +78,15 @@ const StatusUpdateModal = () => {
     : [];
   const isTerminal = load ? allowedStatuses.length === 0 : false;
 
+  const uploaderRef = useRef<FileUploaderHandle>(null);
+  const [uploaderItems, setUploaderItems] = useState<FileUploaderValueItem[]>([]);
+  const isBusy = uploaderItems.some((i) => i.status === "uploading");
+
   const { control, handleSubmit, watch, setValue, reset } = useZodForm<FormValues>(schema, {
     selectedStatus: null,
     isChargable: false,
     chargeAmount: null,
+    chargeSide: null,
     comment: "",
   });
 
@@ -78,6 +96,7 @@ const StatusUpdateModal = () => {
         selectedStatus: null,
         isChargable: load.isChargable ?? false,
         chargeAmount: load.chargeAmount ?? null,
+        chargeSide: load.chargeSide ?? null,
         comment: "",
       });
     }
@@ -96,11 +115,15 @@ const StatusUpdateModal = () => {
       status,
       chargable,
       amount,
+      side,
+      fileIds,
       cmt,
     }: {
       status: LoadStatus;
       chargable: boolean;
       amount: number | null;
+      side: "broker" | "carrier" | null;
+      fileIds?: string[];
       cmt?: string;
     }) => {
       if (!loadId) return;
@@ -108,11 +131,14 @@ const StatusUpdateModal = () => {
         status,
         isChargable: chargable,
         chargeAmount: chargable ? amount : null,
+        chargeSide: chargable ? side : null,
+        fileIds,
         comment: cmt,
       });
     },
     {
       onSuccess: async () => {
+        uploaderRef.current?.commit();
         toast.success("Load status updated successfully");
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ["loads"] }),
@@ -129,11 +155,25 @@ const StatusUpdateModal = () => {
   const onSubmit = handleSubmit((values) => {
     if (!effectiveStatus) return;
     const chargable = values.isChargable;
+    if (chargable && !values.chargeSide) {
+      toast.danger("Please select Broker Side or Carrier Side.");
+      return;
+    }
+    if (chargable && isBusy) {
+      toast.danger("Wait for files to finish uploading.");
+      return;
+    }
     const amt = chargable && values.chargeAmount ? values.chargeAmount : null;
+    const side = chargable ? values.chargeSide : null;
+    const fileIds = chargable
+      ? uploaderItems.filter((i) => i.status === "done" && i.fileId).map((i) => i.fileId as string)
+      : undefined;
     mutation.mutate({
       status: effectiveStatus,
       chargable,
       amount: amt,
+      side,
+      fileIds,
       cmt: values.comment.trim() || undefined,
     });
   });
@@ -212,9 +252,11 @@ const StatusUpdateModal = () => {
                             onChange={(key) => {
                               const s = key as LoadStatus;
                               field.onChange(s);
-                              if (s !== "Approved") {
+                              if (s !== "Delivered") {
                                 setValue("isChargable", false);
                                 setValue("chargeAmount", null);
+                                setValue("chargeSide", null);
+                                setUploaderItems([]);
                               }
                               setValue("comment", "");
                             }}
@@ -238,19 +280,63 @@ const StatusUpdateModal = () => {
                         )}
                       />
 
-                      {effectiveStatus === "Approved" && (
+                      {effectiveStatus === "Delivered" && (
                         <>
                           <FormCheckbox control={control} name="isChargable" label="Is Chargable" />
 
                           {effectiveIsChargable && (
-                            <FormNumberInput
-                              control={control}
-                              name="chargeAmount"
-                              label="Charge Amount"
-                              placeholder="Enter charge amount"
-                              min="0.01"
-                              step="0.01"
-                            />
+                            <>
+                              <Controller
+                                name="chargeSide"
+                                control={control}
+                                render={({ field }) => (
+                                  <RadioGroup
+                                    value={field.value ?? null}
+                                    onChange={(v) =>
+                                      field.onChange(v as "broker" | "carrier" | null)
+                                    }
+                                  >
+                                    <Label>Charge Side</Label>
+                                    <div className="flex flex-col gap-2 mt-1">
+                                      <Radio value="broker">
+                                        <Radio.Control>
+                                          <Radio.Indicator />
+                                        </Radio.Control>
+                                        <Radio.Content>
+                                          <Label>Broker Side</Label>
+                                        </Radio.Content>
+                                      </Radio>
+                                      <Radio value="carrier">
+                                        <Radio.Control>
+                                          <Radio.Indicator />
+                                        </Radio.Control>
+                                        <Radio.Content>
+                                          <Label>Carrier Side</Label>
+                                        </Radio.Content>
+                                      </Radio>
+                                    </div>
+                                  </RadioGroup>
+                                )}
+                              />
+
+                              <FormNumberInput
+                                control={control}
+                                name="chargeAmount"
+                                label="Charge Amount"
+                                placeholder="Enter charge amount"
+                                min="0.01"
+                                step="0.01"
+                              />
+
+                              <FileUploader
+                                ref={uploaderRef}
+                                max={MAX_FILES_DEFAULT}
+                                buttonLabel="Upload"
+                                value={uploaderItems}
+                                onChange={setUploaderItems}
+                                helpText="Optional charge-related documents."
+                              />
+                            </>
                           )}
                         </>
                       )}
@@ -282,7 +368,7 @@ const StatusUpdateModal = () => {
                   variant="primary"
                   type="submit"
                   form="status-update-form"
-                  isDisabled={mutation.isPending}
+                  isDisabled={mutation.isPending || isBusy}
                 >
                   {mutation.isPending ? <Spinner size="sm" /> : "Update Status"}
                 </Button>

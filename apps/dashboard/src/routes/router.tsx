@@ -24,9 +24,9 @@ import OutsideCarriersTab from "@/features/carrier/pages/OutsideCarriersTab";
 import TwyCarriersTab from "@/features/carrier/pages/TwyCarriersTab";
 import CICreateModal from "@/features/community-license/components/CICreateModal";
 import CIEditModal from "@/features/community-license/components/CIEditModal";
-import LoadEditModal from "@/features/load/components/LoadEditModal";
 import StatusUpdateModal from "@/features/load/components/StatusUpdateModal";
 import CreateLoadPage from "@/features/load/pages/CreateLoadPage";
+import LoadEditPage from "@/features/load/pages/LoadEditPage";
 import LoadsPage from "@/features/load/pages/LoadsPage";
 import BrokerRequestModal from "@/features/outside-broker/components/BrokerRequestModal";
 import OutsideBrokerCreateModal from "@/features/outside-broker/components/OutsideBrokerCreateModal";
@@ -122,16 +122,21 @@ export const router = createBrowserRouter([
                 <LoadsPage />
               </RequirePermission>
             ),
-            children: [
-              { path: ":loadId/edit", element: <LoadEditModal /> },
-              { path: ":loadId/status", element: <StatusUpdateModal /> },
-            ],
+            children: [{ path: ":loadId/status", element: <StatusUpdateModal /> }],
           },
           {
             path: "loads/create",
             element: (
               <RequirePermission resource="loads" action="view">
                 <CreateLoadPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: "loads/:loadId/edit",
+            element: (
+              <RequirePermission resource="loads" action="edit">
+                <LoadEditPage />
               </RequirePermission>
             ),
           },

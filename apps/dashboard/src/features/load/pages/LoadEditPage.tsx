@@ -1,5 +1,7 @@
-import { Button, Modal, Spinner, toast } from "@heroui/react";
+import { ArrowLeft } from "@gravity-ui/icons";
+import { Button, Spinner, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
+import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Controller, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
@@ -17,11 +19,11 @@ import { useApiMutation, useApiQuery } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 
 const STEPS = [
-  { title: "Customer & carrier" },
-  { title: "Service & booking" },
-  { title: "Pick-up" },
-  { title: "Drop-off" },
-  { title: "Files" },
+  { title: "Customer & carrier", description: "Who pays and who hauls" },
+  { title: "Service & booking", description: "How the load is classified" },
+  { title: "Pick-up", description: "Origin stops" },
+  { title: "Drop-off", description: "Destination stops" },
+  { title: "Files", description: "Optional documents" },
 ];
 const LAST_STEP = STEPS.length - 1;
 
@@ -86,12 +88,10 @@ const emptyStop = (): Location => ({
   address: "",
 });
 
-const LoadEditModal = () => {
+const LoadEditPage: React.FC = () => {
   const { loadId } = useParams<{ loadId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  const close = () => navigate("..");
 
   const { data: load } = useApiQuery(
     ["load", loadId],
@@ -107,6 +107,7 @@ const LoadEditModal = () => {
   const isBusy = uploaderItems.some((i) => i.status === "uploading");
 
   const [currentStep, setCurrentStep] = useState(0);
+  const [maxStepVisited, setMaxStepVisited] = useState(0);
   const [stepErrors, setStepErrors] = useState<string[]>([]);
 
   const { control, handleSubmit, reset, trigger } = useZodForm<FormValues>(schema, {
@@ -160,7 +161,9 @@ const LoadEditModal = () => {
       return;
     }
     setStepErrors([]);
-    setCurrentStep((s) => s + 1);
+    const next = currentStep + 1;
+    setMaxStepVisited((p) => Math.max(p, next));
+    setCurrentStep(next);
   };
 
   const mutation = useApiMutation(
@@ -176,13 +179,13 @@ const LoadEditModal = () => {
           queryClient.invalidateQueries({ queryKey: ["loads"] }),
           queryClient.invalidateQueries({ queryKey: ["load", loadId] }),
         ]);
-        close();
+        navigate("/loads");
       },
       onError: (err: unknown) => {
         const apiError = err as Error & { status?: number; data?: { code?: string } };
         if (apiError.status === 409 && apiError.data?.code === "LOAD_EDIT_BLOCKED_BY_STATUS") {
           toast.danger("This load can no longer be edited. Move it back to Hold first.");
-          close();
+          navigate("/loads");
           return;
         }
         toast.danger(getErrorMessage(err));
@@ -241,28 +244,9 @@ const LoadEditModal = () => {
 
   if (!load) {
     return (
-      <Modal>
-        <Modal.Backdrop
-          isOpen
-          onOpenChange={(open) => {
-            if (!open) close();
-          }}
-        >
-          <Modal.Container>
-            <Modal.Dialog>
-              <Modal.CloseTrigger />
-              <Modal.Header>
-                <Modal.Heading>Edit Load</Modal.Heading>
-              </Modal.Header>
-              <Modal.Body className="p-2">
-                <div className="flex justify-center py-8">
-                  <Spinner size="lg" />
-                </div>
-              </Modal.Body>
-            </Modal.Dialog>
-          </Modal.Container>
-        </Modal.Backdrop>
-      </Modal>
+      <div className="flex justify-center py-16">
+        <Spinner size="lg" />
+      </div>
     );
   }
 
@@ -282,8 +266,7 @@ const LoadEditModal = () => {
           <div className="flex flex-col gap-4">
             <p className="text-sm font-semibold text-gray-600 border-b pb-1">Broker</p>
             <p className="text-xs text-gray-500">
-              Reference {load.referenceNumber} · contact, payment method and terms are managed on
-              the broker page.
+              Contact name, payment method and terms are managed on the broker page.
             </p>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -405,91 +388,91 @@ const LoadEditModal = () => {
   };
 
   return (
-    <Modal>
-      <Modal.Backdrop
-        isOpen
-        onOpenChange={(open) => {
-          if (!open) close();
-        }}
-      >
-        <Modal.Container>
-          <Modal.Dialog>
-            <Modal.CloseTrigger />
-            <Modal.Header>
-              <Modal.Heading>Edit Load</Modal.Heading>
-            </Modal.Header>
-            <Modal.Body className="p-2">
-              <div className="flex gap-1 mb-6">
-                {STEPS.map((step, i) => (
-                  <Button
-                    key={step.title}
-                    variant="ghost"
-                    className={`flex-1 text-xs py-1 border-b-2 rounded-none transition-colors ${
-                      i === currentStep
-                        ? "border-primary text-primary font-medium"
-                        : i < currentStep
-                          ? "border-green-500 text-green-600"
-                          : "border-gray-200 text-gray-400"
-                    }`}
-                    onPress={() => {
-                      if (i <= currentStep) setCurrentStep(i);
-                    }}
-                  >
-                    {i + 1}. {step.title}
-                  </Button>
-                ))}
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Edit Load — {load.referenceNumber}</h1>
+        <Button variant="ghost" onPress={() => navigate("/loads")}>
+          <ArrowLeft className="h-4 w-4" />
+          Back to Loads
+        </Button>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-6">
+        <div className="flex gap-1">
+          {STEPS.map((step, i) => (
+            <Button
+              key={step.title}
+              variant="ghost"
+              className={`flex-1 text-xs py-2 px-1 border-b-2 rounded-none transition-colors ${
+                i === currentStep
+                  ? "border-primary text-primary font-medium"
+                  : i < currentStep
+                    ? "border-green-500 text-green-600"
+                    : "border-gray-200 text-gray-400 cursor-not-allowed"
+              }`}
+              onPress={() => {
+                if (i <= maxStepVisited) setCurrentStep(i);
+              }}
+              isDisabled={i > maxStepVisited}
+            >
+              <div>
+                {i + 1}. {step.title}
               </div>
+              <div className="text-xs text-gray-400 hidden sm:block">{step.description}</div>
+            </Button>
+          ))}
+        </div>
 
-              {stepErrors.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-                  {stepErrors.map((e) => (
-                    <p key={e} className="text-red-600 text-xs">
-                      {e}
-                    </p>
-                  ))}
-                </div>
-              )}
+        {stepErrors.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            {stepErrors.map((e) => (
+              <p key={e} className="text-red-600 text-xs">
+                {e}
+              </p>
+            ))}
+          </div>
+        )}
 
-              <form id="load-edit-form" onSubmit={onSubmit}>
-                {renderStep()}
-              </form>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="ghost" onPress={close}>
-                Cancel
+        <form id="load-edit-form" onSubmit={onSubmit}>
+          {renderStep()}
+        </form>
+
+        <div className="flex items-center justify-between pt-4 border-t">
+          <Button variant="ghost" onPress={() => navigate("/loads")}>
+            Cancel
+          </Button>
+          <div className="flex gap-2">
+            {currentStep > 0 && (
+              <Button
+                variant="secondary"
+                onPress={() => {
+                  setCurrentStep((s) => s - 1);
+                  setStepErrors([]);
+                }}
+              >
+                Previous
               </Button>
-              {currentStep > 0 && (
-                <Button
-                  variant="secondary"
-                  onPress={() => {
-                    setCurrentStep((s) => s - 1);
-                    setStepErrors([]);
-                  }}
-                >
-                  Previous
-                </Button>
-              )}
-              {currentStep < LAST_STEP && (
-                <Button variant="primary" onPress={handleNext}>
-                  Next
-                </Button>
-              )}
-              {currentStep === LAST_STEP && (
-                <Button
-                  variant="primary"
-                  type="submit"
-                  form="load-edit-form"
-                  isDisabled={mutation.isPending || isBusy}
-                >
-                  {mutation.isPending ? <Spinner size="sm" /> : "Update Load"}
-                </Button>
-              )}
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-    </Modal>
+            )}
+            {currentStep < LAST_STEP && (
+              <Button variant="primary" onPress={handleNext}>
+                Next
+              </Button>
+            )}
+            {currentStep === LAST_STEP && (
+              <Button
+                variant="primary"
+                type="submit"
+                form="load-edit-form"
+                isDisabled={mutation.isPending || isBusy}
+              >
+                {mutation.isPending ? <Spinner size="sm" /> : "Update Load"}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
-export default LoadEditModal;
+export default LoadEditPage;
