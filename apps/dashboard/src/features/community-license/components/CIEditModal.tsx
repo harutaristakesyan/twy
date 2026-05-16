@@ -22,7 +22,7 @@ type FormValues = z.infer<typeof schema>;
 const CIEditModal = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const close = () => navigate("..");
+  const close = () => navigate("/settings");
   const { ciId } = useParams<{ ciId: string }>();
 
   const { data: communityLicense, isLoading } = useApiQuery(

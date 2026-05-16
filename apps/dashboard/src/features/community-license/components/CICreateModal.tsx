@@ -21,7 +21,7 @@ type FormValues = z.infer<typeof schema>;
 const CICreateModal = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const close = () => navigate("..");
+  const close = () => navigate("/settings");
 
   const { control, handleSubmit } = useZodForm(schema, {
     ciNumber: "",

@@ -46,8 +46,8 @@ const CIManagementPage: React.FC = () => {
     },
   });
 
-  const handleCreate = () => navigate("create");
-  const handleEdit = (ci: CommunityLicense) => navigate(`${ci.id}/edit`);
+  const handleCreate = () => navigate("community-licenses/create");
+  const handleEdit = (ci: CommunityLicense) => navigate(`community-licenses/${ci.id}/edit`);
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
