@@ -1,10 +1,9 @@
-import { ArrowLeft } from "@gravity-ui/icons";
-import { Button, Spinner, toast } from "@heroui/react";
+import { Button, Modal, Spinner, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Controller, useFieldArray } from "react-hook-form";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { FormCheckbox, FormNumberInput, FormTextField } from "@/components/form";
 import CarrierAutocomplete from "@/features/carrier/components/CarrierAutocomplete";
@@ -12,7 +11,7 @@ import type { FileUploaderHandle, FileUploaderValueItem } from "@/features/files
 import { FileUploader, MAX_FILES_DEFAULT } from "@/features/files";
 import { loadApi } from "@/features/load/api/loadApi";
 import { LoadStopsFormList } from "@/features/load/components/LoadStopsFormList";
-import type { Location, UpdateLoadDto } from "@/features/load/types/load";
+import type { CreateLoadDto, Load, Location, UpdateLoadDto } from "@/features/load/types/load";
 import BrokerAutocomplete from "@/features/outside-broker/components/BrokerAutocomplete";
 import { useZodForm } from "@/libs/form";
 import { useApiMutation, useApiQuery } from "@/libs/query";
@@ -84,27 +83,51 @@ const emptyStop = (): Location => ({
   address: "",
 });
 
-const LoadEditPage: React.FC = () => {
-  const { loadId } = useParams<{ loadId: string }>();
+const toNull = (v: string | null | undefined): string | null | undefined => {
+  if (v === undefined) return undefined;
+  if (v === null) return null;
+  return v.trim().length ? v.trim() : null;
+};
+
+const toFormValues = (load: Load): FormValues => ({
+  brokerId: load.broker.id,
+  customerRate: load.customerRate ?? null,
+  carrierId: load.carrier?.id ?? null,
+  carrierRate: load.carrierRate ?? null,
+  chargeServiceFeeToOffice: load.chargeServiceFeeToOffice,
+  loadType: load.loadType,
+  serviceType: load.serviceType,
+  serviceGivenAs: load.serviceGivenAs,
+  commodity: load.commodity,
+  bookedAs: load.bookedAs,
+  soldAs: load.soldAs,
+  weight: load.weight,
+  temperature: load.temperature ?? "",
+  pickups: load.pickups.length > 0 ? load.pickups : [emptyStop()],
+  dropoffs: load.dropoffs.length > 0 ? load.dropoffs : [emptyStop()],
+});
+
+export type LoadFormModalProps = { mode: "create" | "edit"; loadId?: string };
+
+export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: load } = useApiQuery(
+  const [currentStep, setCurrentStep] = useState(0);
+  const [maxStepVisited, setMaxStepVisited] = useState(0);
+  const [stepErrors, setStepErrors] = useState<string[]>([]);
+  const [uploaderItems, setUploaderItems] = useState<FileUploaderValueItem[]>([]);
+  const uploaderRef = useRef<FileUploaderHandle>(null);
+  const isBusy = uploaderItems.some((i) => i.status === "uploading");
+
+  const { data: existing } = useApiQuery(
     ["load", loadId],
     () => {
       if (!loadId) return Promise.reject(new Error("No loadId"));
       return loadApi.getById(loadId);
     },
-    { enabled: !!loadId },
+    { enabled: mode === "edit" && !!loadId },
   );
-
-  const uploaderRef = useRef<FileUploaderHandle>(null);
-  const [uploaderItems, setUploaderItems] = useState<FileUploaderValueItem[]>([]);
-  const isBusy = uploaderItems.some((i) => i.status === "uploading");
-
-  const [currentStep, setCurrentStep] = useState(0);
-  const [maxStepVisited, setMaxStepVisited] = useState(0);
-  const [stepErrors, setStepErrors] = useState<string[]>([]);
 
   const { control, handleSubmit, reset, trigger } = useZodForm<FormValues>(schema, {
     brokerId: "",
@@ -125,29 +148,15 @@ const LoadEditPage: React.FC = () => {
   });
 
   useEffect(() => {
-    if (load) {
-      reset({
-        brokerId: load.broker.id,
-        customerRate: load.customerRate ?? null,
-        carrierId: load.carrier?.id ?? null,
-        carrierRate: load.carrierRate ?? null,
-        chargeServiceFeeToOffice: load.chargeServiceFeeToOffice,
-        loadType: load.loadType,
-        serviceType: load.serviceType,
-        serviceGivenAs: load.serviceGivenAs,
-        commodity: load.commodity,
-        bookedAs: load.bookedAs,
-        soldAs: load.soldAs,
-        weight: load.weight,
-        temperature: load.temperature ?? "",
-        pickups: load.pickups.length > 0 ? load.pickups : [emptyStop()],
-        dropoffs: load.dropoffs.length > 0 ? load.dropoffs : [emptyStop()],
-      });
-    }
-  }, [load, reset]);
+    if (existing) reset(toFormValues(existing));
+  }, [existing, reset]);
 
   const pickupsField = useFieldArray({ control, name: "pickups" });
   const dropoffsField = useFieldArray({ control, name: "dropoffs" });
+
+  const handleClose = () => {
+    navigate("..");
+  };
 
   const handleNext = async () => {
     const fields = STEP_FIELDS[currentStep];
@@ -162,9 +171,19 @@ const LoadEditPage: React.FC = () => {
     setCurrentStep(next);
   };
 
-  const mutation = useApiMutation(
+  const createMutation = useApiMutation(async (payload: CreateLoadDto) => loadApi.create(payload), {
+    onSuccess: async (result) => {
+      uploaderRef.current?.commit();
+      toast.success(`Load ${result.referenceNumber} created`);
+      await queryClient.invalidateQueries({ queryKey: ["loads"] });
+      handleClose();
+    },
+    onError: (err: unknown) => toast.danger(getErrorMessage(err)),
+  });
+
+  const updateMutation = useApiMutation(
     async (payload: UpdateLoadDto) => {
-      if (!loadId) return;
+      if (!loadId) throw new Error("No loadId");
       return loadApi.update(loadId, payload);
     },
     {
@@ -175,19 +194,21 @@ const LoadEditPage: React.FC = () => {
           queryClient.invalidateQueries({ queryKey: ["loads"] }),
           queryClient.invalidateQueries({ queryKey: ["load", loadId] }),
         ]);
-        navigate("/loads");
+        handleClose();
       },
       onError: (err: unknown) => {
         const apiError = err as Error & { status?: number; data?: { code?: string } };
         if (apiError.status === 409 && apiError.data?.code === "LOAD_EDIT_BLOCKED_BY_STATUS") {
           toast.danger("This load can no longer be edited. Move it back to Hold first.");
-          navigate("/loads");
+          handleClose();
           return;
         }
         toast.danger(getErrorMessage(err));
       },
     },
   );
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   const onSubmit = handleSubmit((values) => {
     if (isBusy) {
@@ -201,12 +222,7 @@ const LoadEditPage: React.FC = () => {
         fileName: i.name,
         documentCategory: null as string | null,
       }));
-    const toNull = (v: string | null | undefined): string | null | undefined => {
-      if (v === undefined) return undefined;
-      if (v === null) return null;
-      return v.trim().length ? v.trim() : null;
-    };
-    mutation.mutate({
+    const payload: CreateLoadDto = {
       brokerId: values.brokerId,
       customerRate: values.customerRate,
       carrierId: values.carrierId ?? null,
@@ -230,33 +246,18 @@ const LoadEditPage: React.FC = () => {
         phone: toNull(d.phone),
         address: d.address,
       })),
-      files: filesPayload,
-    });
+      files: filesPayload.length ? filesPayload : undefined,
+    };
+    if (mode === "create") createMutation.mutate(payload);
+    else updateMutation.mutate(payload);
   });
-
-  if (!load) {
-    return (
-      <div className="flex justify-center py-16">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
-  const initialUploaderItems: FileUploaderValueItem[] = (load.files ?? []).map((f) => ({
-    uid: f.id,
-    name: f.fileName,
-    status: "done" as const,
-    fileId: f.id,
-  }));
-
-  const activeUploaderItems = uploaderItems.length === 0 ? initialUploaderItems : uploaderItems;
 
   const renderStep = () => {
     switch (currentStep) {
       case 0:
         return (
           <div className="flex flex-col gap-4">
-            <p className="text-sm font-semibold text-gray-600 border-b pb-1">Broker</p>
+            <p className="border-b pb-1 text-sm font-semibold text-gray-600">Broker</p>
             <p className="text-xs text-gray-500">
               Contact name, payment method and terms are managed on the broker page.
             </p>
@@ -269,11 +270,6 @@ const LoadEditPage: React.FC = () => {
                     <BrokerAutocomplete
                       value={field.value || null}
                       onChange={(id) => field.onChange(id ?? "")}
-                      initialOption={
-                        load.broker
-                          ? { value: load.broker.id, label: load.broker.brokerName }
-                          : undefined
-                      }
                       placeholder="Select broker"
                       isInvalid={!!fieldState.error}
                     />
@@ -288,7 +284,7 @@ const LoadEditPage: React.FC = () => {
                 step="0.01"
               />
             </div>
-            <p className="text-sm font-semibold text-gray-600 border-b pb-1 mt-2">Carrier</p>
+            <p className="mt-2 border-b pb-1 text-sm font-semibold text-gray-600">Carrier</p>
             <p className="text-xs text-gray-500">
               Carrier payment method and terms are managed on the carrier page.
             </p>
@@ -301,11 +297,6 @@ const LoadEditPage: React.FC = () => {
                     <CarrierAutocomplete
                       value={field.value ?? null}
                       onChange={(id) => field.onChange(id ?? null)}
-                      initialOption={
-                        load.carrier
-                          ? { value: load.carrier.id, label: load.carrier.carrierName }
-                          : undefined
-                      }
                       placeholder="Select carrier"
                     />
                   )}
@@ -324,7 +315,7 @@ const LoadEditPage: React.FC = () => {
       case 1:
         return (
           <div className="flex flex-col gap-4">
-            <p className="text-sm font-semibold text-gray-600 border-b pb-1">Service</p>
+            <p className="border-b pb-1 text-sm font-semibold text-gray-600">Service</p>
             <FormCheckbox
               control={control}
               name="chargeServiceFeeToOffice"
@@ -336,7 +327,7 @@ const LoadEditPage: React.FC = () => {
               <FormTextField control={control} name="serviceGivenAs" label="Service Given As *" />
               <FormTextField control={control} name="commodity" label="Commodity *" />
             </div>
-            <p className="text-sm font-semibold text-gray-600 border-b pb-1 mt-2">Booking</p>
+            <p className="mt-2 border-b pb-1 text-sm font-semibold text-gray-600">Booking</p>
             <div className="grid grid-cols-2 gap-4">
               <FormTextField control={control} name="bookedAs" label="Booked As *" />
               <FormTextField control={control} name="soldAs" label="Sold As *" />
@@ -363,108 +354,116 @@ const LoadEditPage: React.FC = () => {
         );
       case 4:
         return (
-          <div>
-            <FileUploader
-              ref={uploaderRef}
-              max={MAX_FILES_DEFAULT}
-              buttonLabel="Select Files"
-              value={activeUploaderItems}
-              onChange={setUploaderItems}
-              helpText="Supporting documents related to this load — multiple files allowed."
-            />
-          </div>
+          <FileUploader
+            ref={uploaderRef}
+            max={MAX_FILES_DEFAULT}
+            buttonLabel="Select Files"
+            onChange={setUploaderItems}
+            helpText="Supporting documents related to this load — multiple files allowed."
+          />
         );
       default:
         return null;
     }
   };
 
+  const isLoadingExisting = mode === "edit" && !existing;
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Edit Load — {load.referenceNumber}</h1>
-        <Button variant="ghost" onPress={() => navigate("/loads")}>
-          <ArrowLeft className="h-4 w-4" />
-          Back to Loads
-        </Button>
-      </div>
+    <Modal>
+      <Modal.Backdrop
+        isOpen
+        onOpenChange={(open) => {
+          if (!open) handleClose();
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog className="sm:max-w-2xl">
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>{mode === "create" ? "Add new load" : "Edit load"}</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="flex flex-col gap-4 p-2">
+              {isLoadingExisting ? (
+                <div className="flex h-40 items-center justify-center">
+                  <Spinner size="md" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex gap-1">
+                    {STEPS.map((step, i) => (
+                      <Button
+                        key={step.title}
+                        variant="tertiary"
+                        className={`flex-1 rounded-none border-b-2 px-1 py-2 text-xs transition-colors ${
+                          i === currentStep
+                            ? "border-primary text-primary"
+                            : i < currentStep
+                              ? "border-success text-success"
+                              : "border-default-200 text-default-400"
+                        }`}
+                        onPress={() => {
+                          if (i <= maxStepVisited) setCurrentStep(i);
+                        }}
+                        isDisabled={i > maxStepVisited}
+                      >
+                        {i + 1}. {step.title}
+                      </Button>
+                    ))}
+                  </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-6">
-        <div className="flex gap-1">
-          {STEPS.map((step, i) => (
-            <Button
-              key={step.title}
-              variant="ghost"
-              className={`flex-1 text-xs py-2 px-1 border-b-2 rounded-none transition-colors ${
-                i === currentStep
-                  ? "border-primary text-primary font-medium"
-                  : i < currentStep
-                    ? "border-green-500 text-green-600"
-                    : "border-gray-200 text-gray-400 cursor-not-allowed"
-              }`}
-              onPress={() => {
-                if (i <= maxStepVisited) setCurrentStep(i);
-              }}
-              isDisabled={i > maxStepVisited}
-            >
-              <div>
-                {i + 1}. {step.title}
+                  {stepErrors.length > 0 && (
+                    <div className="rounded-lg border border-danger-200 bg-danger-50 p-3">
+                      {stepErrors.map((e) => (
+                        <p key={e} className="text-xs text-danger-600">
+                          {e}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  <form id="load-form-modal" onSubmit={onSubmit}>
+                    {renderStep()}
+                  </form>
+                </>
+              )}
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="tertiary" onPress={handleClose}>
+                Cancel
+              </Button>
+              <div className="flex gap-2">
+                {currentStep > 0 && (
+                  <Button
+                    variant="secondary"
+                    onPress={() => {
+                      setCurrentStep((s) => s - 1);
+                      setStepErrors([]);
+                    }}
+                  >
+                    Previous
+                  </Button>
+                )}
+                {currentStep < LAST_STEP && (
+                  <Button variant="primary" onPress={handleNext}>
+                    Next
+                  </Button>
+                )}
+                {currentStep === LAST_STEP && (
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    form="load-form-modal"
+                    isDisabled={isSubmitting || isBusy}
+                  >
+                    {isSubmitting ? <Spinner size="sm" /> : mode === "create" ? "Create" : "Save"}
+                  </Button>
+                )}
               </div>
-              <div className="text-xs text-gray-400 hidden sm:block">{step.description}</div>
-            </Button>
-          ))}
-        </div>
-
-        {stepErrors.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            {stepErrors.map((e) => (
-              <p key={e} className="text-red-600 text-xs">
-                {e}
-              </p>
-            ))}
-          </div>
-        )}
-
-        <form id="load-edit-form" onSubmit={onSubmit}>
-          {renderStep()}
-        </form>
-
-        <div className="flex items-center justify-between pt-4 border-t">
-          <Button variant="ghost" onPress={() => navigate("/loads")}>
-            Cancel
-          </Button>
-          <div className="flex gap-2">
-            {currentStep > 0 && (
-              <Button
-                variant="secondary"
-                onPress={() => {
-                  setCurrentStep((s) => s - 1);
-                  setStepErrors([]);
-                }}
-              >
-                Previous
-              </Button>
-            )}
-            {currentStep < LAST_STEP && (
-              <Button variant="primary" onPress={handleNext}>
-                Next
-              </Button>
-            )}
-            {currentStep === LAST_STEP && (
-              <Button
-                variant="primary"
-                type="submit"
-                form="load-edit-form"
-                isDisabled={mutation.isPending || isBusy}
-              >
-                {mutation.isPending ? <Spinner size="sm" /> : "Update Load"}
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal>
   );
 };
-
-export default LoadEditPage;

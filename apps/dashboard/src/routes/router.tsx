@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate, useParams } from "react-router-dom";
 import ChangePaymentStatusModal from "@/features/accounting/components/ChangePaymentStatusModal";
 import CreateLoadPaymentOrderModal from "@/features/accounting/components/CreateLoadPaymentOrderModal";
 import CreateOfficeExpenseModal from "@/features/accounting/components/CreateOfficeExpenseModal";
@@ -24,9 +24,8 @@ import OutsideCarriersTab from "@/features/carrier/pages/OutsideCarriersTab";
 import TwyCarriersTab from "@/features/carrier/pages/TwyCarriersTab";
 import CICreateModal from "@/features/community-license/components/CICreateModal";
 import CIEditModal from "@/features/community-license/components/CIEditModal";
+import { LoadFormModal } from "@/features/load/components/LoadFormModal";
 import StatusUpdateModal from "@/features/load/components/StatusUpdateModal";
-import CreateLoadPage from "@/features/load/pages/CreateLoadPage";
-import LoadEditPage from "@/features/load/pages/LoadEditPage";
 import LoadsPage from "@/features/load/pages/LoadsPage";
 import BrokerRequestModal from "@/features/outside-broker/components/BrokerRequestModal";
 import OutsideBrokerCreateModal from "@/features/outside-broker/components/OutsideBrokerCreateModal";
@@ -47,6 +46,16 @@ import ProtectedRoute from "@/routes/ProtectedRoute";
 import RequirePermission from "@/routes/RequirePermission";
 
 const NotFound = () => <div>Not Found</div>;
+
+const LoadEditModalRoute = () => {
+  const { loadId } = useParams<{ loadId: string }>();
+  if (!loadId) return null;
+  return (
+    <RequirePermission resource="loads" action="edit">
+      <LoadFormModal mode="edit" loadId={loadId} />
+    </RequirePermission>
+  );
+};
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -122,23 +131,12 @@ export const router = createBrowserRouter([
                 <LoadsPage />
               </RequirePermission>
             ),
-            children: [{ path: ":loadId/status", element: <StatusUpdateModal /> }],
-          },
-          {
-            path: "loads/create",
-            element: (
-              <RequirePermission resource="loads" action="view">
-                <CreateLoadPage />
-              </RequirePermission>
-            ),
-          },
-          {
-            path: "loads/:loadId/edit",
-            element: (
-              <RequirePermission resource="loads" action="edit">
-                <LoadEditPage />
-              </RequirePermission>
-            ),
+            children: [
+              { path: "create", element: <LoadFormModal mode="create" /> },
+              { path: ":loadId", element: null },
+              { path: ":loadId/edit", element: <LoadEditModalRoute /> },
+              { path: ":loadId/status", element: <StatusUpdateModal /> },
+            ],
           },
           {
             path: "outside-brokers",

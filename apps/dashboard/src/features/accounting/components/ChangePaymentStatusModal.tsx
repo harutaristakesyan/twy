@@ -1,6 +1,5 @@
 import { Button, Modal, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { FormSelect, type SelectItem } from "@/components/form";
@@ -47,15 +46,9 @@ export default function ChangePaymentStatusModal() {
 
   const items: SelectItem[] = allowedStatuses.map((s) => ({ id: s, label: STATUS_LABEL[s] }));
 
-  const { control, handleSubmit, reset } = useZodForm<FormValues>(schema, {
-    paymentStatus: "",
+  const { control, handleSubmit } = useZodForm<FormValues>(schema, {
+    paymentStatus: allowedStatuses[0] ?? "",
   });
-
-  useEffect(() => {
-    if (allowedStatuses.length > 0) {
-      reset({ paymentStatus: allowedStatuses[0] });
-    }
-  }, [allowedStatuses, reset]);
 
   const mutation = useApiMutation(
     async (values: FormValues) => {

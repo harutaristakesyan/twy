@@ -15,8 +15,8 @@ env:
   STAGE: dev
 
 concurrency:
-  group: pr-deploy-dev-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
 
 jobs:
   lint:
@@ -49,6 +49,9 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     environment: dev
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
     env:
       AWS_REGION: us-east-1
     steps:

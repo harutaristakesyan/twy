@@ -50,7 +50,8 @@ jobs:
           - { name: prod, account_var: PROD_ACCOUNT_ID, region: us-east-1 }
     environment: ${{ matrix.environment.name }}
     concurrency:
-      group: deploy-${{ matrix.environment.name }}-${{ github.ref }}
+      group: deploy-${{ matrix.environment.name }}
+      cancel-in-progress: false
     env:
       AWS_REGION: ${{ matrix.environment.region }}
       STAGE: ${{ matrix.environment.name }}
