@@ -38,6 +38,7 @@ export default function OfficeExpensePOTab() {
     setDetailOrder(record);
     setDetailMode(mode);
     setDetailOpen(true);
+    setDetailOpenKey((k: number) => k + 1);
   }, []);
 
   const closeDetail = useCallback(() => {
@@ -111,6 +112,7 @@ export default function OfficeExpensePOTab() {
       )}
 
       <OfficeExpensePaymentOrderDetailModal
+        key={detailOpenKey}
         order={detailOrder}
         open={detailOpen}
         mode={detailMode}

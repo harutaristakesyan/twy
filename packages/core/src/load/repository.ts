@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   branch,
+  type ChargeSide,
   db,
   file,
   type LoadCommentType,
@@ -24,6 +25,7 @@ import {
 } from "../payment-order/repository.js";
 import type { AdvancedFilter } from "../shared/advanced-filter-schema.js";
 import { buildLoadAdvancedFilterClause } from "../shared/load-advanced-filter.js";
+import type { PermissionsScope } from "../shared/permissions.js";
 import type { LoadCommentResponse } from "./response.js";
 import { assertValidTransition } from "./status-machine.js";
 
@@ -81,6 +83,7 @@ export interface LoadRecord {
   chargeServiceFeeToOffice: boolean;
   isChargable: boolean;
   chargeAmount: number | null;
+  chargeSide: ChargeSide | null;
   loadType: string;
   serviceType: string;
   serviceGivenAs: string;
@@ -322,6 +325,7 @@ const mapLoadRow = (
   chargeServiceFeeToOffice: Boolean(row.chargeServiceFeeToOffice),
   isChargable: Boolean(row.isChargable),
   chargeAmount: numericToNumber(row.chargeAmount),
+  chargeSide: (row.chargeSide as ChargeSide | null) ?? null,
   loadType: row.loadType,
   serviceType: row.serviceType,
   serviceGivenAs: row.serviceGivenAs,
@@ -595,7 +599,7 @@ export const updateLoad = async (loadId: string, input: UpdateLoad): Promise<boo
 const commentTypeForStatus = (status: LoadStatus, isChargable: boolean): LoadCommentType => {
   if (status === "Hold") return "hold_reason";
   if (status === "Declined") return "decline_reason";
-  if (status === "Approved" && isChargable) return "charge_reason";
+  if (status === "Delivered" && isChargable) return "charge_reason";
   return "general";
 };
 
@@ -605,6 +609,9 @@ export const changeLoadStatus = async (
   changedBy: string,
   isChargable: boolean,
   chargeAmount: number | null,
+  chargeSide: ChargeSide | null,
+  scope: PermissionsScope,
+  fileIds?: string[],
   comment?: string,
 ): Promise<{ updated: boolean }> =>
   db.transaction(async (tx) => {
@@ -612,6 +619,8 @@ export const changeLoadStatus = async (
       .select({
         id: load.id,
         status: load.status,
+        branchId: load.branchId,
+        createdBy: load.createdBy,
         customerRate: load.customerRate,
         carrierRate: load.carrierRate,
         serviceFee: load.serviceFee,
@@ -620,6 +629,9 @@ export const changeLoadStatus = async (
       .where(eq(load.id, loadId));
 
     if (!existing) return { updated: false };
+
+    if (scope.branchId && existing.branchId !== scope.branchId) return { updated: false };
+    if (scope.ownerId && existing.createdBy !== scope.ownerId) return { updated: false };
 
     assertValidTransition(existing.status, status);
 
@@ -638,6 +650,7 @@ export const changeLoadStatus = async (
         statusChangedBy: changedBy,
         isChargable,
         chargeAmount: isChargable && chargeAmount != null ? chargeAmount.toString() : null,
+        chargeSide: isChargable ? chargeSide : null,
         ...(status === "Hold"
           ? { financialsLockedAt: null }
           : status === "Approved" || status === "Delivered"
@@ -657,6 +670,20 @@ export const changeLoadStatus = async (
       carrierRate: existing.carrierRate,
       serviceFee: existing.serviceFee,
     });
+
+    if (fileIds && fileIds.length > 0) {
+      const owned = await tx
+        .select({ id: file.id })
+        .from(file)
+        .where(and(inArray(file.id, fileIds), eq(file.createdBy, changedBy)));
+      if (owned.length !== fileIds.length) {
+        throw new createError.Forbidden("One or more files are not owned by the caller");
+      }
+      await tx
+        .insert(loadFiles)
+        .values(fileIds.map((fileId) => ({ loadId, fileId })))
+        .onConflictDoNothing();
+    }
 
     if (comment) {
       await tx.insert(loadComment).values({

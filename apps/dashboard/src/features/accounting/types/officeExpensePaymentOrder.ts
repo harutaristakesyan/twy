@@ -17,7 +17,7 @@ export type OfficeExpensePaymentStatus =
   | "Hold"
   | "Declined";
 
-export type Currency = "USD" | "EUR";
+export type Currency = "USD" | "EUR" | "AMD";
 
 export interface OfficeExpenseFile {
   fileId: string;
@@ -98,4 +98,5 @@ export const OFFICE_EXPENSE_STATUS_OPTIONS = (
 export const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
   { value: "USD", label: "USD" },
   { value: "EUR", label: "EUR" },
+  { value: "AMD", label: "AMD" },
 ];

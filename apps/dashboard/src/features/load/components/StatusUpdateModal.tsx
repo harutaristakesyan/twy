@@ -20,7 +20,7 @@ const statusBadge: Record<LoadStatus, string> = {
 const commentLabel = (status: LoadStatus | undefined, chargable: boolean): string | null => {
   if (status === "Hold") return "Hold Reason";
   if (status === "Declined") return "Decline Reason";
-  if (status === "Approved" && chargable) return "Charge Reason";
+  if (status === "Delivered" && chargable) return "Charge Reason";
   return null;
 };
 
@@ -29,6 +29,7 @@ const StatusUpdateModal = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { permissions } = useCurrentUser();
+  const uploaderRef = useRef<FileUploaderHandle>(null);
 
   const close = () => navigate("..");
 

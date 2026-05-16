@@ -37,7 +37,7 @@ export const officeExpensePaymentStatusValues = [
 ] as const;
 export type OfficeExpensePaymentStatus = (typeof officeExpensePaymentStatusValues)[number];
 
-export const currencyValues = ["USD", "EUR"] as const;
+export const currencyValues = ["USD", "EUR", "AMD"] as const;
 export type Currency = (typeof currencyValues)[number];
 
 export const officeExpensePaymentOrder = pgTable(

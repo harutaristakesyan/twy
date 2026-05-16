@@ -1,4 +1,4 @@
-import type { LoadCommentType, LoadStatus } from "@twy/db";
+import type { ChargeSide, LoadCommentType, LoadStatus } from "@twy/db";
 import type { MessageResponse } from "../shared/response.js";
 
 export interface LoadLocationResponse {
@@ -23,6 +23,7 @@ export interface LoadResponse {
   chargeServiceFeeToOffice: boolean;
   isChargable: boolean;
   chargeAmount: number | null;
+  chargeSide: ChargeSide | null;
   loadType: string;
   serviceType: string;
   serviceGivenAs: string;

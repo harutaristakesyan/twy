@@ -1,0 +1,1 @@
+ALTER TABLE "load" ADD COLUMN "charge_side" text;

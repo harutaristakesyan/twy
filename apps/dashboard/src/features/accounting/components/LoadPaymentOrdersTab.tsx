@@ -98,6 +98,7 @@ export default function LoadPaymentOrdersTab() {
       )}
 
       <UpdatePaymentStatusModal
+        key={openKey}
         paymentOrder={selectedOrder}
         open={open}
         mode={mode}

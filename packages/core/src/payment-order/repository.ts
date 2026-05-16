@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   branch,
+  type ChargeSide,
   carrier,
   db,
   file,
@@ -85,6 +86,7 @@ const mapRow = (
   referenceNumber: string,
   branchName: string,
   carrierName: string | null,
+  chargeSide: ChargeSide | null,
   invoices: PaymentOrderInvoice[],
 ): PaymentOrderResponse => ({
   id: row.id,
@@ -99,6 +101,7 @@ const mapRow = (
   serviceFee: Number(row.serviceFee),
   incomePercentage: numericToNumber(row.incomePercentage),
   charges: numericToNumber(row.charges),
+  chargeSide: chargeSide ?? null,
   profit: numericToNumber(row.profit),
   carrierPaidAmount: numericToNumber(row.carrierPaidAmount),
   carrierPaidDate: row.carrierPaidDate ?? null,
@@ -292,6 +295,7 @@ export const listPaymentOrders = async (
         referenceNumber: load.referenceNumber,
         branchName: branch.name,
         carrierName: carrier.carrierName,
+        chargeSide: load.chargeSide,
       })
       .from(paymentOrder)
       .innerJoin(load, eq(load.id, paymentOrder.loadId))
@@ -313,6 +317,7 @@ export const listPaymentOrders = async (
         r.referenceNumber,
         r.branchName,
         r.carrierName ?? null,
+        r.chargeSide ?? null,
         invoicesMap.get(r.paymentOrder.id) ?? [],
       ),
     ),

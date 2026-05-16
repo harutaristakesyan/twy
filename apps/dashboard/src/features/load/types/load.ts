@@ -28,6 +28,7 @@ export interface Load {
   chargeServiceFeeToOffice: boolean;
   isChargable: boolean;
   chargeAmount?: number | null;
+  chargeSide?: "broker" | "carrier" | null;
   loadType: string;
   serviceType: string;
   serviceGivenAs: string;
@@ -78,6 +79,8 @@ export interface ChangeLoadStatusDto {
   status: LoadStatus;
   isChargable: boolean;
   chargeAmount?: number | null;
+  chargeSide?: "broker" | "carrier" | null;
+  fileIds?: string[];
   comment?: string;
 }
 

@@ -16,6 +16,9 @@ import { users } from "./users.js";
 export const loadStatusValues = ["Pending", "Approved", "Delivered", "Declined", "Hold"] as const;
 export type LoadStatus = (typeof loadStatusValues)[number];
 
+export const chargeSideValues = ["broker", "carrier"] as const;
+export type ChargeSide = (typeof chargeSideValues)[number];
+
 export const load = pgTable("load", {
   id: uuid().primaryKey(),
 
@@ -33,6 +36,7 @@ export const load = pgTable("load", {
   chargeServiceFeeToOffice: boolean().default(false),
   isChargable: boolean().notNull().default(false),
   chargeAmount: numeric({ precision: 10, scale: 2 }),
+  chargeSide: text().$type<ChargeSide>(),
 
   serviceFee: numeric({ precision: 10, scale: 2 }).default("30.00"),
   financialsLockedAt: timestamp(),

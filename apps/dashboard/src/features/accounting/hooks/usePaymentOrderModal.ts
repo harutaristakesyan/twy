@@ -7,16 +7,18 @@ export function usePaymentOrderModal() {
   const [selectedOrder, setSelectedOrder] = useState<PaymentOrder | null>(null);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<ModalMode>("edit");
+  const [openKey, setOpenKey] = useState(0);
 
   const openModal = useCallback((record: PaymentOrder, modalMode: ModalMode) => {
     setSelectedOrder(record);
     setMode(modalMode);
     setOpen(true);
+    setOpenKey((k: number) => k + 1);
   }, []);
 
   const closeModal = useCallback(() => {
     setOpen(false);
   }, []);
 
-  return { selectedOrder, open, mode, openModal, closeModal };
+  return { selectedOrder, open, mode, openModal, closeModal, openKey };
 }
