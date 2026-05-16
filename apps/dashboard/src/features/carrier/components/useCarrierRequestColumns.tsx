@@ -1,5 +1,5 @@
-import { Button, Chip } from "@heroui/react";
-import { useCallback } from "react";
+import { Chip } from "@heroui/react";
+import { ActionsMenu } from "@/components/ActionsMenu";
 import type { CarrierRequest } from "../types/carrierRequest";
 
 export type CarrierRequestColumnDef = {
@@ -29,41 +29,34 @@ type UseCarrierRequestColumnsParams = {
 };
 
 export function useCarrierRequestColumns({ onView }: UseCarrierRequestColumnsParams) {
-  const renderCell = useCallback(
-    (req: CarrierRequest, colId: string) => {
-      switch (colId) {
-        case "carrierName":
-          return <span className="font-medium">{req.carrierName}</span>;
-        case "mcDotNumber":
-          return (
-            <Chip size="sm" variant="soft">
-              {req.mcDotNumber}
-            </Chip>
-          );
-        case "kind":
-          return <span className="text-xs capitalize">{req.kind}</span>;
-        case "status":
-          return (
-            <Chip color={statusColor[req.status] ?? "default"} size="sm" variant="soft">
-              {req.status}
-            </Chip>
-          );
-        case "submittedBy":
-          return <span className="text-sm">{req.submittedByName ?? "—"}</span>;
-        case "createdAt":
-          return new Date(req.createdAt).toLocaleDateString();
-        case "actions":
-          return (
-            <Button size="sm" variant="tertiary" onPress={() => onView(req)}>
-              View
-            </Button>
-          );
-        default:
-          return null;
-      }
-    },
-    [onView],
-  );
+  const renderCell = (req: CarrierRequest, colId: string) => {
+    switch (colId) {
+      case "carrierName":
+        return <span className="font-medium">{req.carrierName}</span>;
+      case "mcDotNumber":
+        return (
+          <Chip size="sm" variant="soft">
+            {req.mcDotNumber}
+          </Chip>
+        );
+      case "kind":
+        return <span className="text-xs capitalize">{req.kind}</span>;
+      case "status":
+        return (
+          <Chip color={statusColor[req.status] ?? "default"} size="sm" variant="soft">
+            {req.status}
+          </Chip>
+        );
+      case "submittedBy":
+        return <span className="text-sm">{req.submittedByName ?? "—"}</span>;
+      case "createdAt":
+        return new Date(req.createdAt).toLocaleDateString();
+      case "actions":
+        return <ActionsMenu actions={[{ type: "view", onAction: () => onView(req) }]} />;
+      default:
+        return null;
+    }
+  };
 
   return { columns: CARRIER_REQUEST_COLUMNS, renderCell };
 }

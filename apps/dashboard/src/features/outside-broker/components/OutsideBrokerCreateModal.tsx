@@ -1,4 +1,4 @@
-import { Button, Checkbox, Modal, Spinner, toast } from "@heroui/react";
+import { Button, Checkbox, Label, Modal, Spinner, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -141,8 +141,19 @@ const OutsideBrokerCreateModal = () => {
                       name="creditLimitUnlimited"
                       control={control}
                       render={({ field }) => (
-                        <Checkbox isSelected={field.value} onChange={field.onChange}>
-                          Unlimited credit limit
+                        <Checkbox
+                          id="broker-create-unlimited-credit"
+                          isSelected={field.value}
+                          onChange={field.onChange}
+                        >
+                          <Checkbox.Control>
+                            <Checkbox.Indicator />
+                          </Checkbox.Control>
+                          <Checkbox.Content>
+                            <Label htmlFor="broker-create-unlimited-credit">
+                              Unlimited credit limit
+                            </Label>
+                          </Checkbox.Content>
                         </Checkbox>
                       )}
                     />

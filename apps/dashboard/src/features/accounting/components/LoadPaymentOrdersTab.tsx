@@ -1,21 +1,19 @@
 import { Plus } from "@gravity-ui/icons";
-import { Button, Label, SearchField, Spinner, Table } from "@heroui/react";
-import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import PageControls from "@/components/PageControls";
+import { Button } from "@heroui/react";
+import { useState } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
+import { DataTable } from "@/components/DataTable";
+import { Search } from "@/components/Search";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePermission } from "@/hooks/usePermission";
 import { useServerTable } from "@/hooks/useServerTable";
 import { paymentOrderApi } from "../api/paymentOrderApi";
-import { usePaymentOrderModal } from "../hooks/usePaymentOrderModal";
 import type { PaymentOrder } from "../types/paymentOrder";
-import UpdatePaymentStatusModal from "./UpdatePaymentStatusModal";
 import { useLoadPaymentOrderColumns } from "./useLoadPaymentOrderColumns";
 
 export default function LoadPaymentOrdersTab() {
   const navigate = useNavigate();
   const canCreate = usePermission("load_payment_order", "add");
-  const { selectedOrder, open, mode, openModal, closeModal } = usePaymentOrderModal();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
 
@@ -32,26 +30,25 @@ export default function LoadPaymentOrdersTab() {
     initialPageSize: 20,
   });
 
-  const rawColumns = useLoadPaymentOrderColumns(openModal);
-  const columns = rawColumns.map((col) => ({ id: col.key, label: col.label, render: col.render }));
+  const rawColumns = useLoadPaymentOrderColumns(navigate);
+  const columns = rawColumns.map((col) => ({
+    id: col.key,
+    label: col.label,
+    isRowHeader: col.isRowHeader,
+  }));
+  const renderCell = (record: PaymentOrder, colId: string) => {
+    const col = rawColumns.find((c) => c.key === colId);
+    return col?.render(record);
+  };
 
-  const handleCreate = useCallback(() => {
-    navigate("create-load-po");
-  }, [navigate]);
+  const handleCreate = () => navigate("create-load-po");
 
   return (
     <>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-base font-semibold">Load Payment Orders ({table.total})</h2>
         <div className="flex items-center gap-2">
-          <SearchField name="load-po-search" value={search} onChange={setSearch}>
-            <Label className="sr-only">Search orders</Label>
-            <SearchField.Group>
-              <SearchField.SearchIcon />
-              <SearchField.Input className="w-65" placeholder="Search orders..." />
-              <SearchField.ClearButton />
-            </SearchField.Group>
-          </SearchField>
+          <Search query={search} onQueryChange={setSearch} placeholder="Search orders..." />
           {canCreate && (
             <Button variant="primary" onPress={handleCreate}>
               <Plus className="h-4 w-4" />
@@ -61,52 +58,19 @@ export default function LoadPaymentOrdersTab() {
         </div>
       </div>
 
-      {table.isLoading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="lg" />
-        </div>
-      ) : (
-        <Table>
-          <Table.ScrollContainer>
-            <Table.Content aria-label="Load Payment Orders table" className="min-w-full">
-              <Table.Header columns={columns}>
-                {(col) => <Table.Column>{col.label}</Table.Column>}
-              </Table.Header>
-              <Table.Body items={table.items}>
-                {(record) => (
-                  <Table.Row id={record.id}>
-                    <Table.Collection items={columns}>
-                      {(col) => <Table.Cell>{col.render(record)}</Table.Cell>}
-                    </Table.Collection>
-                  </Table.Row>
-                )}
-              </Table.Body>
-            </Table.Content>
-          </Table.ScrollContainer>
-          {!table.isLoading && table.total > table.pageSize && (
-            <Table.Footer>
-              <div className="flex justify-end pt-4">
-                <PageControls
-                  totalPages={Math.ceil(table.total / table.pageSize)}
-                  page={table.page}
-                  onPageChange={table.setPage}
-                />
-              </div>
-            </Table.Footer>
-          )}
-        </Table>
-      )}
-
-      <UpdatePaymentStatusModal
-        key={openKey}
-        paymentOrder={selectedOrder}
-        open={open}
-        mode={mode}
-        onClose={closeModal}
-        onSuccess={() => {
-          void table.refetch();
-        }}
+      <DataTable
+        ariaLabel="Load Payment Orders table"
+        items={table.items}
+        columns={columns}
+        renderCell={renderCell}
+        total={table.total}
+        page={table.page}
+        pageSize={table.pageSize}
+        isLoading={table.isLoading}
+        onPageChange={table.setPage}
       />
+
+      <Outlet />
     </>
   );
 }

@@ -1,14 +1,15 @@
 import { Plus } from "@gravity-ui/icons";
-import { Button, Label, SearchField, toast } from "@heroui/react";
+import { Button, toast } from "@heroui/react";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { DataTable } from "@/components/DataTable";
+import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useServerTable } from "@/hooks/useServerTable";
 import { useApiMutation } from "@/libs/query";
 import { deleteBranch, getBranches } from "../api/branchApi";
-import BranchManagementTable from "../components/BranchManagementTable";
 import { useBranchColumns } from "../components/useBranchColumns";
 import type { Branch } from "../types/branch";
 
@@ -49,23 +50,20 @@ const BranchesPage: React.FC = () => {
     },
   });
 
-  const handleCreate = useCallback(() => navigate("create"), [navigate]);
-  const handleEdit = useCallback((branch: Branch) => navigate(`${branch.id}/edit`), [navigate]);
+  const handleCreate = () => navigate("create");
+  const handleEdit = (branch: Branch) => navigate(`${branch.id}/edit`);
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
-  const handleDelete = useCallback(
-    (id: string) => {
-      confirm({
-        title: "Delete this branch?",
-        description: "This action cannot be undone. All associated data may be affected.",
-        confirmLabel: "Delete",
-        status: "danger",
-        onConfirm: () => deleteMutation.mutate(id),
-      });
-    },
-    [confirm, deleteMutation],
-  );
+  const handleDelete = (id: string) => {
+    confirm({
+      title: "Delete this branch?",
+      description: "This action cannot be undone. All associated data may be affected.",
+      confirmLabel: "Delete",
+      status: "danger",
+      onConfirm: () => deleteMutation.mutate(id),
+    });
+  };
 
   const { columns, renderCell } = useBranchColumns({
     canEdit,
@@ -79,14 +77,7 @@ const BranchesPage: React.FC = () => {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-lg font-semibold">Branches ({total})</h2>
         <div className="flex items-center gap-2">
-          <SearchField name="branches-search" value={query} onChange={setQuery}>
-            <Label className="sr-only">Search branches</Label>
-            <SearchField.Group>
-              <SearchField.SearchIcon />
-              <SearchField.Input className="w-65" placeholder="Search branches..." />
-              <SearchField.ClearButton />
-            </SearchField.Group>
-          </SearchField>
+          <Search query={query} onQueryChange={setQuery} placeholder="Search branches..." />
           {canAdd && (
             <Button variant="primary" onPress={handleCreate}>
               <Plus className="h-4 w-4" />
@@ -96,7 +87,8 @@ const BranchesPage: React.FC = () => {
         </div>
       </div>
 
-      <BranchManagementTable
+      <DataTable
+        ariaLabel="Branches"
         items={items}
         columns={columns}
         renderCell={renderCell}

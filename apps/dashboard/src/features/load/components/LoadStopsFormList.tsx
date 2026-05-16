@@ -1,4 +1,5 @@
 import { Minus, Plus } from "@gravity-ui/icons";
+import { Button, Input, Label, TextArea, TextField } from "@heroui/react";
 import type React from "react";
 import { useState } from "react";
 import type { Location } from "@/features/load/types/load";
@@ -16,10 +17,6 @@ export interface LoadStopsFormListProps {
   onChange: (stops: Location[]) => void;
   legLabel: string;
 }
-
-const fieldClass =
-  "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent";
-const labelClass = "block text-sm font-medium text-gray-700 mb-1";
 
 export const LoadStopsFormList: React.FC<LoadStopsFormListProps> = ({
   stops,
@@ -50,12 +47,12 @@ export const LoadStopsFormList: React.FC<LoadStopsFormListProps> = ({
       {stops.map((stop, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: stops have no stable ID
         <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
-          <button
-            type="button"
-            className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-            onClick={() => setExpandedIndex(expandedIndex === index ? -1 : index)}
+          <Button
+            variant="ghost"
+            className="w-full flex items-center justify-between px-4 py-3 rounded-none text-left"
+            onPress={() => setExpandedIndex(expandedIndex === index ? -1 : index)}
           >
-            <div className="flex flex-col">
+            <div className="flex flex-col items-start">
               <span className="text-sm font-medium">
                 {legLabel} stop {index + 1}
               </span>
@@ -64,90 +61,80 @@ export const LoadStopsFormList: React.FC<LoadStopsFormListProps> = ({
               </span>
             </div>
             {stops.length > 1 && (
-              <button
-                type="button"
-                className="ml-3 p-1 rounded text-red-500 hover:bg-red-50"
-                onClick={(e) => {
-                  e.stopPropagation();
+              <Button
+                isIconOnly
+                size="sm"
+                variant="ghost"
+                className="ml-3 text-red-500 hover:bg-red-50"
+                onPress={(e) => {
+                  e.continuePropagation();
                   removeStop(index);
                 }}
+                aria-label={`Remove ${legLabel} stop ${index + 1}`}
               >
                 <Minus className="h-3.5 w-3.5" />
-              </button>
+              </Button>
             )}
-          </button>
+          </Button>
 
           {expandedIndex === index && (
             <div className="p-4 grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>
-                  City / Zipcode
-                  <input
-                    className={fieldClass}
-                    placeholder="Enter city or zipcode"
-                    value={stop.cityZipCode ?? ""}
-                    onChange={(e) => updateStop(index, "cityZipCode", e.target.value || null)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Phone Number
-                  <input
-                    className={fieldClass}
-                    placeholder="Enter phone number"
-                    value={stop.phone ?? ""}
-                    onChange={(e) => updateStop(index, "phone", e.target.value || null)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Select Carrier *
-                  <input
-                    className={fieldClass}
-                    placeholder="Enter carrier"
-                    value={stop.carrier}
-                    onChange={(e) => updateStop(index, "carrier", e.target.value)}
-                  />
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Name *
-                  <input
-                    className={fieldClass}
-                    placeholder="Enter name"
-                    value={stop.name}
-                    onChange={(e) => updateStop(index, "name", e.target.value)}
-                  />
-                </label>
-              </div>
+              <TextField fullWidth>
+                <Label>City / Zipcode</Label>
+                <Input
+                  placeholder="Enter city or zipcode"
+                  value={stop.cityZipCode ?? ""}
+                  onChange={(e) => updateStop(index, "cityZipCode", e.target.value || null)}
+                />
+              </TextField>
+              <TextField fullWidth>
+                <Label>Phone Number</Label>
+                <Input
+                  placeholder="Enter phone number"
+                  value={stop.phone ?? ""}
+                  onChange={(e) => updateStop(index, "phone", e.target.value || null)}
+                />
+              </TextField>
+              <TextField fullWidth>
+                <Label>Select Carrier *</Label>
+                <Input
+                  placeholder="Enter carrier"
+                  value={stop.carrier}
+                  onChange={(e) => updateStop(index, "carrier", e.target.value)}
+                />
+              </TextField>
+              <TextField fullWidth>
+                <Label>Name *</Label>
+                <Input
+                  placeholder="Enter name"
+                  value={stop.name}
+                  onChange={(e) => updateStop(index, "name", e.target.value)}
+                />
+              </TextField>
               <div className="col-span-2">
-                <label className={labelClass}>
-                  Address *
-                  <textarea
-                    className={fieldClass}
+                <TextField fullWidth>
+                  <Label>Address *</Label>
+                  <TextArea
                     placeholder="Enter address"
                     rows={3}
                     value={stop.address}
                     onChange={(e) => updateStop(index, "address", e.target.value)}
                   />
-                </label>
+                </TextField>
               </div>
             </div>
           )}
         </div>
       ))}
 
-      <button
-        type="button"
-        className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-lg py-3 text-sm text-gray-600 hover:border-primary hover:text-primary transition-colors"
-        onClick={addStop}
+      <Button
+        variant="ghost"
+        className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-lg py-3 text-sm text-gray-600 hover:border-primary hover:text-primary"
+        onPress={addStop}
       >
         <Plus className="h-4 w-4" />
         Add {legLabel} stop
-      </button>
+      </Button>
     </div>
   );
 };

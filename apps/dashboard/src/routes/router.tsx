@@ -1,7 +1,9 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
+import ChangePaymentStatusModal from "@/features/accounting/components/ChangePaymentStatusModal";
 import CreateLoadPaymentOrderModal from "@/features/accounting/components/CreateLoadPaymentOrderModal";
 import CreateOfficeExpenseModal from "@/features/accounting/components/CreateOfficeExpenseModal";
-import AccountingLayout from "@/features/accounting/pages/AccountingLayout";
+import OfficeExpensePaymentOrderDetailModal from "@/features/accounting/components/OfficeExpensePaymentOrderDetailModal";
+import UpdatePaymentStatusModal from "@/features/accounting/components/UpdatePaymentStatusModal";
 import ExternalBillingPage from "@/features/accounting/pages/ExternalBillingPage";
 import InternalBillingPage from "@/features/accounting/pages/InternalBillingPage";
 import PaymentOrdersPage from "@/features/accounting/pages/PaymentOrdersPage";
@@ -16,9 +18,8 @@ import BranchEditModal from "@/features/branch/components/BranchEditModal";
 import BranchesPage from "@/features/branch/pages/BranchesPage";
 import CarrierCreateModal from "@/features/carrier/components/CarrierCreateModal";
 import CarrierEditModal from "@/features/carrier/components/CarrierEditModal";
+import CarrierRequestModal from "@/features/carrier/components/CarrierRequestModal";
 import CarrierRequestsTab from "@/features/carrier/pages/CarrierRequestsTab";
-import CarriersIndexRedirect from "@/features/carrier/pages/CarriersIndexRedirect";
-import CarriersLayout from "@/features/carrier/pages/CarriersLayout";
 import OutsideCarriersTab from "@/features/carrier/pages/OutsideCarriersTab";
 import TwyCarriersTab from "@/features/carrier/pages/TwyCarriersTab";
 import CICreateModal from "@/features/community-license/components/CICreateModal";
@@ -27,11 +28,10 @@ import LoadEditModal from "@/features/load/components/LoadEditModal";
 import StatusUpdateModal from "@/features/load/components/StatusUpdateModal";
 import CreateLoadPage from "@/features/load/pages/CreateLoadPage";
 import LoadsPage from "@/features/load/pages/LoadsPage";
+import BrokerRequestModal from "@/features/outside-broker/components/BrokerRequestModal";
 import OutsideBrokerCreateModal from "@/features/outside-broker/components/OutsideBrokerCreateModal";
 import OutsideBrokerEditModal from "@/features/outside-broker/components/OutsideBrokerEditModal";
 import BrokerRequestsTab from "@/features/outside-broker/pages/BrokerRequestsTab";
-import OutsideBrokersIndexRedirect from "@/features/outside-broker/pages/OutsideBrokersIndexRedirect";
-import OutsideBrokersLayout from "@/features/outside-broker/pages/OutsideBrokersLayout";
 import OutsideBrokersPage from "@/features/outside-broker/pages/OutsideBrokersPage";
 import SettingsPage from "@/features/settings/pages/SettingsPage";
 import CreateTeamPage from "@/features/team/pages/CreateTeamPage";
@@ -44,7 +44,6 @@ import ProfilePage from "@/features/user/pages/ProfilePage";
 import UsersPage from "@/features/user/pages/UsersPage";
 import AppLayout from "@/layouts/AppLayout.tsx";
 import ProtectedRoute from "@/routes/ProtectedRoute";
-import RequireBrokerRequestsView from "@/routes/RequireBrokerRequestsView";
 import RequirePermission from "@/routes/RequirePermission";
 
 const NotFound = () => <div>Not Found</div>;
@@ -138,9 +137,8 @@ export const router = createBrowserRouter([
           },
           {
             path: "outside-brokers",
-            element: <OutsideBrokersLayout />,
             children: [
-              { index: true, element: <OutsideBrokersIndexRedirect /> },
+              { index: true, element: <Navigate to="directory" replace /> },
               {
                 path: "directory",
                 element: (
@@ -156,18 +154,18 @@ export const router = createBrowserRouter([
               {
                 path: "requests",
                 element: (
-                  <RequireBrokerRequestsView>
+                  <RequirePermission resource="brokers_requests" action="view">
                     <BrokerRequestsTab />
-                  </RequireBrokerRequestsView>
+                  </RequirePermission>
                 ),
+                children: [{ path: ":requestId", element: <BrokerRequestModal /> }],
               },
             ],
           },
           {
             path: "carriers",
-            element: <CarriersLayout />,
             children: [
-              { index: true, element: <CarriersIndexRedirect /> },
+              { index: true, element: <Navigate to="twy" replace /> },
               {
                 path: "twy",
                 element: (
@@ -199,12 +197,12 @@ export const router = createBrowserRouter([
                     <CarrierRequestsTab />
                   </RequirePermission>
                 ),
+                children: [{ path: ":requestId", element: <CarrierRequestModal /> }],
               },
             ],
           },
           {
             path: "accounting",
-            element: <AccountingLayout />,
             children: [
               { index: true, element: <Navigate to="/accounting/payment-orders" replace /> },
               {
@@ -220,6 +218,12 @@ export const router = createBrowserRouter([
                 children: [
                   { path: "create-load-po", element: <CreateLoadPaymentOrderModal /> },
                   { path: "create-office-po", element: <CreateOfficeExpenseModal /> },
+                  { path: ":paymentOrderId", element: <UpdatePaymentStatusModal /> },
+                  { path: ":paymentOrderId/status", element: <ChangePaymentStatusModal /> },
+                  {
+                    path: "office-expense/:officeExpenseOrderId",
+                    element: <OfficeExpensePaymentOrderDetailModal />,
+                  },
                 ],
               },
               {

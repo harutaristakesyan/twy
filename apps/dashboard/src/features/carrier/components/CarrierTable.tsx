@@ -1,10 +1,11 @@
 import { Plus } from "@gravity-ui/icons";
-import { Button, Label, SearchField, Spinner, Table, toast } from "@heroui/react";
+import { Button, toast } from "@heroui/react";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
-import PageControls from "@/components/PageControls";
+import { DataTable } from "@/components/DataTable";
+import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useServerTable } from "@/hooks/useServerTable";
@@ -51,22 +52,19 @@ const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
     onError: (err: unknown) => toast.danger(getErrorMessage(err)),
   });
 
-  const handleCreate = useCallback(() => navigate("create"), [navigate]);
-  const handleEdit = useCallback((carrier: Carrier) => navigate(`${carrier.id}/edit`), [navigate]);
+  const handleCreate = () => navigate("create");
+  const handleEdit = (carrier: Carrier) => navigate(`${carrier.id}/edit`);
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
-  const handleDelete = useCallback(
-    (id: string) =>
-      confirm({
-        title: "Delete this carrier?",
-        description: "This action cannot be undone.",
-        confirmLabel: "Delete",
-        status: "danger",
-        onConfirm: () => deleteMutation.mutate(id),
-      }),
-    [confirm, deleteMutation],
-  );
+  const handleDelete = (id: string) =>
+    confirm({
+      title: "Delete this carrier?",
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete",
+      status: "danger",
+      onConfirm: () => deleteMutation.mutate(id),
+    });
 
   const { columns, renderCell } = useCarrierColumns({
     canEdit,
@@ -84,14 +82,7 @@ const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
           {title} ({table.total})
         </h2>
         <div className="flex items-center gap-2">
-          <SearchField name="carriers-search" value={search} onChange={setSearch}>
-            <Label className="sr-only">Search carriers</Label>
-            <SearchField.Group>
-              <SearchField.SearchIcon />
-              <SearchField.Input className="w-65" placeholder="Search carriers..." />
-              <SearchField.ClearButton />
-            </SearchField.Group>
-          </SearchField>
+          <Search query={search} onQueryChange={setSearch} placeholder="Search carriers..." />
           {canCreate && (
             <Button variant="primary" onPress={handleCreate}>
               <Plus className="h-4 w-4" />
@@ -101,41 +92,17 @@ const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
         </div>
       </div>
 
-      {table.isLoading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="lg" />
-        </div>
-      ) : (
-        <Table>
-          <Table.ScrollContainer>
-            <Table.Content aria-label={title} className="min-w-full">
-              <Table.Header columns={columns}>
-                {(col) => <Table.Column isRowHeader={col.isRowHeader}>{col.label}</Table.Column>}
-              </Table.Header>
-              <Table.Body items={table.items}>
-                {(carrier) => (
-                  <Table.Row id={carrier.id}>
-                    <Table.Collection items={columns}>
-                      {(col) => <Table.Cell>{renderCell(carrier, col.id)}</Table.Cell>}
-                    </Table.Collection>
-                  </Table.Row>
-                )}
-              </Table.Body>
-            </Table.Content>
-          </Table.ScrollContainer>
-          {table.total > table.pageSize && (
-            <Table.Footer>
-              <div className="flex justify-end pt-3">
-                <PageControls
-                  totalPages={Math.ceil(table.total / table.pageSize)}
-                  page={table.page}
-                  onPageChange={table.setPage}
-                />
-              </div>
-            </Table.Footer>
-          )}
-        </Table>
-      )}
+      <DataTable
+        ariaLabel={title}
+        items={table.items}
+        columns={columns}
+        renderCell={renderCell}
+        total={table.total}
+        page={table.page}
+        pageSize={table.pageSize}
+        isLoading={table.isLoading}
+        onPageChange={table.setPage}
+      />
 
       {confirmDialog}
     </div>

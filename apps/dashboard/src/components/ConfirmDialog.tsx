@@ -1,7 +1,7 @@
 import { AlertDialog, Button } from "@heroui/react";
 import type React from "react";
 import type { ReactNode } from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 type ConfirmStatus = "danger" | "warning" | "accent" | "success";
 
@@ -32,7 +32,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   <AlertDialog>
     <AlertDialog.Backdrop isOpen={isOpen} onOpenChange={onOpenChange}>
       <AlertDialog.Container>
-        <AlertDialog.Dialog className="sm:max-w-[420px]">
+        <AlertDialog.Dialog className="sm:max-w-105">
           <AlertDialog.CloseTrigger />
           <AlertDialog.Header>
             <AlertDialog.Icon status={status} />
@@ -69,18 +69,16 @@ export type ConfirmOptions = {
 export function useConfirmDialog() {
   const [options, setOptions] = useState<ConfirmOptions | null>(null);
 
-  const confirm = useCallback((next: ConfirmOptions) => {
-    setOptions(next);
-  }, []);
+  const confirm = (next: ConfirmOptions) => setOptions(next);
 
-  const handleOpenChange = useCallback((open: boolean) => {
+  const handleOpenChange = (open: boolean) => {
     if (!open) setOptions(null);
-  }, []);
+  };
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = () => {
     options?.onConfirm();
     setOptions(null);
-  }, [options]);
+  };
 
   const dialog = (
     <ConfirmDialog

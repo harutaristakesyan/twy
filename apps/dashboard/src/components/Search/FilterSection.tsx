@@ -1,5 +1,5 @@
 import { Button, Separator } from "@heroui/react";
-import { Fragment, useCallback } from "react";
+import { Fragment } from "react";
 import { FilterControl } from "./FilterControl.js";
 import type { FilterValues } from "./filterTransform.js";
 import type { FilterField } from "./types.js";
@@ -13,8 +13,8 @@ interface FieldRowProps {
 }
 
 function FieldRow({ field, value, setValue, resetValue }: FieldRowProps) {
-  const onChange = useCallback((val: unknown) => setValue(field.key, val), [field.key, setValue]);
-  const onReset = useCallback(() => resetValue(field.key), [field.key, resetValue]);
+  const onChange = (val: unknown) => setValue(field.key, val);
+  const onReset = () => resetValue(field.key);
 
   return (
     <div>

@@ -1,6 +1,5 @@
 import { Xmark } from "@gravity-ui/icons";
 import { Button, Chip } from "@heroui/react";
-import { useMemo } from "react";
 import type { Filter, FilterField } from "./types.js";
 
 interface Props {
@@ -22,7 +21,7 @@ function removeKeys(filter: Filter, keys: string[]): Filter | undefined {
 }
 
 export function ActiveFilters({ filter, fields = [], onChange }: Props) {
-  const chips = useMemo((): ChipItem[] => {
+  const chips: ChipItem[] = (() => {
     if (!filter) return [];
     const result: ChipItem[] = [];
 
@@ -71,7 +70,7 @@ export function ActiveFilters({ filter, fields = [], onChange }: Props) {
     }
 
     return result;
-  }, [filter, fields, onChange]);
+  })();
 
   if (!chips.length) return null;
 

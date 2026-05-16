@@ -1,6 +1,6 @@
 import { ComboBox, Input, type Key, Label, ListBox } from "@heroui/react";
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useApiQuery } from "@/libs/query";
 import { getBranches } from "../api/branchApi";
 
@@ -25,25 +25,23 @@ const BranchSelect: React.FC<BranchSelectProps> = ({
   variant,
   isInvalid,
 }) => {
-  const [inputValue, setInputValue] = useState("");
+  const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(inputValue), 250);
+    const t = setTimeout(() => setDebounced(search), 250);
     return () => clearTimeout(t);
-  }, [inputValue]);
+  }, [search]);
 
   const { data } = useApiQuery(["branches-select", debounced], () =>
     getBranches({ limit: 50, query: debounced || undefined }),
   );
 
-  const items = useMemo(() => {
-    const fetched = data?.branches ?? [];
-    if (initialOption && !fetched.find((b) => b.id === initialOption.value)) {
-      return [{ id: initialOption.value, name: initialOption.label }, ...fetched];
-    }
-    return fetched;
-  }, [data?.branches, initialOption]);
+  const fetched = data?.branches ?? [];
+  const items =
+    initialOption && !fetched.find((b) => b.id === initialOption.value)
+      ? [{ id: initialOption.value, name: initialOption.label }, ...fetched]
+      : fetched;
 
   return (
     <ComboBox
@@ -52,8 +50,7 @@ const BranchSelect: React.FC<BranchSelectProps> = ({
       isInvalid={isInvalid}
       value={value ?? null}
       onChange={(key: Key | null) => onChange?.(key ? String(key) : null)}
-      inputValue={inputValue}
-      onInputChange={setInputValue}
+      onInputChange={setSearch}
     >
       <Label>{label}</Label>
       <ComboBox.InputGroup>

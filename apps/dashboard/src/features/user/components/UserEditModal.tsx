@@ -1,3 +1,4 @@
+import { Check, Power } from "@gravity-ui/icons";
 import { Button, Input, Label, Modal, Spinner, Switch, TextField, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -5,6 +6,7 @@ import { Controller } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import BranchSelect from "@/features/branch/components/BranchSelect";
+import TeamSelect from "@/features/team/components/TeamSelect";
 import { useZodForm } from "@/libs/form";
 import { useApiMutation, useApiQuery } from "@/libs/query";
 import { getUserById, updateUser } from "../api/userApi";
@@ -57,6 +59,9 @@ const UserEditModal = () => {
     ? { value: user.branch.id, label: user.branch.name }
     : undefined;
 
+  const teamInitialOption =
+    user?.teamId && user?.teamName ? { value: user.teamId, label: user.teamName } : undefined;
+
   const onSubmit = handleSubmit((values: FormValues) => {
     if (!userId) return;
     mutation.mutate({
@@ -89,31 +94,19 @@ const UserEditModal = () => {
               ) : (
                 <form id="user-edit-form" onSubmit={onSubmit} className="flex flex-col gap-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <TextField isReadOnly>
+                    <TextField isDisabled>
                       <Label>First Name</Label>
-                      <Input
-                        variant="secondary"
-                        placeholder="e.g. Jane"
-                        defaultValue={user.firstName ?? ""}
-                      />
+                      <Input placeholder="e.g. Jane" value={user.firstName ?? ""} />
                     </TextField>
-                    <TextField isReadOnly>
+                    <TextField isDisabled>
                       <Label>Last Name</Label>
-                      <Input
-                        variant="secondary"
-                        placeholder="e.g. Doe"
-                        defaultValue={user.lastName ?? ""}
-                      />
+                      <Input placeholder="e.g. Doe" value={user.lastName ?? ""} />
                     </TextField>
                   </div>
 
-                  <TextField isReadOnly>
+                  <TextField isDisabled>
                     <Label>Email</Label>
-                    <Input
-                      variant="secondary"
-                      placeholder="name@example.com"
-                      defaultValue={user.email ?? ""}
-                    />
+                    <Input placeholder="name@example.com" value={user.email ?? ""} />
                   </TextField>
 
                   <hr className="my-1" />
@@ -127,7 +120,20 @@ const UserEditModal = () => {
                         value={field.value ?? null}
                         onChange={field.onChange}
                         initialOption={branchInitialOption}
-                        variant="secondary"
+                        isInvalid={!!fieldState.error}
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    name="teamId"
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <TeamSelect
+                        label="Team"
+                        value={field.value ?? null}
+                        onChange={field.onChange}
+                        initialOption={teamInitialOption}
                         isInvalid={!!fieldState.error}
                       />
                     )}
@@ -137,13 +143,25 @@ const UserEditModal = () => {
                     name="isActive"
                     control={control}
                     render={({ field }) => (
-                      <Switch isSelected={field.value} onChange={field.onChange}>
-                        <Switch.Control>
-                          <Switch.Thumb />
-                        </Switch.Control>
-                        <Switch.Content>
-                          <Label>{field.value ? "Active" : "Inactive"}</Label>
-                        </Switch.Content>
+                      <Switch isSelected={field.value} onChange={field.onChange} size="lg">
+                        {({ isSelected }) => (
+                          <>
+                            <Switch.Control className={isSelected ? "bg-green-500/80" : ""}>
+                              <Switch.Thumb>
+                                <Switch.Icon>
+                                  {isSelected ? (
+                                    <Check className="size-3 text-inherit opacity-100" />
+                                  ) : (
+                                    <Power className="size-3 text-inherit opacity-70" />
+                                  )}
+                                </Switch.Icon>
+                              </Switch.Thumb>
+                            </Switch.Control>
+                            <Switch.Content>
+                              <Label>{isSelected ? "Active" : "Inactive"}</Label>
+                            </Switch.Content>
+                          </>
+                        )}
                       </Switch>
                     )}
                   />

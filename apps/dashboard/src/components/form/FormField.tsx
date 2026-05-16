@@ -1,10 +1,13 @@
+import { Check, Power } from "@gravity-ui/icons";
 import {
+  Checkbox,
   FieldError,
   Input,
   Label,
   ListBox,
   NumberField,
   Select,
+  Switch,
   TextArea,
   TextField,
 } from "@heroui/react";
@@ -128,6 +131,7 @@ interface FormNumberInputProps<T extends FieldValues> {
   step?: string;
   placeholder?: string;
   variant?: "primary" | "secondary";
+  isDisabled?: boolean;
 }
 
 export function FormNumberInput<T extends FieldValues>({
@@ -140,6 +144,7 @@ export function FormNumberInput<T extends FieldValues>({
   step,
   placeholder,
   variant,
+  isDisabled,
 }: FormNumberInputProps<T>) {
   return (
     <Controller
@@ -147,7 +152,7 @@ export function FormNumberInput<T extends FieldValues>({
       control={control}
       rules={rules}
       render={({ field, fieldState }) => (
-        <TextField isInvalid={!!fieldState.error} fullWidth>
+        <TextField isInvalid={!!fieldState.error} isDisabled={isDisabled} fullWidth>
           {label && <Label>{label}</Label>}
           <Input
             type="number"
@@ -316,6 +321,7 @@ interface FormSelectProps<T extends FieldValues> {
   placeholder?: string;
   items: SelectItem[];
   variant?: "primary" | "secondary";
+  isDisabled?: boolean;
 }
 
 export function FormSelect<T extends FieldValues>({
@@ -325,6 +331,7 @@ export function FormSelect<T extends FieldValues>({
   placeholder,
   items,
   variant,
+  isDisabled,
 }: FormSelectProps<T>) {
   return (
     <Controller
@@ -336,6 +343,7 @@ export function FormSelect<T extends FieldValues>({
           value={field.value}
           onChange={(key) => field.onChange(String(key))}
           isInvalid={!!fieldState.error}
+          isDisabled={isDisabled}
         >
           {label && <Label>{label}</Label>}
           <Select.Trigger>
@@ -357,6 +365,147 @@ export function FormSelect<T extends FieldValues>({
           </Select.Popover>
           {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
         </Select>
+      )}
+    />
+  );
+}
+
+/* -- Checkbox field ------------------------------------------------ */
+
+interface FormCheckboxProps<T extends FieldValues> {
+  control: Control<T>;
+  name: Path<T>;
+  label: string;
+  description?: ReactNode;
+}
+
+export function FormCheckbox<T extends FieldValues>({
+  control,
+  name,
+  label,
+  description,
+}: FormCheckboxProps<T>) {
+  return (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field }) => (
+        <Checkbox isSelected={!!field.value} onChange={field.onChange}>
+          <Checkbox.Control>
+            <Checkbox.Indicator />
+          </Checkbox.Control>
+          <Checkbox.Content>
+            <Label>{label}</Label>
+            {description && <p className="text-xs text-default-500">{description}</p>}
+          </Checkbox.Content>
+        </Checkbox>
+      )}
+    />
+  );
+}
+
+/* -- Switch field -------------------------------------------------- */
+
+interface FormSwitchProps<T extends FieldValues> {
+  control: Control<T>;
+  name: Path<T>;
+  /** Label shown when on / off. If a single string, used for both states. */
+  label?: string | { on: string; off: string };
+  /** Adds the green track + Check/Power icons (good for Active/Inactive). */
+  iconVariant?: boolean;
+  size?: "sm" | "md" | "lg";
+}
+
+export function FormSwitch<T extends FieldValues>({
+  control,
+  name,
+  label,
+  iconVariant,
+  size = "lg",
+}: FormSwitchProps<T>) {
+  return (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field }) => (
+        <Switch isSelected={!!field.value} onChange={field.onChange} size={size}>
+          {({ isSelected }) => {
+            const text =
+              typeof label === "string"
+                ? label
+                : label
+                  ? isSelected
+                    ? label.on
+                    : label.off
+                  : undefined;
+            return (
+              <>
+                <Switch.Control className={iconVariant && isSelected ? "bg-green-500/80" : ""}>
+                  <Switch.Thumb>
+                    {iconVariant && (
+                      <Switch.Icon>
+                        {isSelected ? (
+                          <Check className="size-3 text-inherit opacity-100" />
+                        ) : (
+                          <Power className="size-3 text-inherit opacity-70" />
+                        )}
+                      </Switch.Icon>
+                    )}
+                  </Switch.Thumb>
+                </Switch.Control>
+                {text !== undefined && (
+                  <Switch.Content>
+                    <Label>{text}</Label>
+                  </Switch.Content>
+                )}
+              </>
+            );
+          }}
+        </Switch>
+      )}
+    />
+  );
+}
+
+/* -- Date input (YYYY-MM-DD string) ------------------------------- */
+
+interface FormDateInputProps<T extends FieldValues> {
+  control: Control<T>;
+  name: Path<T>;
+  label?: string;
+  min?: string;
+  max?: string;
+  variant?: "primary" | "secondary";
+  isDisabled?: boolean;
+}
+
+export function FormDateInput<T extends FieldValues>({
+  control,
+  name,
+  label,
+  min,
+  max,
+  variant,
+  isDisabled,
+}: FormDateInputProps<T>) {
+  return (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field, fieldState }) => (
+        <TextField isInvalid={!!fieldState.error} isDisabled={isDisabled} fullWidth>
+          {label && <Label>{label}</Label>}
+          <Input
+            type="date"
+            variant={variant}
+            value={field.value ?? ""}
+            onChange={(e) => field.onChange(e.target.value)}
+            onBlur={field.onBlur}
+            min={min}
+            max={max}
+          />
+          {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
+        </TextField>
       )}
     />
   );

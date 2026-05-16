@@ -1,6 +1,6 @@
 import { Funnel } from "@gravity-ui/icons";
 import { Button, Chip, Popover, Separator } from "@heroui/react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { FilterSection } from "./FilterSection.js";
 import type { FilterValues } from "./filterTransform.js";
 import { splitToFilterValues, valuesToFilter } from "./filterTransform.js";
@@ -23,26 +23,24 @@ export function FilterPopover({ fields, filter, onChange }: Props) {
     setFilterValues(splitToFilterValues(filter, fields));
   }, [open, filter, fields]);
 
-  const setValue = useCallback((key: string, val: unknown) => {
+  const setValue = (key: string, val: unknown) => {
     setFilterValues((prev) => ({ ...prev, [key]: val }));
-  }, []);
+  };
 
-  const resetValue = useCallback((key: string) => {
+  const resetValue = (key: string) => {
     setFilterValues((prev) => {
       const next = { ...prev };
       delete next[key];
       return next;
     });
-  }, []);
+  };
 
-  const handleResetAll = useCallback(() => {
-    setFilterValues({});
-  }, []);
+  const handleResetAll = () => setFilterValues({});
 
-  const handleApply = useCallback(() => {
+  const handleApply = () => {
     onChange(valuesToFilter(filterValues, fields));
     setOpen(false);
-  }, [filterValues, fields, onChange]);
+  };
 
   return (
     <Popover isOpen={open} onOpenChange={setOpen}>

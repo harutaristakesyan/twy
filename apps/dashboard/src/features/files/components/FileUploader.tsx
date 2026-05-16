@@ -1,6 +1,6 @@
 import { ArrowUpFromLine, Xmark } from "@gravity-ui/icons";
 import { Button, Spinner } from "@heroui/react";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { DocumentCategory } from "../constants";
 import { MAX_FILE_SIZE_BYTES, MAX_FILES_DEFAULT } from "../constants";
 import { useFileUpload } from "../hooks/useFileUpload";
@@ -69,16 +69,13 @@ const FileUploader = forwardRef<FileUploaderHandle, FileUploaderProps>(
     const doneCount = upload.items.filter((i) => i.status === "done").length;
     const buttonDisabled = disabled || doneCount >= max || upload.isBusy;
 
-    const handleInputChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-          upload.addFiles(e.target.files);
-          // Reset input so the same file can be re-selected
-          e.target.value = "";
-        }
-      },
-      [upload],
-    );
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) {
+        upload.addFiles(e.target.files);
+        // Reset input so the same file can be re-selected
+        e.target.value = "";
+      }
+    };
 
     const acceptStr = acceptedMimeTypes?.join(",") || undefined;
 
@@ -108,14 +105,16 @@ const FileUploader = forwardRef<FileUploaderHandle, FileUploaderProps>(
                 </span>
                 {item.status === "uploading" && <Spinner size="sm" />}
                 {!disabled && (
-                  <button
-                    type="button"
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="ghost"
                     className="text-gray-400 hover:text-red-500 flex-shrink-0"
-                    onClick={() => upload.remove(item.uid)}
+                    onPress={() => upload.remove(item.uid)}
                     aria-label={`Remove ${item.name}`}
                   >
                     <Xmark className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 )}
               </li>
             ))}

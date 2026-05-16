@@ -1,3 +1,4 @@
+import { Check, Power } from "@gravity-ui/icons";
 import { Button, Label, Modal, Switch, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller } from "react-hook-form";
@@ -122,13 +123,25 @@ const UserCreateModal = () => {
                   name="isActive"
                   control={control}
                   render={({ field }) => (
-                    <Switch isSelected={field.value} onChange={field.onChange}>
-                      <Switch.Control>
-                        <Switch.Thumb />
-                      </Switch.Control>
-                      <Switch.Content>
-                        <Label>{field.value ? "Active" : "Inactive"}</Label>
-                      </Switch.Content>
+                    <Switch isSelected={field.value} onChange={field.onChange} size="lg">
+                      {({ isSelected }) => (
+                        <>
+                          <Switch.Control className={isSelected ? "bg-green-500/80" : ""}>
+                            <Switch.Thumb>
+                              <Switch.Icon>
+                                {isSelected ? (
+                                  <Check className="size-3 text-inherit opacity-100" />
+                                ) : (
+                                  <Power className="size-3 text-inherit opacity-70" />
+                                )}
+                              </Switch.Icon>
+                            </Switch.Thumb>
+                          </Switch.Control>
+                          <Switch.Content>
+                            <Label>{isSelected ? "Active" : "Inactive"}</Label>
+                          </Switch.Content>
+                        </>
+                      )}
                     </Switch>
                   )}
                 />

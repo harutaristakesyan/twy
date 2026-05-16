@@ -1,4 +1,4 @@
-import { Button, Label, ListBox, Modal, Select, Spinner, toast } from "@heroui/react";
+import { Button, Modal, Spinner, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Controller } from "react-hook-form";
@@ -6,7 +6,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { FormTextArea, FormTextField } from "@/components/form";
 import CIAutocomplete from "@/features/community-license/components/CIAutocomplete";
-import { getUsers } from "@/features/user/api/userApi";
+import UserSelect from "@/features/user/components/UserSelect";
 import { useZodForm } from "@/libs/form";
 import { useApiMutation, useApiQuery } from "@/libs/query";
 import { getBranchById, updateBranch } from "../api/branchApi";
@@ -50,9 +50,6 @@ const BranchEditModal = () => {
     }
   }, [branch, reset]);
 
-  const { data: usersData } = useApiQuery(["users-owners-select"], () => getUsers({ limit: 100 }));
-  const owners = usersData?.users ?? [];
-
   const mutation = useApiMutation(updateBranch, {
     onSuccess: async () => {
       toast.success("Branch updated successfully");
@@ -71,6 +68,13 @@ const BranchEditModal = () => {
       ciId: values.ciId ?? null,
     });
   });
+
+  const ownerInitialOption = branch?.owner
+    ? {
+        value: branch.owner.id,
+        label: `${branch.owner.firstName} ${branch.owner.lastName}`.trim(),
+      }
+    : undefined;
 
   return (
     <Modal>
@@ -126,34 +130,15 @@ const BranchEditModal = () => {
                   <Controller
                     name="owner"
                     control={control}
-                    render={({ field }) => (
-                      <Select
-                        value={field.value ?? undefined}
-                        onChange={(key) => field.onChange(key ? String(key) : null)}
-                      >
-                        <Label>Branch Owner</Label>
-                        <Select.Trigger>
-                          <Select.Value>
-                            {({ defaultChildren, isPlaceholder }) =>
-                              isPlaceholder ? "— No owner —" : defaultChildren
-                            }
-                          </Select.Value>
-                          <Select.Indicator />
-                        </Select.Trigger>
-                        <Select.Popover>
-                          <ListBox>
-                            {owners.map((o) => (
-                              <ListBox.Item
-                                key={o.id}
-                                id={o.id}
-                                textValue={`${o.firstName} ${o.lastName}`}
-                              >
-                                {o.firstName} {o.lastName} ({o.email})
-                              </ListBox.Item>
-                            ))}
-                          </ListBox>
-                        </Select.Popover>
-                      </Select>
+                    render={({ field, fieldState }) => (
+                      <UserSelect
+                        label="Branch Owner"
+                        placeholder="Search users…"
+                        value={field.value ?? null}
+                        onChange={field.onChange}
+                        initialOption={ownerInitialOption}
+                        isInvalid={!!fieldState.error}
+                      />
                     )}
                   />
                 </form>

@@ -1,6 +1,5 @@
-import { ArrowRotateRight, Pencil, TrashBin } from "@gravity-ui/icons";
-import { Button, Chip } from "@heroui/react";
-import { useCallback } from "react";
+import { Chip } from "@heroui/react";
+import { ActionsMenu } from "@/components/ActionsMenu";
 import type { Load } from "@/features/load/types/load";
 import { getAllowedTransitions } from "@/features/load/utils/statusMachine";
 
@@ -47,76 +46,59 @@ export function useLoadColumns({
   onStatusUpdate,
   onDelete,
 }: UseLoadColumnsParams) {
-  const renderCell = useCallback(
-    (load: Load, colId: string) => {
-      switch (colId) {
-        case "referenceNumber":
-          return <span className="font-medium">{load.referenceNumber}</span>;
-        case "customer":
-          return load.customer;
-        case "carrier":
-          return load.carrier ?? "—";
-        case "status":
-          return (
-            <Chip color={statusColor[load.status] ?? "default"} size="sm" variant="soft">
-              {load.status}
-            </Chip>
-          );
-        case "branch":
-          return load.branchName;
-        case "customerRate":
-          return load.customerRate != null ? `€${load.customerRate.toFixed(2)}` : "—";
-        case "carrierRate":
-          return load.carrierRate != null ? `€${load.carrierRate.toFixed(2)}` : "—";
-        case "createdAt":
-          return new Date(load.createdAt).toLocaleDateString();
-        case "actions": {
-          const canTransition = getAllowedTransitions(load.status).length > 0;
-          return (
-            <div className="flex items-center gap-1">
-              {canEdit && (
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="tertiary"
-                  aria-label="Edit load"
-                  onPress={() => onEdit(load)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              )}
-              {canTransition && (
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="tertiary"
-                  aria-label="Update status"
-                  onPress={() => onStatusUpdate(load)}
-                >
-                  <ArrowRotateRight className="h-4 w-4" />
-                </Button>
-              )}
-              {canDelete && (
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="danger-soft"
-                  aria-label="Delete load"
-                  isDisabled={isDeleting}
-                  onPress={() => onDelete(load.id)}
-                >
-                  <TrashBin className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          );
-        }
-        default:
-          return null;
+  const renderCell = (load: Load, colId: string) => {
+    switch (colId) {
+      case "referenceNumber":
+        return <span className="font-medium">{load.referenceNumber}</span>;
+      case "customer":
+        return load.customer;
+      case "carrier":
+        return load.carrier ?? "—";
+      case "status":
+        return (
+          <Chip color={statusColor[load.status] ?? "default"} size="sm" variant="soft">
+            {load.status}
+          </Chip>
+        );
+      case "branch":
+        return load.branchName;
+      case "customerRate":
+        return load.customerRate != null ? `€${load.customerRate.toFixed(2)}` : "—";
+      case "carrierRate":
+        return load.carrierRate != null ? `€${load.carrierRate.toFixed(2)}` : "—";
+      case "createdAt":
+        return new Date(load.createdAt).toLocaleDateString();
+      case "actions": {
+        const canTransition = getAllowedTransitions(load.status).length > 0;
+        return (
+          <ActionsMenu
+            actions={[
+              {
+                header: "Actions",
+                items: [
+                  { type: "edit", hidden: !canEdit, onAction: () => onEdit(load) },
+                  { type: "status", hidden: !canTransition, onAction: () => onStatusUpdate(load) },
+                ],
+              },
+              {
+                header: "Danger zone",
+                items: [
+                  {
+                    type: "delete",
+                    hidden: !canDelete,
+                    disabled: isDeleting,
+                    onAction: () => onDelete(load.id),
+                  },
+                ],
+              },
+            ]}
+          />
+        );
       }
-    },
-    [canEdit, canDelete, isDeleting, onEdit, onStatusUpdate, onDelete],
-  );
+      default:
+        return null;
+    }
+  };
 
   return { columns: LOAD_COLUMNS, renderCell };
 }

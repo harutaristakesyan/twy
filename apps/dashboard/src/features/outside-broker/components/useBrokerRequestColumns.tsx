@@ -1,5 +1,5 @@
-import { Button, Chip } from "@heroui/react";
-import { useCallback } from "react";
+import { Chip } from "@heroui/react";
+import { ActionsMenu } from "@/components/ActionsMenu";
 import type { BrokerRequest } from "../types/brokerRequest";
 
 export type BrokerRequestColumnDef = {
@@ -29,45 +29,38 @@ type UseBrokerRequestColumnsParams = {
 };
 
 export function useBrokerRequestColumns({ onView }: UseBrokerRequestColumnsParams) {
-  const renderCell = useCallback(
-    (req: BrokerRequest, colId: string) => {
-      switch (colId) {
-        case "brokerName":
-          return <span className="font-medium">{req.brokerName}</span>;
-        case "mcNumber":
-          return (
-            <Chip size="sm" variant="soft">
-              {req.mcNumber}
-            </Chip>
-          );
-        case "status":
-          return (
-            <Chip color={statusColor[req.status] ?? "default"} size="sm" variant="soft">
-              {req.status}
-            </Chip>
-          );
-        case "submittedBy":
-          return req.submittedByName ?? "—";
-        case "creditLimit":
-          return req.creditLimitUnlimited
-            ? "Unlimited"
-            : req.creditLimit != null
-              ? `€${req.creditLimit.toFixed(2)}`
-              : "—";
-        case "createdAt":
-          return new Date(req.createdAt).toLocaleDateString();
-        case "actions":
-          return (
-            <Button size="sm" variant="tertiary" onPress={() => onView(req)}>
-              View
-            </Button>
-          );
-        default:
-          return null;
-      }
-    },
-    [onView],
-  );
+  const renderCell = (req: BrokerRequest, colId: string) => {
+    switch (colId) {
+      case "brokerName":
+        return <span className="font-medium">{req.brokerName}</span>;
+      case "mcNumber":
+        return (
+          <Chip size="sm" variant="soft">
+            {req.mcNumber}
+          </Chip>
+        );
+      case "status":
+        return (
+          <Chip color={statusColor[req.status] ?? "default"} size="sm" variant="soft">
+            {req.status}
+          </Chip>
+        );
+      case "submittedBy":
+        return req.submittedByName ?? "—";
+      case "creditLimit":
+        return req.creditLimitUnlimited
+          ? "Unlimited"
+          : req.creditLimit != null
+            ? `€${req.creditLimit.toFixed(2)}`
+            : "—";
+      case "createdAt":
+        return new Date(req.createdAt).toLocaleDateString();
+      case "actions":
+        return <ActionsMenu actions={[{ type: "view", onAction: () => onView(req) }]} />;
+      default:
+        return null;
+    }
+  };
 
   return { columns: BROKER_REQUEST_COLUMNS, renderCell };
 }

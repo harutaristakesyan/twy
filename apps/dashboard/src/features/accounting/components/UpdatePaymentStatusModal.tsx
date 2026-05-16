@@ -178,6 +178,7 @@ export default function UpdatePaymentStatusModal() {
                     name="paymentStatus"
                     label="Payment Status"
                     items={statusItems}
+                    isDisabled={readOnly}
                   />
 
                   <div className="grid grid-cols-2 gap-4">
@@ -188,11 +189,13 @@ export default function UpdatePaymentStatusModal() {
                       min="0"
                       step="0.01"
                       placeholder="0.00"
+                      isDisabled={readOnly}
                     />
                     <FormDateInput
                       control={control}
                       name="carrierPaidDate"
                       label="Carrier Paid Date"
+                      isDisabled={readOnly}
                     />
                     <FormNumberInput
                       control={control}
@@ -201,11 +204,13 @@ export default function UpdatePaymentStatusModal() {
                       min="0"
                       step="0.01"
                       placeholder="0.00"
+                      isDisabled={readOnly}
                     />
                     <FormDateInput
                       control={control}
                       name="brokerReceivedDate"
                       label="Broker Received Date"
+                      isDisabled={readOnly}
                     />
                   </div>
 

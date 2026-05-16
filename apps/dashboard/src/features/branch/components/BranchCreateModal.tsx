@@ -1,13 +1,13 @@
-import { Button, Label, ListBox, Modal, Select, toast } from "@heroui/react";
+import { Button, Modal, toast } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { FormTextArea, FormTextField } from "@/components/form";
 import CIAutocomplete from "@/features/community-license/components/CIAutocomplete";
-import { getUsers } from "@/features/user/api/userApi";
+import UserSelect from "@/features/user/components/UserSelect";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation, useApiQuery } from "@/libs/query";
+import { useApiMutation } from "@/libs/query";
 import { createBranch } from "../api/branchApi";
 
 const schema = z.object({
@@ -30,9 +30,6 @@ const BranchCreateModal = () => {
     ciId: null,
     owner: null,
   });
-
-  const { data: usersData } = useApiQuery(["users-owners-select"], () => getUsers({ limit: 100 }));
-  const owners = usersData?.users ?? [];
 
   const mutation = useApiMutation(createBranch, {
     onSuccess: async () => {
@@ -99,34 +96,14 @@ const BranchCreateModal = () => {
                 <Controller
                   name="owner"
                   control={control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value ?? undefined}
-                      onChange={(key) => field.onChange(key ? String(key) : null)}
-                    >
-                      <Label>Branch Owner</Label>
-                      <Select.Trigger>
-                        <Select.Value>
-                          {({ defaultChildren, isPlaceholder }) =>
-                            isPlaceholder ? "— No owner —" : defaultChildren
-                          }
-                        </Select.Value>
-                        <Select.Indicator />
-                      </Select.Trigger>
-                      <Select.Popover>
-                        <ListBox>
-                          {owners.map((o) => (
-                            <ListBox.Item
-                              key={o.id}
-                              id={o.id}
-                              textValue={`${o.firstName} ${o.lastName}`}
-                            >
-                              {o.firstName} {o.lastName} ({o.email})
-                            </ListBox.Item>
-                          ))}
-                        </ListBox>
-                      </Select.Popover>
-                    </Select>
+                  render={({ field, fieldState }) => (
+                    <UserSelect
+                      label="Branch Owner"
+                      placeholder="Search users…"
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      isInvalid={!!fieldState.error}
+                    />
                   )}
                 />
               </form>

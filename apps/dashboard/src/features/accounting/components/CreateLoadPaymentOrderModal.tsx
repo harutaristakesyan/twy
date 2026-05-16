@@ -1,6 +1,6 @@
-import { Button, Modal, Spinner, toast } from "@heroui/react";
+import { Button, Input, Label, Modal, Spinner, TextField, toast } from "@heroui/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadApi } from "@/features/load/api/loadApi";
 import type { Load } from "@/features/load/types/load";
@@ -63,18 +63,15 @@ const CreateLoadPaymentOrderModal = () => {
     },
   });
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     setSearchText("");
     setDebouncedSearch("");
     setSelected(null);
     navigate("..");
-  }, [navigate]);
+  };
 
   const financials = selected ? computeFinancials(selected) : null;
   const loads = data?.loads ?? [];
-
-  const fieldClass =
-    "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent";
 
   return (
     <Modal>
@@ -92,11 +89,10 @@ const CreateLoadPaymentOrderModal = () => {
             </Modal.Header>
             <Modal.Body className="p-2">
               <div className="flex flex-col gap-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Load *
+                <TextField fullWidth>
+                  <Label>Load *</Label>
                   <div className="relative">
-                    <input
-                      className={fieldClass}
+                    <Input
                       placeholder="Search by load #, customer, carrier…"
                       value={searchText}
                       onChange={handleSearchChange}
@@ -107,41 +103,42 @@ const CreateLoadPaymentOrderModal = () => {
                       </div>
                     )}
                   </div>
-                  {loads.length > 0 && !selected && (
-                    <ul className="mt-1 border border-gray-200 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
-                      {loads.map((l) => (
-                        <li key={l.id}>
-                          <button
-                            type="button"
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
-                            onClick={() => {
-                              setSelected(l);
-                              setSearchText(
-                                `#${l.referenceNumber} — ${l.customer}${l.carrier ? ` → ${l.carrier}` : ""}`,
-                              );
-                            }}
-                          >
-                            #{l.referenceNumber} — {l.customer}
-                            {l.carrier ? ` → ${l.carrier}` : ""}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {selected && (
-                    <button
-                      type="button"
-                      className="text-xs text-gray-500 hover:text-gray-700 mt-1"
-                      onClick={() => {
-                        setSelected(null);
-                        setSearchText("");
-                        setDebouncedSearch("");
-                      }}
-                    >
-                      Clear selection
-                    </button>
-                  )}
-                </label>
+                </TextField>
+                {loads.length > 0 && !selected && (
+                  <ul className="mt-1 border border-gray-200 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                    {loads.map((l) => (
+                      <li key={l.id}>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start px-3 py-2 text-sm border-b border-gray-100 last:border-0 rounded-none"
+                          onPress={() => {
+                            setSelected(l);
+                            setSearchText(
+                              `#${l.referenceNumber} — ${l.customer}${l.carrier ? ` → ${l.carrier}` : ""}`,
+                            );
+                          }}
+                        >
+                          #{l.referenceNumber} — {l.customer}
+                          {l.carrier ? ` → ${l.carrier}` : ""}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {selected && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-1 text-xs text-gray-500"
+                    onPress={() => {
+                      setSelected(null);
+                      setSearchText("");
+                      setDebouncedSearch("");
+                    }}
+                  >
+                    Clear selection
+                  </Button>
+                )}
 
                 {selected && financials && (
                   <div className="bg-gray-50 rounded-lg p-4 flex flex-col gap-2">

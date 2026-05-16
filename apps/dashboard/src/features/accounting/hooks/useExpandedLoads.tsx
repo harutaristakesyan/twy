@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { billingApi } from "../api/billingApi";
 import type { ExternalBillingLoad } from "../types/billing";
 import { type ExternalBillingUserGroup, groupLoadsByCreator } from "./groupLoadsByCreator";
@@ -18,31 +18,15 @@ export function useExpandedLoads(apiParams: ApiParams) {
   const [loadsByBranch, setLoadsByBranch] = useState<Map<string, ExternalBillingTreeBranchData>>(
     new Map(),
   );
-  const [expandingBranchId, setExpandingBranchId] = useState<string | null>(null);
 
-  const resetLoads = useCallback(() => setLoadsByBranch(new Map()), []);
+  const resetLoads = () => setLoadsByBranch(new Map());
 
-  const onExpand = useCallback(
-    async (expanded: boolean, branchId: string) => {
-      if (!expanded) return;
-      let alreadyCached = false;
-      setLoadsByBranch((prev) => {
-        if (prev.has(branchId)) alreadyCached = true;
-        return prev;
-      });
-      if (alreadyCached) return;
+  const onExpand = async (expanded: boolean, branchId: string) => {
+    if (!expanded || loadsByBranch.has(branchId)) return;
+    const loads = await billingApi.listExternalLoads(branchId, apiParams);
+    const userGroups = groupLoadsByCreator(loads);
+    setLoadsByBranch((prev) => new Map(prev).set(branchId, { loads, userGroups }));
+  };
 
-      setExpandingBranchId(branchId);
-      try {
-        const loads = await billingApi.listExternalLoads(branchId, apiParams);
-        const userGroups = groupLoadsByCreator(loads);
-        setLoadsByBranch((prev) => new Map(prev).set(branchId, { loads, userGroups }));
-      } finally {
-        setExpandingBranchId(null);
-      }
-    },
-    [apiParams],
-  );
-
-  return { onExpand, resetLoads, loadsByBranch, expandingBranchId };
+  return { onExpand, resetLoads, loadsByBranch };
 }

@@ -1,14 +1,13 @@
 import { Plus } from "@gravity-ui/icons";
 import { Button, toast } from "@heroui/react";
 import type React from "react";
-import { useCallback } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { DataTable } from "@/components/DataTable";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useServerTable } from "@/hooks/useServerTable";
 import { useApiMutation } from "@/libs/query";
 import { deleteCommunityLicense, getCommunityLicenses } from "../api/ciApi";
-import CIManagementTable from "../components/CIManagementTable";
 import { useCIColumns } from "../components/useCIColumns";
 import type { CommunityLicense } from "../types/communityLicense";
 
@@ -47,23 +46,20 @@ const CIManagementPage: React.FC = () => {
     },
   });
 
-  const handleCreate = useCallback(() => navigate("create"), [navigate]);
-  const handleEdit = useCallback((ci: CommunityLicense) => navigate(`${ci.id}/edit`), [navigate]);
+  const handleCreate = () => navigate("create");
+  const handleEdit = (ci: CommunityLicense) => navigate(`${ci.id}/edit`);
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
-  const handleDelete = useCallback(
-    (id: string) => {
-      confirm({
-        title: "Delete this community license?",
-        description: "This action cannot be undone. Branches using this CI must be updated first.",
-        confirmLabel: "Delete",
-        status: "danger",
-        onConfirm: () => deleteMutation.mutate(id),
-      });
-    },
-    [confirm, deleteMutation],
-  );
+  const handleDelete = (id: string) => {
+    confirm({
+      title: "Delete this community license?",
+      description: "This action cannot be undone. Branches using this CI must be updated first.",
+      confirmLabel: "Delete",
+      status: "danger",
+      onConfirm: () => deleteMutation.mutate(id),
+    });
+  };
 
   const { columns, renderCell } = useCIColumns({
     canEdit,
@@ -84,7 +80,8 @@ const CIManagementPage: React.FC = () => {
         )}
       </div>
 
-      <CIManagementTable
+      <DataTable
+        ariaLabel="Community Licenses"
         items={items}
         columns={columns}
         renderCell={renderCell}

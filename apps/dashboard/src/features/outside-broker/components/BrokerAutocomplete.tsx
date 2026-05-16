@@ -1,6 +1,6 @@
 import { ComboBox, Input, type Key, Label, ListBox } from "@heroui/react";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useApiQuery } from "@/libs/query";
 import { getOutsideBrokers } from "../api/brokerApi";
@@ -33,20 +33,11 @@ const BrokerAutocomplete: React.FC<BrokerAutocompleteProps> = ({
     getOutsideBrokers({ query: debounced || undefined, limit: 50, page: 0 }),
   );
 
-  const items = useMemo(() => {
-    const fetched = data?.brokers ?? [];
-    if (initialOption && !fetched.find((b) => b.id === initialOption.value)) {
-      return [
-        {
-          id: initialOption.value,
-          brokerName: initialOption.label,
-          mcNumber: "",
-        },
-        ...fetched,
-      ];
-    }
-    return fetched;
-  }, [data?.brokers, initialOption]);
+  const fetched = data?.brokers ?? [];
+  const items =
+    initialOption && !fetched.find((b) => b.id === initialOption.value)
+      ? [{ id: initialOption.value, brokerName: initialOption.label, mcNumber: "" }, ...fetched]
+      : fetched;
 
   return (
     <ComboBox

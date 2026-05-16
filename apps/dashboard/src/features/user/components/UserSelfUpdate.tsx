@@ -1,7 +1,7 @@
 import { ArrowDownToSquare, Camera, Lock, Pencil, Xmark } from "@gravity-ui/icons";
 import { Button, Input, Label, Separator, Spinner, TextField, toast } from "@heroui/react";
 import type React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { FormTextField } from "@/components/form";
@@ -57,48 +57,43 @@ const UserSelfUpdate: React.FC = () => {
     });
   });
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     reset({
       firstName: user?.firstName ?? "",
       lastName: user?.lastName ?? "",
     });
     setIsEditing(false);
-  }, [reset, user]);
+  };
 
-  const handleAvatarClick = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
+  const handleAvatarClick = () => fileInputRef.current?.click();
 
-  const handleFileChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      if (!ACCEPTED_AVATAR_TYPES.includes(file.type)) {
-        toast.danger("Only JPEG, PNG, and WebP images are supported");
-        return;
+    if (!ACCEPTED_AVATAR_TYPES.includes(file.type)) {
+      toast.danger("Only JPEG, PNG, and WebP images are supported");
+      return;
+    }
+    if (file.size > MAX_AVATAR_SIZE_BYTES) {
+      toast.danger("Image must be smaller than 5 MB");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      await uploadProfilePicture(file);
+      await refetch();
+      toast.success("Profile picture updated");
+    } catch (error) {
+      toast.danger(getErrorMessage(error));
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
-      if (file.size > MAX_AVATAR_SIZE_BYTES) {
-        toast.danger("Image must be smaller than 5 MB");
-        return;
-      }
-
-      setUploadingAvatar(true);
-      try {
-        await uploadProfilePicture(file);
-        await refetch();
-        toast.success("Profile picture updated");
-      } catch (error) {
-        toast.danger(getErrorMessage(error));
-      } finally {
-        setUploadingAvatar(false);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-      }
-    },
-    [refetch],
-  );
+    }
+  };
 
   if (!user) {
     return userLoading ? (

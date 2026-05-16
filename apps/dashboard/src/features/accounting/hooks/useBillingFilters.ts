@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { Filter, FilterField } from "@/components/Search";
 import { getBranches } from "@/features/branch/api/branchApi";
 import { getCarriers } from "@/features/carrier/api/carrierApi";
@@ -34,43 +34,37 @@ export function useBillingFilters() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const fields: FilterField[] = useMemo(
-    () => [
-      {
-        key: "branchId",
-        label: "Branch",
-        type: "select",
-        options: branchesData?.branches.map((b) => ({ label: b.name, value: b.id })) ?? [],
-        placeholder: "All branches",
-      },
-      { key: "createdAt", label: "Date Range", type: "dateRange" },
-      { key: "status", label: "Status", type: "multiSelect", options: PAYMENT_STATUS_OPTIONS },
-      {
-        key: "broker",
-        label: "Broker",
-        type: "select",
-        options:
-          brokersData?.brokers.map((b) => ({ label: b.brokerName, value: b.brokerName })) ?? [],
-        placeholder: "All brokers",
-      },
-      {
-        key: "carrierId",
-        label: "Carrier",
-        type: "select",
-        options: carriersData?.carriers.map((c) => ({ label: c.carrierName, value: c.id })) ?? [],
-        placeholder: "All carriers",
-      },
-    ],
-    [branchesData, carriersData, brokersData],
-  );
+  const fields: FilterField[] = [
+    {
+      key: "branchId",
+      label: "Branch",
+      type: "select",
+      options: branchesData?.branches.map((b) => ({ label: b.name, value: b.id })) ?? [],
+      placeholder: "All branches",
+    },
+    { key: "createdAt", label: "Date Range", type: "dateRange" },
+    { key: "status", label: "Status", type: "multiSelect", options: PAYMENT_STATUS_OPTIONS },
+    {
+      key: "broker",
+      label: "Broker",
+      type: "select",
+      options:
+        brokersData?.brokers.map((b) => ({ label: b.brokerName, value: b.brokerName })) ?? [],
+      placeholder: "All brokers",
+    },
+    {
+      key: "carrierId",
+      label: "Carrier",
+      type: "select",
+      options: carriersData?.carriers.map((c) => ({ label: c.carrierName, value: c.id })) ?? [],
+      placeholder: "All carriers",
+    },
+  ];
 
-  const apiParams = useMemo(
-    () => ({
-      query: activeQuery || undefined,
-      filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
-    }),
-    [activeFilter, activeQuery],
-  );
+  const apiParams = {
+    query: activeQuery || undefined,
+    filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
+  };
 
   return {
     activeFilter,

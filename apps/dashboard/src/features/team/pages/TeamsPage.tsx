@@ -1,9 +1,10 @@
 import { Plus } from "@gravity-ui/icons";
 import { Button, toast } from "@heroui/react";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { DataTable } from "@/components/DataTable";
 import type { Filter, FilterField } from "@/components/Search";
 import { ActiveFilters, Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -11,7 +12,6 @@ import { useServerTable } from "@/hooks/useServerTable";
 import { useApiMutation } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { deleteTeam, getTeams } from "../api/teamApi";
-import TeamManagementTable from "../components/TeamManagementTable";
 import { useTeamColumns } from "../components/useTeamColumns";
 import type { Team } from "../types/team";
 
@@ -59,23 +59,18 @@ const TeamsPage: React.FC = () => {
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
-  const handleCreate = useCallback(() => navigate("/user-management/teams/create"), [navigate]);
-  const handleEdit = useCallback(
-    (team: Team) => navigate(`/user-management/teams/${team.id}/edit`),
-    [navigate],
-  );
+  const handleCreate = () => navigate("/user-management/teams/create");
 
-  const handleDelete = useCallback(
-    (id: string) =>
-      confirm({
-        title: "Delete this team?",
-        description: "This action cannot be undone.",
-        confirmLabel: "Delete",
-        status: "danger",
-        onConfirm: () => deleteMutation.mutate(id),
-      }),
-    [confirm, deleteMutation],
-  );
+  const handleEdit = (team: Team) => navigate(`/user-management/teams/${team.id}/edit`);
+
+  const handleDelete = (id: string) =>
+    confirm({
+      title: "Delete this team?",
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete",
+      status: "danger",
+      onConfirm: () => deleteMutation.mutate(id),
+    });
 
   const { columns, renderCell } = useTeamColumns({
     canEdit,
@@ -107,7 +102,8 @@ const TeamsPage: React.FC = () => {
 
       <ActiveFilters filter={activeFilter} fields={FILTER_FIELDS} onChange={setActiveFilter} />
 
-      <TeamManagementTable
+      <DataTable
+        ariaLabel="Teams"
         items={table.items}
         columns={columns}
         renderCell={renderCell}

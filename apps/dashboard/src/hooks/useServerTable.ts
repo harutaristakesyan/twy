@@ -1,6 +1,6 @@
 import type { QueryKey } from "@tanstack/react-query";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 export type SortDescriptor = {
   column: string;
@@ -40,25 +40,6 @@ export function useServerTable<TItem>({
     placeholderData: keepPreviousData,
   });
 
-  const handlePageChange = useCallback((nextPage: number) => {
-    setPage(nextPage);
-  }, []);
-
-  const handlePageSizeChange = useCallback((nextSize: number) => {
-    setPageSize(nextSize);
-    setPage(1);
-  }, []);
-
-  const handleSortChange = useCallback((descriptor: SortDescriptor) => {
-    setSort(descriptor);
-    setPage(1);
-  }, []);
-
-  const handleFiltersChange = useCallback((nextFilters: Record<string, unknown>) => {
-    setFilters(nextFilters);
-    setPage(1);
-  }, []);
-
   return {
     items: query.data?.items ?? [],
     total: query.data?.total ?? 0,
@@ -68,10 +49,19 @@ export function useServerTable<TItem>({
     filters,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
-    setPage: handlePageChange,
-    setPageSize: handlePageSizeChange,
-    setSort: handleSortChange,
-    setFilters: handleFiltersChange,
+    setPage: (nextPage: number) => setPage(nextPage),
+    setPageSize: (nextSize: number) => {
+      setPageSize(nextSize);
+      setPage(1);
+    },
+    setSort: (descriptor: SortDescriptor) => {
+      setSort(descriptor);
+      setPage(1);
+    },
+    setFilters: (nextFilters: Record<string, unknown>) => {
+      setFilters(nextFilters);
+      setPage(1);
+    },
     refetch: query.refetch,
   };
 }

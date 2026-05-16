@@ -205,8 +205,19 @@ const OutsideBrokerEditModal = () => {
                         name="creditLimitUnlimited"
                         control={control}
                         render={({ field }) => (
-                          <Checkbox isSelected={field.value} onChange={field.onChange}>
-                            Unlimited credit limit
+                          <Checkbox
+                            id="broker-edit-unlimited-credit"
+                            isSelected={field.value}
+                            onChange={field.onChange}
+                          >
+                            <Checkbox.Control>
+                              <Checkbox.Indicator />
+                            </Checkbox.Control>
+                            <Checkbox.Content>
+                              <Label htmlFor="broker-edit-unlimited-credit">
+                                Unlimited credit limit
+                              </Label>
+                            </Checkbox.Content>
                           </Checkbox>
                         )}
                       />

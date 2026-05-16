@@ -1,6 +1,6 @@
 import { ComboBox, Input, type Key, Label, ListBox } from "@heroui/react";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useApiQuery } from "@/libs/query";
 import { getCarriers } from "../api/carrierApi";
@@ -37,20 +37,11 @@ const CarrierAutocomplete: React.FC<CarrierAutocompleteProps> = ({
     return [...twy.carriers, ...outside.carriers];
   });
 
-  const items = useMemo(() => {
-    const fetched = data ?? [];
-    if (initialOption && !fetched.find((c) => c.id === initialOption.value)) {
-      return [
-        {
-          id: initialOption.value,
-          carrierName: initialOption.label,
-          mcDotNumber: "",
-        },
-        ...fetched,
-      ];
-    }
-    return fetched;
-  }, [data, initialOption]);
+  const fetched = data ?? [];
+  const items =
+    initialOption && !fetched.find((c) => c.id === initialOption.value)
+      ? [{ id: initialOption.value, carrierName: initialOption.label, mcDotNumber: "" }, ...fetched]
+      : fetched;
 
   return (
     <ComboBox

@@ -1,6 +1,6 @@
 import { ComboBox, Input, type Key, Label, ListBox } from "@heroui/react";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { BranchCI } from "@/features/branch/types/branch";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useApiQuery } from "@/libs/query";
@@ -27,29 +27,27 @@ const CIAutocomplete: React.FC<CIAutocompleteProps> = ({
   variant,
   isInvalid,
 }) => {
-  const [inputValue, setInputValue] = useState("");
-  const debounced = useDebouncedValue(inputValue, 250);
+  const [search, setSearch] = useState("");
+  const debounced = useDebouncedValue(search, 250);
 
   const { data } = useApiQuery(["ci-search", debounced], () =>
     getCommunityLicenses({ query: debounced || undefined, limit: 25, page: 0 }),
   );
 
-  const items = useMemo(() => {
-    const fetched = data?.communityLicenses ?? [];
-    if (existingCI && !fetched.find((c) => c.id === existingCI.id)) {
-      return [
-        {
-          id: existingCI.id,
-          ciNumber: existingCI.ciNumber,
-          validFrom: existingCI.validFrom,
-          validTo: existingCI.validTo,
-          createdAt: "",
-        },
-        ...fetched,
-      ];
-    }
-    return fetched;
-  }, [data?.communityLicenses, existingCI]);
+  const fetched = data?.communityLicenses ?? [];
+  const items =
+    existingCI && !fetched.find((c) => c.id === existingCI.id)
+      ? [
+          {
+            id: existingCI.id,
+            ciNumber: existingCI.ciNumber,
+            validFrom: existingCI.validFrom,
+            validTo: existingCI.validTo,
+            createdAt: "",
+          },
+          ...fetched,
+        ]
+      : fetched;
 
   return (
     <ComboBox
@@ -66,8 +64,7 @@ const CIAutocomplete: React.FC<CIAutocompleteProps> = ({
         const item = items.find((c) => c.id === id);
         onChange?.(id, item?.ciNumber ?? "");
       }}
-      inputValue={inputValue}
-      onInputChange={setInputValue}
+      onInputChange={setSearch}
     >
       <Label>{label}</Label>
       <ComboBox.InputGroup>

@@ -1,6 +1,6 @@
 import { ArrowDownToLine, ArrowUpFromLine, Xmark } from "@gravity-ui/icons";
 import { Button, Spinner, toast } from "@heroui/react";
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { filesApi } from "../api/filesApi";
 
@@ -54,52 +54,46 @@ const AttachedFilesField = ({
     });
   }
 
-  const handleInputChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (!e.target.files || readOnly) return;
-      const fileArray = Array.from(e.target.files);
-      e.target.value = "";
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || readOnly) return;
+    const fileArray = Array.from(e.target.files);
+    e.target.value = "";
 
-      for (const file of fileArray) {
-        const tempId = `uploading-${Date.now()}-${Math.random()}`;
-        const tempItem: LocalFile = { fileId: tempId, fileName: file.name, uploading: true };
-        setLocalFiles((cur) => [...cur, tempItem]);
-        onUploadingChange?.(true);
-        try {
-          await onAdd(file);
-          toast.success(`${file.name} uploaded`);
-          onChanged?.();
-        } catch (err: unknown) {
-          toast.danger(`${file.name} failed to upload: ${getErrorMessage(err)}`);
-          setLocalFiles((cur) => cur.filter((f) => f.fileId !== tempId));
-        } finally {
-          setLocalFiles((cur) => cur.filter((f) => f.fileId !== tempId));
-          onUploadingChange?.(false);
-        }
-      }
-    },
-    [onAdd, onChanged, onUploadingChange, readOnly],
-  );
-
-  const handleRemove = useCallback(
-    async (fileId: string, fileName: string) => {
-      if (readOnly || !onRemove) return;
-      setRemovingId(fileId);
+    for (const file of fileArray) {
+      const tempId = `uploading-${Date.now()}-${Math.random()}`;
+      const tempItem: LocalFile = { fileId: tempId, fileName: file.name, uploading: true };
+      setLocalFiles((cur) => [...cur, tempItem]);
+      onUploadingChange?.(true);
       try {
-        await onRemove(fileId);
-        toast.success(`${fileName} removed`);
-        setLocalFiles((cur) => cur.filter((f) => f.fileId !== fileId));
+        await onAdd(file);
+        toast.success(`${file.name} uploaded`);
         onChanged?.();
       } catch (err: unknown) {
-        toast.danger(getErrorMessage(err));
+        toast.danger(`${file.name} failed to upload: ${getErrorMessage(err)}`);
+        setLocalFiles((cur) => cur.filter((f) => f.fileId !== tempId));
       } finally {
-        setRemovingId(null);
+        setLocalFiles((cur) => cur.filter((f) => f.fileId !== tempId));
+        onUploadingChange?.(false);
       }
-    },
-    [onRemove, onChanged, readOnly],
-  );
+    }
+  };
 
-  const handleDownload = useCallback(async (fileId: string, fileName: string) => {
+  const handleRemove = async (fileId: string, fileName: string) => {
+    if (readOnly || !onRemove) return;
+    setRemovingId(fileId);
+    try {
+      await onRemove(fileId);
+      toast.success(`${fileName} removed`);
+      setLocalFiles((cur) => cur.filter((f) => f.fileId !== fileId));
+      onChanged?.();
+    } catch (err: unknown) {
+      toast.danger(getErrorMessage(err));
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const handleDownload = async (fileId: string, fileName: string) => {
     setDownloadingId(fileId);
     try {
       await filesApi.downloadFile(fileId, fileName);
@@ -108,7 +102,7 @@ const AttachedFilesField = ({
     } finally {
       setDownloadingId(null);
     }
-  }, []);
+  };
 
   const doneFiles = localFiles.filter((f) => !f.uploading);
 
@@ -123,33 +117,37 @@ const AttachedFilesField = ({
             >
               <span className="flex-1 truncate text-gray-800">{f.fileName}</span>
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button
-                  type="button"
-                  className="p-1 text-gray-500 hover:text-primary rounded"
-                  onClick={() => void handleDownload(f.fileId, f.fileName)}
-                  disabled={downloadingId === f.fileId}
-                  title="Download"
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  className="text-gray-500 hover:text-primary"
+                  onPress={() => void handleDownload(f.fileId, f.fileName)}
+                  isDisabled={downloadingId === f.fileId}
+                  aria-label="Download"
                 >
                   {downloadingId === f.fileId ? (
                     <Spinner size="sm" />
                   ) : (
                     <ArrowDownToLine className="h-3.5 w-3.5" />
                   )}
-                </button>
+                </Button>
                 {!readOnly && onRemove && (
-                  <button
-                    type="button"
-                    className="p-1 text-gray-400 hover:text-red-500 rounded"
-                    onClick={() => void handleRemove(f.fileId, f.fileName)}
-                    disabled={removingId === f.fileId}
-                    title="Remove"
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="ghost"
+                    className="text-gray-400 hover:text-red-500"
+                    onPress={() => void handleRemove(f.fileId, f.fileName)}
+                    isDisabled={removingId === f.fileId}
+                    aria-label="Remove"
                   >
                     {removingId === f.fileId ? (
                       <Spinner size="sm" />
                     ) : (
                       <Xmark className="h-3.5 w-3.5" />
                     )}
-                  </button>
+                  </Button>
                 )}
               </div>
             </li>

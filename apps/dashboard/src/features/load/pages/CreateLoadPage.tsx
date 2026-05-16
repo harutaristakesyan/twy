@@ -39,7 +39,9 @@ const schema = z.object({
   referenceNumber: z.string().min(1, "Reference number is required"),
   customerRate: z
     .number({ invalid_type_error: "Customer rate is required" })
-    .positive("Customer rate must be greater than 0"),
+    .positive("Customer rate must be greater than 0")
+    .nullable()
+    .refine((v): v is number => v !== null, "Customer rate is required"),
   contactName: z.string().min(1, "Contact name is required"),
   paymentMethod: z.string().min(1, "Payment method is required"),
   paymentTerms: z.string().min(1, "Payment terms is required"),
@@ -47,7 +49,9 @@ const schema = z.object({
   carrierPaymentMethod: z.string().nullable().optional(),
   carrierRate: z
     .number({ invalid_type_error: "Carrier rate is required" })
-    .positive("Carrier rate must be greater than 0"),
+    .positive("Carrier rate must be greater than 0")
+    .nullable()
+    .refine((v): v is number => v !== null, "Carrier rate is required"),
   chargeServiceFeeToOffice: z.boolean(),
   loadType: z.string().min(1, "Load type is required"),
   serviceType: z.string().min(1, "Service type is required"),
@@ -110,13 +114,13 @@ const CreateLoadPage: React.FC = () => {
   const { control, handleSubmit, trigger } = useZodForm<FormValues>(schema, {
     customer: "",
     referenceNumber: "",
-    customerRate: 0,
+    customerRate: null,
     contactName: "",
     paymentMethod: "",
     paymentTerms: "",
     carrier: "",
     carrierPaymentMethod: "",
-    carrierRate: 0,
+    carrierRate: null,
     chargeServiceFeeToOffice: false,
     loadType: "",
     serviceType: "",

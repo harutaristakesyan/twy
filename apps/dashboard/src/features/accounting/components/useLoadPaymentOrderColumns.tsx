@@ -1,23 +1,33 @@
-import { Eye, Pencil } from "@gravity-ui/icons";
+import { ActionsMenu } from "@/components/ActionsMenu";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { renderCurrency, renderDate } from "@/utils/formatters";
-import type { PaymentOrder } from "../types/paymentOrder";
-import PaymentStatusTag from "./PaymentStatusTag";
+import type { PaymentOrder, PaymentStatus } from "../types/paymentOrder";
+import PaymentStatusTag, { STATUS_LABEL } from "./PaymentStatusTag";
+
+const ALL_STATUSES = Object.keys(STATUS_LABEL) as PaymentStatus[];
 
 export interface LoadPaymentOrderColumn {
   key: string;
   label: string;
   render: (record: PaymentOrder) => React.ReactNode;
   width?: string;
+  isRowHeader?: boolean;
 }
 
 export function useLoadPaymentOrderColumns(
-  openModal: (record: PaymentOrder, mode: "edit" | "view") => void,
+  navigate: (path: string) => void,
 ): LoadPaymentOrderColumn[] {
+  const { permissions } = useCurrentUser();
+  const canEdit = Boolean(permissions.load_payment_order?.edit);
+  const transitions = permissions.load_payment_order as Record<string, boolean> | undefined;
+  const canChangeStatus = ALL_STATUSES.some((s) => transitions?.[`transition:${s}`]);
+
   return [
     {
       key: "referenceNumber",
       label: "Reference",
       width: "w-32",
+      isRowHeader: true,
       render: (r) => <strong>{r.referenceNumber}</strong>,
     },
     { key: "branchName", label: "Branch", width: "w-32", render: (r) => r.branchName },
@@ -108,24 +118,17 @@ export function useLoadPaymentOrderColumns(
       label: "Actions",
       width: "w-20",
       render: (r) => (
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
-            onClick={() => openModal(r, "edit")}
-            title="Edit"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
-            onClick={() => openModal(r, "view")}
-            title="View"
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        <ActionsMenu
+          actions={[
+            { type: "edit", hidden: !canEdit, onAction: () => navigate(`${r.id}?mode=edit`) },
+            { type: "view", onAction: () => navigate(`${r.id}`) },
+            {
+              type: "status",
+              hidden: !canChangeStatus,
+              onAction: () => navigate(`${r.id}/status`),
+            },
+          ]}
+        />
       ),
     },
   ];

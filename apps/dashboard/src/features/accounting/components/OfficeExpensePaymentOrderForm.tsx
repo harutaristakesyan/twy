@@ -1,3 +1,4 @@
+import { Checkbox, Input, Label, ListBox, Select, TextArea, TextField } from "@heroui/react";
 import type React from "react";
 import { AttachedFilesField } from "@/features/files";
 import { officeExpenseApi } from "../api/officeExpensePaymentOrderApi";
@@ -54,16 +55,12 @@ export function formValuesToPeriod(
   return { periodStart: values.date, periodEnd: values.date };
 }
 
-const fieldClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-50 disabled:text-gray-500";
-const labelClass = "block text-sm font-medium text-gray-700 mb-1";
-
 interface Props {
   values: OfficeExpenseFormValues;
   onChange: (values: OfficeExpenseFormValues) => void;
   order: OfficeExpensePaymentOrder;
   readOnly: boolean;
-  onFilesChanged: () => void;
+  onFilesChanged: () => void | Promise<void>;
   onUploadingChange: (uploading: boolean) => void;
 }
 
@@ -82,124 +79,125 @@ const OfficeExpensePaymentOrderForm: React.FC<Props> = ({
 
   return (
     <div className="mt-2 flex flex-col gap-4">
-      <label className={labelClass}>
-        Service Name
-        <select
-          value={values.serviceName}
-          onChange={(e) => set("serviceName", e.target.value as OfficeExpenseService)}
-          disabled={readOnly}
-          className={fieldClass}
-        >
-          {OFFICE_EXPENSE_SERVICE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <Select
+        value={values.serviceName}
+        onChange={(key) => set("serviceName", key as OfficeExpenseService)}
+        isDisabled={readOnly}
+        fullWidth
+      >
+        <Label>Service Name</Label>
+        <Select.Trigger />
+        <Select.Popover>
+          <ListBox>
+            {OFFICE_EXPENSE_SERVICE_OPTIONS.map((opt) => (
+              <ListBox.Item key={opt.value} id={opt.value}>
+                {opt.label}
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+      </Select>
 
-      <label className={labelClass}>
-        Payment Purpose
-        <textarea
+      <TextField isDisabled={readOnly} fullWidth>
+        <Label>Payment Purpose</Label>
+        <TextArea
           rows={3}
-          className={fieldClass}
           value={values.paymentPurpose}
           onChange={(e) => set("paymentPurpose", e.target.value)}
-          disabled={readOnly}
         />
-      </label>
+      </TextField>
 
       <div>
         <div className="mb-2 flex items-center gap-3">
-          <span className={`${labelClass} mb-0`}>Date</span>
+          <Label>Date</Label>
           {!readOnly && (
-            <label className="flex items-center gap-1.5 text-sm text-gray-600">
-              <input
-                type="checkbox"
-                checked={values.isRange}
-                onChange={(e) => set("isRange", e.target.checked)}
-              />
-              Date range
-            </label>
+            <Checkbox isSelected={values.isRange} onChange={(checked) => set("isRange", checked)}>
+              <Checkbox.Control>
+                <Checkbox.Indicator />
+              </Checkbox.Control>
+              <Checkbox.Content>
+                <Label>Date range</Label>
+              </Checkbox.Content>
+            </Checkbox>
           )}
         </div>
         {values.isRange ? (
           <div className="grid grid-cols-2 gap-2">
-            <input
-              type="date"
-              className={fieldClass}
-              value={values.dateStart}
-              onChange={(e) => set("dateStart", e.target.value)}
-              disabled={readOnly}
-            />
-            <input
-              type="date"
-              className={fieldClass}
-              value={values.dateEnd}
-              onChange={(e) => set("dateEnd", e.target.value)}
-              disabled={readOnly}
-            />
+            <TextField isDisabled={readOnly} fullWidth>
+              <Input
+                type="date"
+                value={values.dateStart}
+                onChange={(e) => set("dateStart", e.target.value)}
+              />
+            </TextField>
+            <TextField isDisabled={readOnly} fullWidth>
+              <Input
+                type="date"
+                value={values.dateEnd}
+                onChange={(e) => set("dateEnd", e.target.value)}
+              />
+            </TextField>
           </div>
         ) : (
-          <input
-            type="date"
-            className={fieldClass}
-            value={values.date}
-            onChange={(e) => set("date", e.target.value)}
-            disabled={readOnly}
-          />
+          <TextField isDisabled={readOnly} fullWidth>
+            <Input type="date" value={values.date} onChange={(e) => set("date", e.target.value)} />
+          </TextField>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <label className={labelClass}>
-          Currency
-          <select
-            value={values.currency}
-            onChange={(e) => set("currency", e.target.value as Currency)}
-            disabled={readOnly}
-            className={fieldClass}
-          >
-            {CURRENCY_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={labelClass}>
-          Amount ({currencySymbol})
-          <input
+        <Select
+          value={values.currency}
+          onChange={(key) => set("currency", key as Currency)}
+          isDisabled={readOnly}
+          fullWidth
+        >
+          <Label>Currency</Label>
+          <Select.Trigger />
+          <Select.Popover>
+            <ListBox>
+              {CURRENCY_OPTIONS.map((opt) => (
+                <ListBox.Item key={opt.value} id={opt.value}>
+                  {opt.label}
+                </ListBox.Item>
+              ))}
+            </ListBox>
+          </Select.Popover>
+        </Select>
+        <TextField isDisabled={readOnly} fullWidth>
+          <Label>Amount ({currencySymbol})</Label>
+          <Input
             type="number"
             min="0.01"
             step="0.01"
-            className={fieldClass}
             value={values.amount}
             onChange={(e) => set("amount", e.target.value)}
-            disabled={readOnly}
             placeholder="0.00"
           />
-        </label>
+        </TextField>
       </div>
 
-      <label className={labelClass}>
-        Payment Status
-        <select
-          value={values.paymentStatus}
-          onChange={(e) => set("paymentStatus", e.target.value as OfficeExpensePaymentStatus)}
-          disabled={readOnly}
-          className={fieldClass}
-        >
-          {OFFICE_EXPENSE_STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <Select
+        value={values.paymentStatus}
+        onChange={(key) => set("paymentStatus", key as OfficeExpensePaymentStatus)}
+        isDisabled={readOnly}
+        fullWidth
+      >
+        <Label>Payment Status</Label>
+        <Select.Trigger />
+        <Select.Popover>
+          <ListBox>
+            {OFFICE_EXPENSE_STATUS_OPTIONS.map((opt) => (
+              <ListBox.Item key={opt.value} id={opt.value}>
+                {opt.label}
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+      </Select>
 
       <div>
-        <span className={labelClass}>Documents</span>
+        <Label>Documents</Label>
         <AttachedFilesField
           files={order.files.map((f) => ({ fileId: f.fileId, fileName: f.fileName }))}
           onAdd={(file) => officeExpenseApi.addFile(order.id, file)}

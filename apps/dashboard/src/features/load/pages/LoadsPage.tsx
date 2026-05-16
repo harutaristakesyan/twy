@@ -1,11 +1,12 @@
 import { Plus } from "@gravity-ui/icons";
-import { Button, Label, SearchField, toast } from "@heroui/react";
+import { Button, toast } from "@heroui/react";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { DataTable } from "@/components/DataTable";
+import { Search } from "@/components/Search";
 import { loadApi } from "@/features/load/api/loadApi";
-import LoadManagementTable from "@/features/load/components/LoadManagementTable";
 import { useLoadColumns } from "@/features/load/components/useLoadColumns";
 import type { Load } from "@/features/load/types/load";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -46,22 +47,19 @@ const LoadsPage: React.FC = () => {
     onError: (err: unknown) => toast.danger(getErrorMessage(err)),
   });
 
-  const handleEdit = useCallback((load: Load) => navigate(`${load.id}/edit`), [navigate]);
-  const handleStatusUpdate = useCallback((load: Load) => navigate(`${load.id}/status`), [navigate]);
+  const handleEdit = (load: Load) => navigate(`${load.id}/edit`);
+  const handleStatusUpdate = (load: Load) => navigate(`${load.id}/status`);
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
-  const handleDelete = useCallback(
-    (id: string) =>
-      confirm({
-        title: "Delete this load?",
-        description: "This action cannot be undone.",
-        confirmLabel: "Delete",
-        status: "danger",
-        onConfirm: () => deleteMutation.mutate(id),
-      }),
-    [confirm, deleteMutation],
-  );
+  const handleDelete = (id: string) =>
+    confirm({
+      title: "Delete this load?",
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete",
+      status: "danger",
+      onConfirm: () => deleteMutation.mutate(id),
+    });
 
   const { columns, renderCell } = useLoadColumns({
     canEdit,
@@ -77,14 +75,7 @@ const LoadsPage: React.FC = () => {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-lg font-semibold">Loads ({table.total})</h2>
         <div className="flex items-center gap-2">
-          <SearchField name="loads-search" value={search} onChange={setSearch}>
-            <Label className="sr-only">Search loads</Label>
-            <SearchField.Group>
-              <SearchField.SearchIcon />
-              <SearchField.Input className="w-65" placeholder="Search loads..." />
-              <SearchField.ClearButton />
-            </SearchField.Group>
-          </SearchField>
+          <Search query={search} onQueryChange={setSearch} placeholder="Search loads..." />
           {canAdd && (
             <span
               title={
@@ -106,7 +97,8 @@ const LoadsPage: React.FC = () => {
         </div>
       </div>
 
-      <LoadManagementTable
+      <DataTable
+        ariaLabel="Loads"
         items={table.items}
         columns={columns}
         renderCell={renderCell}

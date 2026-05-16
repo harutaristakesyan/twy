@@ -1,15 +1,15 @@
 import { Plus } from "@gravity-ui/icons";
 import { Button, toast } from "@heroui/react";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { DataTable } from "@/components/DataTable";
 import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useServerTable } from "@/hooks/useServerTable";
 import { useApiMutation } from "@/libs/query";
 import { deleteUser, getUsers } from "../api/userApi";
-import UserManagementTable from "../components/UserManagementTable";
 import { useUserColumns } from "../components/useUserColumns";
 import type { User as UserType } from "../types/user";
 
@@ -50,31 +50,20 @@ const UsersPage: React.FC = () => {
     },
   });
 
-  const handleCreate = useCallback(() => {
-    navigate("create");
-  }, [navigate]);
-
-  const handleEdit = useCallback(
-    (user: UserType) => {
-      navigate(`${user.id}/edit`);
-    },
-    [navigate],
-  );
+  const handleCreate = () => navigate("create");
+  const handleEdit = (user: UserType) => navigate(`${user.id}/edit`);
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
-  const handleDelete = useCallback(
-    (id: string) => {
-      confirm({
-        title: "Delete this user?",
-        description: "This action cannot be undone.",
-        confirmLabel: "Delete",
-        status: "danger",
-        onConfirm: () => deleteMutation.mutate(id),
-      });
-    },
-    [confirm, deleteMutation],
-  );
+  const handleDelete = (id: string) => {
+    confirm({
+      title: "Delete this user?",
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete",
+      status: "danger",
+      onConfirm: () => deleteMutation.mutate(id),
+    });
+  };
 
   const { columns, renderCell } = useUserColumns({
     currentUserEmail: currentUser?.email,
@@ -104,7 +93,8 @@ const UsersPage: React.FC = () => {
         </div>
       </div>
 
-      <UserManagementTable
+      <DataTable
+        ariaLabel="Users"
         items={items}
         columns={columns}
         renderCell={renderCell}

@@ -1,5 +1,4 @@
-import { Eye, Pencil } from "@gravity-ui/icons";
-import { useCallback } from "react";
+import { ActionsMenu } from "@/components/ActionsMenu";
 import { usePermission } from "@/hooks/usePermission";
 import { renderDate } from "@/utils/formatters";
 import {
@@ -25,37 +24,23 @@ export interface OfficeExpenseColumn {
   label: string;
   render: (record: OfficeExpensePaymentOrder) => React.ReactNode;
   width?: string;
+  isRowHeader?: boolean;
 }
 
-export function useOfficeExpenseColumns(
-  openDetail: (record: OfficeExpensePaymentOrder, mode: "view" | "edit") => void,
-): OfficeExpenseColumn[] {
+export function useOfficeExpenseColumns(navigate: (path: string) => void): OfficeExpenseColumn[] {
   const canEdit = usePermission("office_expense_payment_order", "edit");
 
-  const renderActions = useCallback(
-    (r: OfficeExpensePaymentOrder) => (
-      <div className="flex items-center gap-1">
-        {canEdit && (
-          <button
-            type="button"
-            className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
-            onClick={() => openDetail(r, "edit")}
-            title="Edit"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-        )}
-        <button
-          type="button"
-          className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
-          onClick={() => openDetail(r, "view")}
-          title="View"
-        >
-          <Eye className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    ),
-    [canEdit, openDetail],
+  const renderActions = (r: OfficeExpensePaymentOrder) => (
+    <ActionsMenu
+      actions={[
+        {
+          type: "edit",
+          hidden: !canEdit,
+          onAction: () => navigate(`office-expense/${r.id}?mode=edit`),
+        },
+        { type: "view", onAction: () => navigate(`office-expense/${r.id}`) },
+      ]}
+    />
   );
 
   return [
@@ -63,6 +48,7 @@ export function useOfficeExpenseColumns(
       key: "serviceName",
       label: "Service",
       width: "w-44",
+      isRowHeader: true,
       render: (r) => SERVICE_LABELS[r.serviceName as OfficeExpenseService],
     },
     {

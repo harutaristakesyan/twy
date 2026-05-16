@@ -1,6 +1,5 @@
 import { Tabs } from "@heroui/react";
-import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { usePermission } from "@/hooks/usePermission";
 import LoadPaymentOrdersTab from "../components/LoadPaymentOrdersTab";
 import OfficeExpensePOTab from "../components/OfficeExpensePOTab";
@@ -10,9 +9,19 @@ type Tab = "load" | "office-expense";
 export default function PaymentOrdersPage() {
   const canViewLoad = usePermission("load_payment_order", "view");
   const canViewOfficeExpense = usePermission("office_expense_payment_order", "view");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const defaultTab: Tab = canViewLoad ? "load" : "office-expense";
-  const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
+  const rawTab = searchParams.get("tab");
+  const activeTab: Tab = rawTab === "load" || rawTab === "office-expense" ? rawTab : defaultTab;
+
+  const handleTabChange = (key: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", key);
+      return next;
+    });
+  };
 
   const tabs: { key: Tab; label: string }[] = [
     ...(canViewLoad ? [{ key: "load" as Tab, label: "Load Payment Orders" }] : []),
@@ -35,13 +44,14 @@ export default function PaymentOrdersPage() {
     <div className="p-6">
       <Tabs
         selectedKey={activeTab}
-        onSelectionChange={(key) => setActiveTab(key as Tab)}
+        onSelectionChange={(key) => handleTabChange(key as string)}
         aria-label="Payment orders"
       >
         <Tabs.List>
           {tabs.map((tab) => (
             <Tabs.Tab key={tab.key} id={tab.key}>
               {tab.label}
+              <Tabs.Indicator />
             </Tabs.Tab>
           ))}
         </Tabs.List>
@@ -56,7 +66,6 @@ export default function PaymentOrdersPage() {
           </Tabs.Panel>
         )}
       </Tabs>
-      <Outlet />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { ComboBox, Input, type Key, Label, ListBox } from "@heroui/react";
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useApiQuery } from "@/libs/query";
 import { getTeams } from "../api/teamApi";
 
@@ -25,25 +25,23 @@ const TeamSelect: React.FC<TeamSelectProps> = ({
   variant,
   isInvalid,
 }) => {
-  const [inputValue, setInputValue] = useState("");
+  const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(inputValue), 250);
+    const t = setTimeout(() => setDebounced(search), 250);
     return () => clearTimeout(t);
-  }, [inputValue]);
+  }, [search]);
 
   const { data } = useApiQuery(["teams-select", debounced], () =>
     getTeams({ page: 0, limit: 30, query: debounced || undefined }),
   );
 
-  const items = useMemo(() => {
-    const fetched = data?.teams ?? [];
-    if (initialOption && !fetched.find((t) => t.id === initialOption.value)) {
-      return [{ id: initialOption.value, name: initialOption.label }, ...fetched];
-    }
-    return fetched;
-  }, [data?.teams, initialOption]);
+  const fetched = data?.teams ?? [];
+  const items =
+    initialOption && !fetched.find((t) => t.id === initialOption.value)
+      ? [{ id: initialOption.value, name: initialOption.label }, ...fetched]
+      : fetched;
 
   return (
     <ComboBox
@@ -52,8 +50,7 @@ const TeamSelect: React.FC<TeamSelectProps> = ({
       isInvalid={isInvalid}
       value={value ?? null}
       onChange={(key: Key | null) => onChange?.(key ? String(key) : null)}
-      inputValue={inputValue}
-      onInputChange={setInputValue}
+      onInputChange={setSearch}
     >
       <Label>{label}</Label>
       <ComboBox.InputGroup>
