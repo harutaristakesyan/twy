@@ -30,8 +30,6 @@ const LAST_STEP = STEPS.length - 1;
 const locationSchema = z.object({
   cityZipCode: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
-  carrier: z.string().min(1, "Carrier is required"),
-  name: z.string().min(1, "Name is required"),
   address: z.string().min(1, "Address is required"),
 });
 
@@ -83,8 +81,6 @@ const STEP_FIELDS: Record<number, (keyof FormValues)[]> = {
 const emptyStop = (): Location => ({
   cityZipCode: null,
   phone: null,
-  carrier: "",
-  name: "",
   address: "",
 });
 
@@ -227,15 +223,11 @@ const LoadEditPage: React.FC = () => {
       pickups: values.pickups.map((p) => ({
         cityZipCode: toNull(p.cityZipCode),
         phone: toNull(p.phone),
-        carrier: p.carrier,
-        name: p.name,
         address: p.address,
       })),
       dropoffs: values.dropoffs.map((d) => ({
         cityZipCode: toNull(d.cityZipCode),
         phone: toNull(d.phone),
-        carrier: d.carrier,
-        name: d.name,
         address: d.address,
       })),
       files: filesPayload,

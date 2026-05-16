@@ -9,8 +9,6 @@ export interface LoadFile {
 export interface Location {
   cityZipCode?: string | null;
   phone?: string | null;
-  carrier: string;
-  name: string;
   address: string;
 }
 

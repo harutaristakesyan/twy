@@ -66,8 +66,6 @@ export interface LoadFileRecord {
 export interface LoadLocationRecord {
   cityZipCode: string | null;
   phone: string | null;
-  carrier: string;
-  name: string;
   address: string;
 }
 
@@ -254,16 +252,12 @@ type LoadStopSelectRow = {
   sortOrder: number;
   cityZipCode: string | null;
   phone: string | null;
-  carrier: string;
-  name: string;
   address: string;
 };
 
 const mapStopRowToLocation = (row: LoadStopSelectRow): LoadLocationRecord => ({
   cityZipCode: row.cityZipCode ?? null,
   phone: row.phone ?? null,
-  carrier: row.carrier,
-  name: row.name,
   address: row.address,
 });
 
@@ -287,8 +281,6 @@ const fetchStopsForLoads = async (
       sortOrder: row.sortOrder,
       cityZipCode: row.cityZipCode ?? null,
       phone: row.phone ?? null,
-      carrier: row.carrier,
-      name: row.name,
       address: row.address,
     };
     const g = grouped.get(row.loadId) ?? { pickupRows: [], dropoffRows: [] };
@@ -556,8 +548,6 @@ const replaceLoadStopsForKind = async (
       sortOrder,
       cityZipCode: loc.cityZipCode ?? null,
       phone: loc.phone ?? null,
-      carrier: loc.carrier,
-      name: loc.name,
       address: loc.address,
     })),
   );

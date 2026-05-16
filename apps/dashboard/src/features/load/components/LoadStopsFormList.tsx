@@ -7,8 +7,6 @@ import type { Location } from "@/features/load/types/load";
 const emptyStop = (): Location => ({
   cityZipCode: null,
   phone: null,
-  carrier: "",
-  name: "",
   address: "",
 });
 
@@ -93,22 +91,6 @@ export const LoadStopsFormList: React.FC<LoadStopsFormListProps> = ({
                   placeholder="Enter phone number"
                   value={stop.phone ?? ""}
                   onChange={(e) => updateStop(index, "phone", e.target.value || null)}
-                />
-              </TextField>
-              <TextField fullWidth>
-                <Label>Select Carrier *</Label>
-                <Input
-                  placeholder="Enter carrier"
-                  value={stop.carrier}
-                  onChange={(e) => updateStop(index, "carrier", e.target.value)}
-                />
-              </TextField>
-              <TextField fullWidth>
-                <Label>Name *</Label>
-                <Input
-                  placeholder="Enter name"
-                  value={stop.name}
-                  onChange={(e) => updateStop(index, "name", e.target.value)}
                 />
               </TextField>
               <div className="col-span-2">

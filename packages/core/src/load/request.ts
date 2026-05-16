@@ -13,8 +13,6 @@ const uuidField = z.uuid("Value must be a valid UUID");
 const locationSchema = z.object({
   cityZipCode: z.string().trim().nullable().optional(),
   phone: z.string().trim().nullable().optional(),
-  carrier: z.string().trim().min(1, "Carrier is required"),
-  name: z.string().trim().min(1, "Name is required"),
   address: z.string().trim().min(1, "Address is required"),
 });
 

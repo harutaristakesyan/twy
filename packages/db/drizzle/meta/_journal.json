@@ -148,6 +148,13 @@
       "when": 1778952988848,
       "tag": "0020_motionless_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1778961419584,
+      "tag": "0021_melodic_giant_man",
+      "breakpoints": true
     }
   ]
 }

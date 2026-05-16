@@ -4,8 +4,6 @@ import type { MessageResponse } from "../shared/response.js";
 export interface LoadLocationResponse {
   cityZipCode: string | null;
   phone: string | null;
-  carrier: string;
-  name: string;
   address: string;
 }
 
