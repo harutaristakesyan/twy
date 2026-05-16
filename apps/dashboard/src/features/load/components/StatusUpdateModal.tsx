@@ -114,7 +114,10 @@ const StatusUpdateModal = () => {
     {
       onSuccess: async () => {
         toast.success("Load status updated successfully");
-        await queryClient.invalidateQueries({ queryKey: ["loads"] });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["loads"] }),
+          queryClient.invalidateQueries({ queryKey: ["load", loadId] }),
+        ]);
         close();
       },
       onError: (err: unknown) => toast.danger(getErrorMessage(err)),

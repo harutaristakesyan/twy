@@ -172,7 +172,10 @@ const LoadEditModal = () => {
       onSuccess: async () => {
         uploaderRef.current?.commit();
         toast.success("Load updated successfully");
-        await queryClient.invalidateQueries({ queryKey: ["loads"] });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["loads"] }),
+          queryClient.invalidateQueries({ queryKey: ["load", loadId] }),
+        ]);
         close();
       },
       onError: (err: unknown) => {
