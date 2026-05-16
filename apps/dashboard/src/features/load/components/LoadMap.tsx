@@ -4,8 +4,8 @@ import { useEffect, useMemo } from "react";
 import { MapContainer, Marker, Polyline, TileLayer, useMap, ZoomControl } from "react-leaflet";
 import type { Load, Location } from "@/features/load/types/load";
 
-const US_CENTER: [number, number] = [39.5, -98.35];
-const US_ZOOM = 4;
+const EU_CENTER: [number, number] = [50, 10];
+const EU_ZOOM = 4;
 
 const hashString = (s: string): number => {
   let h = 0;
@@ -23,7 +23,7 @@ const placeholderCoord = (loadId: string, kind: "pickup" | "dropoff", index: num
   const seed = hashString(`${loadId}:${kind}:${index}`);
   const latJitter = ((seed % 1000) / 1000) * 20 - 10;
   const lngJitter = (((seed >> 10) % 1000) / 1000) * 40 - 20;
-  return [US_CENTER[0] + latJitter, US_CENTER[1] + lngJitter] as [number, number];
+  return [EU_CENTER[0] + latJitter, EU_CENTER[1] + lngJitter] as [number, number];
 };
 
 const pinSvg = (fill: string) => `
@@ -45,7 +45,7 @@ const FitBounds: React.FC<{ points: [number, number][] }> = ({ points }) => {
   const map = useMap();
   useEffect(() => {
     if (points.length === 0) {
-      map.setView(US_CENTER, US_ZOOM);
+      map.setView(EU_CENTER, EU_ZOOM);
       return;
     }
     map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))), {
@@ -70,8 +70,8 @@ export const LoadMap: React.FC<{ load?: Load | null }> = ({ load }) => {
 
   return (
     <MapContainer
-      center={US_CENTER}
-      zoom={US_ZOOM}
+      center={EU_CENTER}
+      zoom={EU_ZOOM}
       scrollWheelZoom
       zoomControl={false}
       className="h-full w-full"
