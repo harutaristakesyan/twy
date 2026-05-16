@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { DataTable } from "@/components/DataTable";
 import { Search } from "@/components/Search";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useServerTable } from "@/hooks/useServerTable";
 import { listCarrierRequests } from "../api/carrierRequestApi";
@@ -11,6 +12,8 @@ import type { CarrierRequest } from "../types/carrierRequest";
 
 const CarrierRequestsTab: React.FC = () => {
   const navigate = useNavigate();
+  const { permissions } = useCurrentUser();
+  const canView = Boolean(permissions.carriers_requests?.view);
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -30,7 +33,7 @@ const CarrierRequestsTab: React.FC = () => {
 
   const openRequest = (record: CarrierRequest) => navigate(record.id);
 
-  const { columns, renderCell } = useCarrierRequestColumns({ onView: openRequest });
+  const { columns, renderCell } = useCarrierRequestColumns({ canView, onView: openRequest });
 
   return (
     <div className="p-6">

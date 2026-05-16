@@ -22,10 +22,10 @@ interface CarrierTableProps {
 const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
   const navigate = useNavigate();
   const { permissions } = useCurrentUser();
-  const addResource = kind === "twy" ? "carriers_twy" : "carriers_outside";
-  const editResource = kind === "twy" ? "carriers_twy" : "carriers_outside";
-  const canCreate = Boolean(permissions[addResource]?.add);
-  const canEdit = Boolean(permissions[editResource]?.edit);
+  const resource = kind === "twy" ? "carriers_twy" : "carriers_outside";
+  const canCreate = Boolean(permissions[resource]?.add);
+  const canEdit = Boolean(permissions[resource]?.edit);
+  const canDelete = Boolean(permissions[resource]?.delete);
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -68,6 +68,7 @@ const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
 
   const { columns, renderCell } = useCarrierColumns({
     canEdit,
+    canDelete,
     isDeleting: deleteMutation.isPending,
     onEdit: handleEdit,
     onDelete: handleDelete,

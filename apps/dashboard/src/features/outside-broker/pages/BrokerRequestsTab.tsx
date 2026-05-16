@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { DataTable } from "@/components/DataTable";
 import { Search } from "@/components/Search";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useServerTable } from "@/hooks/useServerTable";
 import { listBrokerRequests } from "../api/brokerRequestApi";
@@ -11,6 +12,8 @@ import type { BrokerRequest } from "../types/brokerRequest";
 
 const BrokerRequestsTab: React.FC = () => {
   const navigate = useNavigate();
+  const { permissions } = useCurrentUser();
+  const canView = Boolean(permissions.brokers_requests?.view);
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -30,7 +33,7 @@ const BrokerRequestsTab: React.FC = () => {
 
   const openRequest = (record: BrokerRequest) => navigate(record.id);
 
-  const { columns, renderCell } = useBrokerRequestColumns({ onView: openRequest });
+  const { columns, renderCell } = useBrokerRequestColumns({ canView, onView: openRequest });
 
   return (
     <div className="p-6">

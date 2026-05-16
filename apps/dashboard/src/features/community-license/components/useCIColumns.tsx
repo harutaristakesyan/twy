@@ -18,12 +18,19 @@ export const CI_COLUMNS: CIColumnDef[] = [
 
 type UseCIColumnsParams = {
   canEdit: boolean;
+  canDelete: boolean;
   isDeleting: boolean;
   onEdit: (ci: CommunityLicense) => void;
   onDelete: (id: string) => void;
 };
 
-export function useCIColumns({ canEdit, isDeleting, onEdit, onDelete }: UseCIColumnsParams) {
+export function useCIColumns({
+  canEdit,
+  canDelete,
+  isDeleting,
+  onEdit,
+  onDelete,
+}: UseCIColumnsParams) {
   const renderCell = (record: CommunityLicense, colId: string) => {
     switch (colId) {
       case "ciNumber":
@@ -41,14 +48,19 @@ export function useCIColumns({ canEdit, isDeleting, onEdit, onDelete }: UseCICol
       case "createdAt":
         return new Date(record.createdAt).toLocaleDateString();
       case "actions":
-        return canEdit ? (
+        return (
           <ActionsMenu
             actions={[
-              { type: "edit", onAction: () => onEdit(record) },
-              { type: "delete", disabled: isDeleting, onAction: () => onDelete(record.id) },
+              { type: "edit", hidden: !canEdit, onAction: () => onEdit(record) },
+              {
+                type: "delete",
+                hidden: !canDelete,
+                disabled: isDeleting,
+                onAction: () => onDelete(record.id),
+              },
             ]}
           />
-        ) : null;
+        );
       default:
         return null;
     }

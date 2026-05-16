@@ -34,6 +34,7 @@ const insuranceColor: Record<string, "success" | "danger" | "warning"> = {
 
 type UseCarrierColumnsParams = {
   canEdit: boolean;
+  canDelete: boolean;
   isDeleting: boolean;
   onEdit: (carrier: Carrier) => void;
   onDelete: (id: string) => void;
@@ -41,6 +42,7 @@ type UseCarrierColumnsParams = {
 
 export function useCarrierColumns({
   canEdit,
+  canDelete,
   isDeleting,
   onEdit,
   onDelete,
@@ -86,14 +88,19 @@ export function useCarrierColumns({
       case "createdAt":
         return carrier.createdAt ? new Date(carrier.createdAt).toLocaleDateString() : "N/A";
       case "actions":
-        return canEdit ? (
+        return (
           <ActionsMenu
             actions={[
-              { type: "edit", onAction: () => onEdit(carrier) },
-              { type: "delete", disabled: isDeleting, onAction: () => onDelete(carrier.id) },
+              { type: "edit", hidden: !canEdit, onAction: () => onEdit(carrier) },
+              {
+                type: "delete",
+                hidden: !canDelete,
+                disabled: isDeleting,
+                onAction: () => onDelete(carrier.id),
+              },
             ]}
           />
-        ) : null;
+        );
       default:
         return null;
     }

@@ -21,6 +21,7 @@ export const BRANCH_COLUMNS: BranchColumnDef[] = [
 
 type UseBranchColumnsParams = {
   canEdit: boolean;
+  canDelete: boolean;
   isDeleting: boolean;
   onEdit: (branch: Branch) => void;
   onDelete: (id: string) => void;
@@ -28,6 +29,7 @@ type UseBranchColumnsParams = {
 
 export function useBranchColumns({
   canEdit,
+  canDelete,
   isDeleting,
   onEdit,
   onDelete,
@@ -63,7 +65,7 @@ export function useBranchColumns({
         );
       case "contact":
         return record.contact ? (
-          <span className="block max-w-[200px] truncate text-sm" title={record.contact}>
+          <span className="block max-w-50 truncate text-sm" title={record.contact}>
             {record.contact}
           </span>
         ) : (
@@ -82,14 +84,19 @@ export function useBranchColumns({
       case "createdAt":
         return record.createdAt ? new Date(record.createdAt).toLocaleDateString() : "N/A";
       case "actions":
-        return canEdit ? (
+        return (
           <ActionsMenu
             actions={[
-              { type: "edit", onAction: () => onEdit(record) },
-              { type: "delete", disabled: isDeleting, onAction: () => onDelete(record.id) },
+              { type: "edit", hidden: !canEdit, onAction: () => onEdit(record) },
+              {
+                type: "delete",
+                hidden: !canDelete,
+                disabled: isDeleting,
+                onAction: () => onDelete(record.id),
+              },
             ]}
           />
-        ) : null;
+        );
       default:
         return null;
     }

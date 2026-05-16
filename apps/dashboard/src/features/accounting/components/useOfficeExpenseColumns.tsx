@@ -28,6 +28,7 @@ export interface OfficeExpenseColumn {
 }
 
 export function useOfficeExpenseColumns(navigate: (path: string) => void): OfficeExpenseColumn[] {
+  const canView = usePermission("office_expense_payment_order", "view");
   const canEdit = usePermission("office_expense_payment_order", "edit");
 
   const renderActions = (r: OfficeExpensePaymentOrder) => (
@@ -38,7 +39,11 @@ export function useOfficeExpenseColumns(navigate: (path: string) => void): Offic
           hidden: !canEdit,
           onAction: () => navigate(`office-expense/${r.id}?mode=edit`),
         },
-        { type: "view", onAction: () => navigate(`office-expense/${r.id}`) },
+        {
+          type: "view",
+          hidden: !canView,
+          onAction: () => navigate(`office-expense/${r.id}`),
+        },
       ]}
     />
   );

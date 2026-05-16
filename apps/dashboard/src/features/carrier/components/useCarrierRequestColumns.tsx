@@ -25,10 +25,11 @@ const statusColor: Record<string, "success" | "warning" | "danger"> = {
 };
 
 type UseCarrierRequestColumnsParams = {
+  canView: boolean;
   onView: (request: CarrierRequest) => void;
 };
 
-export function useCarrierRequestColumns({ onView }: UseCarrierRequestColumnsParams) {
+export function useCarrierRequestColumns({ canView, onView }: UseCarrierRequestColumnsParams) {
   const renderCell = (req: CarrierRequest, colId: string) => {
     switch (colId) {
       case "carrierName":
@@ -52,7 +53,11 @@ export function useCarrierRequestColumns({ onView }: UseCarrierRequestColumnsPar
       case "createdAt":
         return new Date(req.createdAt).toLocaleDateString();
       case "actions":
-        return <ActionsMenu actions={[{ type: "view", onAction: () => onView(req) }]} />;
+        return (
+          <ActionsMenu
+            actions={[{ type: "view", hidden: !canView, onAction: () => onView(req) }]}
+          />
+        );
       default:
         return null;
     }

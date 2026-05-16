@@ -18,6 +18,7 @@ const CIManagementPage: React.FC = () => {
   const { permissions } = useCurrentUser();
   const canAdd = permissions.settings.add;
   const canEdit = permissions.settings.edit;
+  const canDelete = permissions.settings.delete;
 
   const { items, total, page, pageSize, isLoading, setPage, refetch } =
     useServerTable<CommunityLicense>({
@@ -63,6 +64,7 @@ const CIManagementPage: React.FC = () => {
 
   const { columns, renderCell } = useCIColumns({
     canEdit,
+    canDelete,
     isDeleting: deleteMutation.isPending,
     onEdit: handleEdit,
     onDelete: handleDelete,

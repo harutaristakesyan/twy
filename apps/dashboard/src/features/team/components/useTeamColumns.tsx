@@ -21,11 +21,12 @@ export const TEAM_COLUMNS: TeamColumnDef[] = [
 
 type UseTeamColumnsParams = {
   canEdit: boolean;
+  canDelete: boolean;
   onEdit: (team: Team) => void;
   onDelete: (id: string) => void;
 };
 
-export function useTeamColumns({ canEdit, onEdit, onDelete }: UseTeamColumnsParams) {
+export function useTeamColumns({ canEdit, canDelete, onEdit, onDelete }: UseTeamColumnsParams) {
   const renderCell = (record: Team, colId: string) => {
     switch (colId) {
       case "name":
@@ -72,16 +73,15 @@ export function useTeamColumns({ canEdit, onEdit, onDelete }: UseTeamColumnsPara
       case "createdAt":
         return record.createdAt ? new Date(record.createdAt).toLocaleDateString() : "—";
       case "actions": {
-        if (!canEdit) return null;
         const isSystemTeam = record.id === TWY_TEAM_ID;
         const deleteBlocked = record.memberCount > 0;
         return (
           <ActionsMenu
             actions={[
-              { type: "edit", onAction: () => onEdit(record) },
+              { type: "edit", hidden: !canEdit, onAction: () => onEdit(record) },
               {
                 type: "delete",
-                hidden: isSystemTeam,
+                hidden: !canDelete || isSystemTeam,
                 disabled: deleteBlocked,
                 onAction: () => onDelete(record.id),
               },

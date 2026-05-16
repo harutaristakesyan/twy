@@ -20,6 +20,7 @@ const OutsideBrokersPage: React.FC = () => {
   const { permissions } = useCurrentUser();
   const canCreate = Boolean(permissions.brokers?.add);
   const canEdit = Boolean(permissions.brokers?.edit);
+  const canDelete = Boolean(permissions.brokers?.delete);
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -61,6 +62,7 @@ const OutsideBrokersPage: React.FC = () => {
 
   const { columns, renderCell } = useOutsideBrokerColumns({
     canEdit,
+    canDelete,
     isDeleting: deleteMutation.isPending,
     onEdit: handleEdit,
     onDelete: handleDelete,

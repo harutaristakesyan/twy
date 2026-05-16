@@ -21,6 +21,7 @@ export const USER_COLUMNS: UserColumnDef[] = [
 type UseUserColumnsParams = {
   currentUserEmail?: string;
   canEdit: boolean;
+  canDelete: boolean;
   isDeleting: boolean;
   onEdit: (user: User) => void;
   onDelete: (id: string) => void;
@@ -29,6 +30,7 @@ type UseUserColumnsParams = {
 export function useUserColumns({
   currentUserEmail,
   canEdit,
+  canDelete,
   isDeleting,
   onEdit,
   onDelete,
@@ -71,13 +73,18 @@ export function useUserColumns({
         return date ? new Date(date).toLocaleDateString() : "N/A";
       }
       case "actions":
-        if (!canEdit) return null;
         return (
           <ActionsMenu
             actions={[
-              { type: "edit", disabled: isCurrentUser, onAction: () => onEdit(record) },
+              {
+                type: "edit",
+                hidden: !canEdit,
+                disabled: isCurrentUser,
+                onAction: () => onEdit(record),
+              },
               {
                 type: "delete",
+                hidden: !canDelete,
                 disabled: isCurrentUser || isDeleting,
                 onAction: () => onDelete(record.id),
               },

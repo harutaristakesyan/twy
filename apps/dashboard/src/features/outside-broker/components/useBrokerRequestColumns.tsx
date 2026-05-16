@@ -25,10 +25,11 @@ const statusColor: Record<string, "success" | "warning" | "danger"> = {
 };
 
 type UseBrokerRequestColumnsParams = {
+  canView: boolean;
   onView: (request: BrokerRequest) => void;
 };
 
-export function useBrokerRequestColumns({ onView }: UseBrokerRequestColumnsParams) {
+export function useBrokerRequestColumns({ canView, onView }: UseBrokerRequestColumnsParams) {
   const renderCell = (req: BrokerRequest, colId: string) => {
     switch (colId) {
       case "brokerName":
@@ -56,7 +57,11 @@ export function useBrokerRequestColumns({ onView }: UseBrokerRequestColumnsParam
       case "createdAt":
         return new Date(req.createdAt).toLocaleDateString();
       case "actions":
-        return <ActionsMenu actions={[{ type: "view", onAction: () => onView(req) }]} />;
+        return (
+          <ActionsMenu
+            actions={[{ type: "view", hidden: !canView, onAction: () => onView(req) }]}
+          />
+        );
       default:
         return null;
     }

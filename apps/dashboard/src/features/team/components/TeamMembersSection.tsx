@@ -7,6 +7,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import type { ColumnDef } from "@/components/DataTable";
 import { DataTable } from "@/components/DataTable";
 import UserSelect from "@/features/user/components/UserSelect";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useServerTable } from "@/hooks/useServerTable";
 import { useApiMutation } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -18,6 +19,8 @@ interface TeamMembersSectionProps {
 }
 
 const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
+  const { permissions } = useCurrentUser();
+  const canManageMembers = permissions.teams.edit;
   const [pickedUserId, setPickedUserId] = useState<string | null>(null);
 
   const { items, total, page, pageSize, isLoading, setPage, refetch } = useServerTable<TeamMember>({
@@ -96,6 +99,7 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
             actions={[
               {
                 type: "remove",
+                hidden: !canManageMembers,
                 label: "Remove from team",
                 onAction: () => handleRemoveMember(record.id),
               },

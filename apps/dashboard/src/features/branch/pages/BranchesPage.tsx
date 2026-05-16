@@ -19,6 +19,7 @@ const BranchesPage: React.FC = () => {
   const { permissions } = useCurrentUser();
   const canAdd = permissions.branches.add;
   const canEdit = permissions.branches.edit;
+  const canDelete = permissions.branches.delete;
   const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
@@ -67,6 +68,7 @@ const BranchesPage: React.FC = () => {
 
   const { columns, renderCell } = useBranchColumns({
     canEdit,
+    canDelete,
     isDeleting: deleteMutation.isPending,
     onEdit: handleEdit,
     onDelete: handleDelete,

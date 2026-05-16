@@ -28,6 +28,7 @@ const statusColor: Record<BrokerStatus, "success" | "warning" | "danger"> = {
 
 type UseOutsideBrokerColumnsParams = {
   canEdit: boolean;
+  canDelete: boolean;
   isDeleting: boolean;
   onEdit: (broker: OutsideBroker) => void;
   onDelete: (id: string) => void;
@@ -35,6 +36,7 @@ type UseOutsideBrokerColumnsParams = {
 
 export function useOutsideBrokerColumns({
   canEdit,
+  canDelete,
   isDeleting,
   onEdit,
   onDelete,
@@ -68,14 +70,19 @@ export function useOutsideBrokerColumns({
       case "phone":
         return broker.phone ?? "—";
       case "actions":
-        return canEdit ? (
+        return (
           <ActionsMenu
             actions={[
-              { type: "edit", onAction: () => onEdit(broker) },
-              { type: "delete", disabled: isDeleting, onAction: () => onDelete(broker.id) },
+              { type: "edit", hidden: !canEdit, onAction: () => onEdit(broker) },
+              {
+                type: "delete",
+                hidden: !canDelete,
+                disabled: isDeleting,
+                onAction: () => onDelete(broker.id),
+              },
             ]}
           />
-        ) : null;
+        );
       default:
         return null;
     }

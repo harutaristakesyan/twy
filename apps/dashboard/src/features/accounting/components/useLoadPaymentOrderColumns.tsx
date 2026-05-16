@@ -18,6 +18,7 @@ export function useLoadPaymentOrderColumns(
   navigate: (path: string) => void,
 ): LoadPaymentOrderColumn[] {
   const { permissions } = useCurrentUser();
+  const canView = Boolean(permissions.load_payment_order?.view);
   const canEdit = Boolean(permissions.load_payment_order?.edit);
   const transitions = permissions.load_payment_order as Record<string, boolean> | undefined;
   const canChangeStatus = ALL_STATUSES.some((s) => transitions?.[`transition:${s}`]);
@@ -121,7 +122,7 @@ export function useLoadPaymentOrderColumns(
         <ActionsMenu
           actions={[
             { type: "edit", hidden: !canEdit, onAction: () => navigate(`${r.id}?mode=edit`) },
-            { type: "view", onAction: () => navigate(`${r.id}`) },
+            { type: "view", hidden: !canView, onAction: () => navigate(`${r.id}`) },
             {
               type: "status",
               hidden: !canChangeStatus,

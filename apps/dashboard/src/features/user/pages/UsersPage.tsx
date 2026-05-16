@@ -19,6 +19,7 @@ const UsersPage: React.FC = () => {
   const { user: currentUser, permissions } = useCurrentUser();
   const canAdd = permissions.users.add;
   const canEdit = permissions.users.edit;
+  const canDelete = permissions.users.delete;
   const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
@@ -68,6 +69,7 @@ const UsersPage: React.FC = () => {
   const { columns, renderCell } = useUserColumns({
     currentUserEmail: currentUser?.email,
     canEdit,
+    canDelete,
     isDeleting: deleteMutation.isPending,
     onEdit: handleEdit,
     onDelete: handleDelete,

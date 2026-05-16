@@ -30,6 +30,7 @@ const TeamsPage: React.FC = () => {
   const { permissions } = useCurrentUser();
   const canAdd = permissions.teams.add;
   const canEdit = permissions.teams.edit;
+  const canDelete = permissions.teams.delete;
 
   const [activeFilter, setActiveFilter] = useState<Filter | undefined>();
   const [activeQuery, setActiveQuery] = useState("");
@@ -74,6 +75,7 @@ const TeamsPage: React.FC = () => {
 
   const { columns, renderCell } = useTeamColumns({
     canEdit,
+    canDelete,
     onEdit: handleEdit,
     onDelete: handleDelete,
   });
