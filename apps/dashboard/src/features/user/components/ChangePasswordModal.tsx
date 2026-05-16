@@ -1,7 +1,8 @@
-import { Button, FieldError, Label, Modal, TextField, toast } from "@heroui/react";
+import { Button, Modal, Spinner, toast } from "@heroui/react";
 import type React from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { FormTextField } from "@/components/form";
 import { useZodForm } from "@/libs/form";
 import { useApiMutation } from "@/libs/query";
 import { changePassword } from "../api/userApi";
@@ -24,12 +25,7 @@ export type ChangePasswordFormProps = {
 };
 
 export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ onClose }) => {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useZodForm(schema, {
+  const { control, handleSubmit, reset } = useZodForm(schema, {
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -57,39 +53,25 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ onClose 
 
   return (
     <form id="change-password-form" onSubmit={onSubmit} className="flex flex-col gap-4">
-      <TextField name="currentPassword" type="password" isInvalid={!!errors.currentPassword}>
-        <Label>Current Password</Label>
-        <input
-          type="password"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          {...register("currentPassword")}
-        />
-        <FieldError>{errors.currentPassword?.message}</FieldError>
-      </TextField>
-      <TextField name="newPassword" type="password" isInvalid={!!errors.newPassword}>
-        <Label>New Password</Label>
-        <input
-          type="password"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          {...register("newPassword")}
-        />
-        <FieldError>{errors.newPassword?.message}</FieldError>
-      </TextField>
-      <TextField name="confirmPassword" type="password" isInvalid={!!errors.confirmPassword}>
-        <Label>Confirm New Password</Label>
-        <input
-          type="password"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          {...register("confirmPassword")}
-        />
-        <FieldError>{errors.confirmPassword?.message}</FieldError>
-      </TextField>
+      <FormTextField
+        control={control}
+        name="currentPassword"
+        type="password"
+        label="Current Password"
+      />
+      <FormTextField control={control} name="newPassword" type="password" label="New Password" />
+      <FormTextField
+        control={control}
+        name="confirmPassword"
+        type="password"
+        label="Confirm New Password"
+      />
       <div className="flex justify-end gap-2">
         <Button variant="ghost" type="button" onPress={handleClose}>
           Cancel
         </Button>
-        <Button variant="primary" type="submit" isPending={mutation.isPending}>
-          {({ isPending }) => (isPending ? "Saving..." : "Save")}
+        <Button variant="primary" type="submit" isDisabled={mutation.isPending}>
+          {mutation.isPending ? <Spinner size="sm" /> : "Save"}
         </Button>
       </div>
     </form>

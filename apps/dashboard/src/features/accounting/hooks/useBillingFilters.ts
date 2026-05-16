@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
+import type { Filter, FilterField } from "@/components/Search";
 import { getBranches } from "@/features/branch/api/branchApi";
 import { getCarriers } from "@/features/carrier/api/carrierApi";
 import { getOutsideBrokers } from "@/features/outside-broker/api/brokerApi";
@@ -13,7 +13,7 @@ const PAYMENT_STATUS_OPTIONS = (Object.keys(STATUS_LABEL) as PaymentStatus[]).ma
 }));
 
 export function useBillingFilters() {
-  const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
+  const [activeFilter, setActiveFilter] = useState<Filter | undefined>();
   const [activeQuery, setActiveQuery] = useState("");
 
   const { data: branchesData } = useQuery({
@@ -72,17 +72,11 @@ export function useBillingFilters() {
     [activeFilter, activeQuery],
   );
 
-  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
-    setActiveFilter(filter);
-    setActiveQuery(query ?? "");
-  };
-
   return {
     activeFilter,
     activeQuery,
     apiParams,
     fields,
-    handleFilterApply,
     setActiveFilter,
     setActiveQuery,
   };

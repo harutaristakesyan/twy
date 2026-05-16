@@ -1,4 +1,4 @@
-import { Button } from "@heroui/react";
+import { Button, Separator } from "@heroui/react";
 import { Fragment, useCallback } from "react";
 import { FilterControl } from "./FilterControl.js";
 import type { FilterValues } from "./filterTransform.js";
@@ -45,7 +45,7 @@ export function FilterSection({ fields, filterValues, setValue, resetValue }: Pr
     <>
       {fields.map((field) => (
         <Fragment key={field.key}>
-          <hr className="border-default-100" />
+          <Separator />
           <FieldRow
             field={field}
             value={filterValues[field.key]}

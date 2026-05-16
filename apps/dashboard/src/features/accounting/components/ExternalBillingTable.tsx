@@ -2,8 +2,8 @@ import { ChevronDown, ChevronRight } from "@gravity-ui/icons";
 import { Spinner } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import type { AdvancedFilter } from "@/components/AdvancedFilter";
-import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
+import type { Filter } from "@/components/Search";
+import { ActiveFilters, Search } from "@/components/Search";
 import { formatCurrency, renderCurrency } from "@/utils/formatters";
 import { billingApi } from "../api/billingApi";
 import type { ExternalBillingUserGroup } from "../hooks/groupLoadsByCreator";
@@ -134,19 +134,17 @@ const BranchRow = ({
 };
 
 export default function ExternalBillingTable() {
-  const {
-    activeFilter,
-    activeQuery,
-    apiParams,
-    fields,
-    handleFilterApply,
-    setActiveFilter,
-    setActiveQuery,
-  } = useBillingFilters();
+  const { activeFilter, activeQuery, apiParams, fields, setActiveFilter, setActiveQuery } =
+    useBillingFilters();
   const { onExpand, resetLoads, loadsByBranch, expandingBranchId } = useExpandedLoads(apiParams);
 
-  const onFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
-    handleFilterApply(filter, query);
+  const handleQueryChange = (q: string) => {
+    setActiveQuery(q);
+    resetLoads();
+  };
+
+  const handleFilterChange = (filter: Filter | undefined) => {
+    setActiveFilter(filter);
     resetLoads();
   };
 
@@ -159,21 +157,17 @@ export default function ExternalBillingTable() {
     <>
       <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
         <h2 className="text-base font-semibold">External Billing</h2>
-        <AdvancedFilterPopover
+        <Search
+          query={activeQuery}
+          onQueryChange={handleQueryChange}
+          placeholder="Search billing..."
           fields={fields}
-          initialFilter={activeFilter}
-          initialQuery={activeQuery}
-          onApply={onFilterApply}
+          filter={activeFilter}
+          onFilterChange={handleFilterChange}
         />
       </div>
 
-      <ActiveFilterChips
-        filter={activeFilter}
-        fields={fields}
-        query={activeQuery}
-        onChange={setActiveFilter}
-        onClearQuery={() => setActiveQuery("")}
-      />
+      <ActiveFilters filter={activeFilter} fields={fields} onChange={handleFilterChange} />
 
       {isLoading ? (
         <div className="flex justify-center py-12">

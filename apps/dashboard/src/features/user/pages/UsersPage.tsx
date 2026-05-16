@@ -1,9 +1,10 @@
 import { Plus } from "@gravity-ui/icons";
-import { Button, Label, SearchField, toast } from "@heroui/react";
+import { Button, toast } from "@heroui/react";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useServerTable } from "@/hooks/useServerTable";
 import { useApiMutation } from "@/libs/query";
@@ -88,14 +89,12 @@ const UsersPage: React.FC = () => {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-lg font-semibold">Users ({total})</h2>
         <div className="flex items-center gap-2">
-          <SearchField name="users-search" value={query} onChange={setQuery}>
-            <Label className="sr-only">Search users</Label>
-            <SearchField.Group>
-              <SearchField.SearchIcon />
-              <SearchField.Input className="w-65" placeholder="Search users..." />
-              <SearchField.ClearButton />
-            </SearchField.Group>
-          </SearchField>
+          <Search
+            name="users-search"
+            query={query}
+            onQueryChange={setQuery}
+            placeholder="Search users..."
+          />
           {canAdd && (
             <Button variant="primary" onPress={handleCreate}>
               <Plus className="h-4 w-4" />

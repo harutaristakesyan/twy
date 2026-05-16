@@ -41,7 +41,6 @@ import ChangePasswordModal from "@/features/user/components/ChangePasswordModal"
 import UserCreateModal from "@/features/user/components/UserCreateModal";
 import UserEditModal from "@/features/user/components/UserEditModal";
 import ProfilePage from "@/features/user/pages/ProfilePage";
-import UserManagementLayout from "@/features/user/pages/UserManagementLayout";
 import UsersPage from "@/features/user/pages/UsersPage";
 import AppLayout from "@/layouts/AppLayout.tsx";
 import ProtectedRoute from "@/routes/ProtectedRoute";
@@ -67,46 +66,43 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/loads" replace /> },
           {
             path: "user-management",
-            element: <UserManagementLayout />,
+            element: <Navigate to="/user-management/users" replace />,
+          },
+          {
+            path: "user-management/users",
+            element: (
+              <RequirePermission resource="users" action="view">
+                <UsersPage />
+              </RequirePermission>
+            ),
             children: [
-              { index: true, element: <Navigate to="/user-management/users" replace /> },
-              {
-                path: "users",
-                element: (
-                  <RequirePermission resource="users" action="view">
-                    <UsersPage />
-                  </RequirePermission>
-                ),
-                children: [
-                  { path: "create", element: <UserCreateModal /> },
-                  { path: ":userId/edit", element: <UserEditModal /> },
-                ],
-              },
-              {
-                path: "teams",
-                element: (
-                  <RequirePermission resource="teams" action="view">
-                    <TeamsPage />
-                  </RequirePermission>
-                ),
-              },
-              {
-                path: "teams/create",
-                element: (
-                  <RequirePermission resource="teams" action="add">
-                    <CreateTeamPage />
-                  </RequirePermission>
-                ),
-              },
-              {
-                path: "teams/:teamId/edit",
-                element: (
-                  <RequirePermission resource="teams" action="edit">
-                    <EditTeamPage />
-                  </RequirePermission>
-                ),
-              },
+              { path: "create", element: <UserCreateModal /> },
+              { path: ":userId/edit", element: <UserEditModal /> },
             ],
+          },
+          {
+            path: "user-management/teams",
+            element: (
+              <RequirePermission resource="teams" action="view">
+                <TeamsPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: "user-management/teams/create",
+            element: (
+              <RequirePermission resource="teams" action="add">
+                <CreateTeamPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: "user-management/teams/:teamId/edit",
+            element: (
+              <RequirePermission resource="teams" action="edit">
+                <EditTeamPage />
+              </RequirePermission>
+            ),
           },
           {
             path: "branches",

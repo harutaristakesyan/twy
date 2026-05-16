@@ -1,20 +1,12 @@
-import type { AdvancedFilter, FilterField } from "./types.js";
+import type { Filter, FilterField } from "./types.js";
 import { fieldHasValue } from "./types.js";
 
-/** Untyped bag — each key maps to the field's value in its native form:
- *  select       → string
- *  multiSelect  → string[]
- *  dateRange    → [dayjs.Dayjs | null, dayjs.Dayjs | null]  (stored in modal state)
- *               | [string | null, string | null]             (returned by splitToFilterValues)
- *  numberRange  → { min: number | null; max: number | null }
- */
 export type FilterValues = Record<string, unknown>;
 
-/** Translate the declarative filter state into the wire format (flat Record<string, string>). */
 export function valuesToFilter(
   filterValues: FilterValues,
   fields: FilterField[],
-): AdvancedFilter | undefined {
+): Filter | undefined {
   const result: Record<string, string> = {};
 
   for (const field of fields) {
@@ -39,10 +31,8 @@ export function valuesToFilter(
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-/** Reverse-map a flat AdvancedFilter back into filter values.
- *  dateRange values are returned as [string | null, string | null] — the popover converts to dayjs. */
 export function splitToFilterValues(
-  filter: AdvancedFilter | undefined,
+  filter: Filter | undefined,
   fields: FilterField[],
 ): FilterValues {
   const result: FilterValues = {};

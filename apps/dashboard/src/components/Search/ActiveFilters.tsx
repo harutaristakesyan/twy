@@ -1,41 +1,30 @@
 import { Xmark } from "@gravity-ui/icons";
-import { Button, Chip as HeroChip } from "@heroui/react";
+import { Button, Chip } from "@heroui/react";
 import { useMemo } from "react";
-import type { AdvancedFilter, FilterField } from "./types.js";
+import type { Filter, FilterField } from "./types.js";
 
 interface Props {
-  filter: AdvancedFilter | undefined;
+  filter: Filter | undefined;
   fields?: FilterField[];
-  query: string | undefined;
-  onChange: (next: AdvancedFilter | undefined) => void;
-  onClearQuery: () => void;
+  onChange: (next: Filter | undefined) => void;
 }
 
-interface Chip {
+interface ChipItem {
   id: string;
   label: string;
   onRemove: () => void;
 }
 
-function removeKeys(filter: AdvancedFilter, keys: string[]): AdvancedFilter | undefined {
+function removeKeys(filter: Filter, keys: string[]): Filter | undefined {
   const next = { ...filter };
   for (const k of keys) delete next[k];
   return Object.keys(next).length > 0 ? next : undefined;
 }
 
-export function ActiveFilterChips({ filter, fields = [], query, onChange, onClearQuery }: Props) {
-  const chips = useMemo((): Chip[] => {
-    const result: Chip[] = [];
-
-    if (query?.trim()) {
-      result.push({
-        id: "__query__",
-        label: `Keyword: ${query.trim()}`,
-        onRemove: onClearQuery,
-      });
-    }
-
-    if (!filter) return result;
+export function ActiveFilters({ filter, fields = [], onChange }: Props) {
+  const chips = useMemo((): ChipItem[] => {
+    if (!filter) return [];
+    const result: ChipItem[] = [];
 
     for (const field of fields) {
       if (field.type === "select") {
@@ -82,7 +71,7 @@ export function ActiveFilterChips({ filter, fields = [], query, onChange, onClea
     }
 
     return result;
-  }, [filter, fields, query, onChange, onClearQuery]);
+  }, [filter, fields, onChange]);
 
   if (!chips.length) return null;
 
@@ -90,7 +79,7 @@ export function ActiveFilterChips({ filter, fields = [], query, onChange, onClea
     <div className="mb-3 flex flex-wrap items-center gap-1.5">
       <span className="whitespace-nowrap text-xs text-default-500">Active filters:</span>
       {chips.map((chip) => (
-        <HeroChip key={chip.id} color="accent" size="sm" variant="soft">
+        <Chip key={chip.id} color="accent" size="sm" variant="soft">
           <span className="inline-flex items-center gap-1">
             {chip.label}
             <button
@@ -102,16 +91,9 @@ export function ActiveFilterChips({ filter, fields = [], query, onChange, onClea
               <Xmark className="h-3 w-3" />
             </button>
           </span>
-        </HeroChip>
+        </Chip>
       ))}
-      <Button
-        size="sm"
-        variant="tertiary"
-        onPress={() => {
-          onChange(undefined);
-          onClearQuery();
-        }}
-      >
+      <Button size="sm" variant="tertiary" onPress={() => onChange(undefined)}>
         Clear all
       </Button>
     </div>

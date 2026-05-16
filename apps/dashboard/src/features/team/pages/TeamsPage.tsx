@@ -3,9 +3,9 @@ import { Button, toast } from "@heroui/react";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
-import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
+import type { Filter, FilterField } from "@/components/Search";
+import { ActiveFilters, Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useServerTable } from "@/hooks/useServerTable";
 import { useApiMutation } from "@/libs/query";
@@ -31,7 +31,7 @@ const TeamsPage: React.FC = () => {
   const canAdd = permissions.teams.add;
   const canEdit = permissions.teams.edit;
 
-  const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
+  const [activeFilter, setActiveFilter] = useState<Filter | undefined>();
   const [activeQuery, setActiveQuery] = useState("");
 
   const table = useServerTable<Team>({
@@ -57,14 +57,6 @@ const TeamsPage: React.FC = () => {
     onError: (err: unknown) => toast.danger(getErrorMessage(err)),
   });
 
-  const handleFilterApply = useCallback(
-    (filter: AdvancedFilter | undefined, query: string | undefined) => {
-      setActiveFilter(filter);
-      setActiveQuery(query ?? "");
-    },
-    [],
-  );
-
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const handleCreate = useCallback(() => navigate("/user-management/teams/create"), [navigate]);
@@ -85,8 +77,6 @@ const TeamsPage: React.FC = () => {
     [confirm, deleteMutation],
   );
 
-  const handleClearQuery = useCallback(() => setActiveQuery(""), []);
-
   const { columns, renderCell } = useTeamColumns({
     canEdit,
     onEdit: handleEdit,
@@ -98,11 +88,13 @@ const TeamsPage: React.FC = () => {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Teams ({table.total})</h2>
         <div className="flex items-center gap-2">
-          <AdvancedFilterPopover
+          <Search
+            query={activeQuery}
+            onQueryChange={setActiveQuery}
+            placeholder="Search teams..."
             fields={FILTER_FIELDS}
-            initialFilter={activeFilter}
-            initialQuery={activeQuery}
-            onApply={handleFilterApply}
+            filter={activeFilter}
+            onFilterChange={setActiveFilter}
           />
           {canAdd && (
             <Button variant="primary" onPress={handleCreate}>
@@ -113,13 +105,7 @@ const TeamsPage: React.FC = () => {
         </div>
       </div>
 
-      <ActiveFilterChips
-        filter={activeFilter}
-        fields={FILTER_FIELDS}
-        query={activeQuery}
-        onChange={setActiveFilter}
-        onClearQuery={handleClearQuery}
-      />
+      <ActiveFilters filter={activeFilter} fields={FILTER_FIELDS} onChange={setActiveFilter} />
 
       <TeamManagementTable
         items={table.items}

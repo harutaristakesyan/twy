@@ -1,11 +1,9 @@
-export type AdvancedFilter = Record<string, string>;
+export type Filter = Record<string, string>;
 
 export interface FieldOption {
   label: string;
   value: string;
 }
-
-// ── Filter fields (declarative, one control per field) ────────────────────────
 
 export type FilterFieldType = "select" | "multiSelect" | "dateRange" | "numberRange";
 
