@@ -1,111 +1,110 @@
-import { PlusOutlined } from "@ant-design/icons";
-import { useAntdTable, useRequest } from "ahooks";
-import { Button, Flex, Space, Table, Typography } from "antd";
-import { useState } from "react";
-import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
-import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
-import { getBranches } from "@/features/branch/api/branchApi";
+import { Plus } from "@gravity-ui/icons";
+import { Button, Label, SearchField, Spinner, Table } from "@heroui/react";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import PageControls from "@/components/PageControls";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePermission } from "@/hooks/usePermission";
+import { useServerTable } from "@/hooks/useServerTable";
 import { paymentOrderApi } from "../api/paymentOrderApi";
 import { usePaymentOrderModal } from "../hooks/usePaymentOrderModal";
 import type { PaymentOrder } from "../types/paymentOrder";
-import CreateLoadPaymentOrderModal from "./CreateLoadPaymentOrderModal";
 import UpdatePaymentStatusModal from "./UpdatePaymentStatusModal";
 import { useLoadPaymentOrderColumns } from "./useLoadPaymentOrderColumns";
 
-const { Title } = Typography;
-
 export default function LoadPaymentOrdersTab() {
-  const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
-  const [activeQuery, setActiveQuery] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
+  const navigate = useNavigate();
   const canCreate = usePermission("load_payment_order", "add");
   const { selectedOrder, open, mode, openModal, closeModal } = usePaymentOrderModal();
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
 
-  const { data: branchesData } = useRequest(() => getBranches({ limit: 200 }), {
-    cacheKey: "branches-for-filter",
+  const table = useServerTable<PaymentOrder>({
+    queryKey: ["payment-orders", debouncedSearch],
+    fetcher: async ({ page, pageSize }) => {
+      const res = await paymentOrderApi.list({
+        page: page - 1,
+        limit: pageSize,
+        query: debouncedSearch || undefined,
+      });
+      return { items: res.paymentOrders, total: res.total };
+    },
+    initialPageSize: 20,
   });
 
-  const fields: FilterField[] = [
-    {
-      key: "branchId",
-      label: "Branch",
-      type: "select",
-      options: branchesData?.branches.map((b) => ({ label: b.name, value: b.id })) ?? [],
-      placeholder: "All branches",
-    },
-  ];
+  const rawColumns = useLoadPaymentOrderColumns(openModal);
+  const columns = rawColumns.map((col) => ({ id: col.key, label: col.label, render: col.render }));
 
-  const { tableProps, refresh } = useAntdTable(
-    async ({ current, pageSize }) => {
-      const res = await paymentOrderApi.list({
-        page: (current ?? 1) - 1,
-        limit: pageSize ?? 20,
-        query: activeQuery || undefined,
-        filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
-      });
-      return { list: res.paymentOrders, total: res.total };
-    },
-    { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 20 },
-  );
-
-  const columns = useLoadPaymentOrderColumns(openModal);
-
-  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
-    setActiveFilter(filter);
-    setActiveQuery(query ?? "");
-  };
+  const handleCreate = useCallback(() => {
+    navigate("create-load-po");
+  }, [navigate]);
 
   return (
     <>
-      <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>
-          Load Payment Orders (
-          {tableProps.pagination ? ((tableProps.pagination as { total?: number }).total ?? 0) : 0})
-        </Title>
-        <Space>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-base font-semibold">Load Payment Orders ({table.total})</h2>
+        <div className="flex items-center gap-2">
+          <SearchField name="load-po-search" value={search} onChange={setSearch}>
+            <Label className="sr-only">Search orders</Label>
+            <SearchField.Group>
+              <SearchField.SearchIcon />
+              <SearchField.Input className="w-65" placeholder="Search orders..." />
+              <SearchField.ClearButton />
+            </SearchField.Group>
+          </SearchField>
           {canCreate && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+            <Button variant="primary" onPress={handleCreate}>
+              <Plus className="h-4 w-4" />
               Create
             </Button>
           )}
-          <AdvancedFilterPopover
-            fields={fields}
-            initialFilter={activeFilter}
-            initialQuery={activeQuery}
-            onApply={handleFilterApply}
-          />
-        </Space>
-      </Flex>
+        </div>
+      </div>
 
-      <ActiveFilterChips
-        filter={activeFilter}
-        fields={fields}
-        query={activeQuery}
-        onChange={setActiveFilter}
-        onClearQuery={() => setActiveQuery("")}
-      />
-
-      <Table<PaymentOrder>
-        {...tableProps}
-        columns={columns}
-        rowKey="id"
-        scroll={{ x: "max-content" }}
-        size="middle"
-      />
+      {table.isLoading ? (
+        <div className="flex justify-center py-12">
+          <Spinner size="lg" />
+        </div>
+      ) : (
+        <Table>
+          <Table.ScrollContainer>
+            <Table.Content aria-label="Load Payment Orders table" className="min-w-full">
+              <Table.Header columns={columns}>
+                {(col) => <Table.Column>{col.label}</Table.Column>}
+              </Table.Header>
+              <Table.Body items={table.items}>
+                {(record) => (
+                  <Table.Row id={record.id}>
+                    <Table.Collection items={columns}>
+                      {(col) => <Table.Cell>{col.render(record)}</Table.Cell>}
+                    </Table.Collection>
+                  </Table.Row>
+                )}
+              </Table.Body>
+            </Table.Content>
+          </Table.ScrollContainer>
+          {!table.isLoading && table.total > table.pageSize && (
+            <Table.Footer>
+              <div className="flex justify-end pt-4">
+                <PageControls
+                  totalPages={Math.ceil(table.total / table.pageSize)}
+                  page={table.page}
+                  onPageChange={table.setPage}
+                />
+              </div>
+            </Table.Footer>
+          )}
+        </Table>
+      )}
 
       <UpdatePaymentStatusModal
         paymentOrder={selectedOrder}
         open={open}
         mode={mode}
         onClose={closeModal}
-        onSuccess={refresh}
-      />
-
-      <CreateLoadPaymentOrderModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onSuccess={refresh}
+        onSuccess={() => {
+          void table.refetch();
+        }}
       />
     </>
   );

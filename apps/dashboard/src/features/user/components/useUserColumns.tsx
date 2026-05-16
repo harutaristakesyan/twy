@@ -1,111 +1,110 @@
-import { DeleteOutlined, EditOutlined, UserOutlined } from "@ant-design/icons";
-import { Badge, Button, Popconfirm, Space, Tag, Tooltip, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { useMemo } from "react";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useUserModal } from "../providers/UserModalProvider";
+import { Pencil, TrashBin } from "@gravity-ui/icons";
+import { Button, Chip } from "@heroui/react";
+import { useCallback } from "react";
+import { UserAvatar } from "@/components/UserAvatar";
 import type { User } from "../types/user";
 
-const { Text } = Typography;
+export type UserColumnDef = {
+  id: string;
+  label: string;
+  isRowHeader?: boolean;
+};
 
-export function useUserColumns(
-  refresh: () => void,
-  runDelete: (id: string) => void,
-): ColumnsType<User> {
-  const { user: currentUser, permissions } = useCurrentUser();
-  const { openUserEdit } = useUserModal();
-  const canEdit = permissions.users.edit;
+export const USER_COLUMNS: UserColumnDef[] = [
+  { id: "name", label: "Name", isRowHeader: true },
+  { id: "team", label: "Team" },
+  { id: "branch", label: "Branch" },
+  { id: "status", label: "Status" },
+  { id: "registered", label: "Registered" },
+  { id: "actions", label: "Actions" },
+];
 
-  return useMemo(
-    () => [
-      {
-        title: "Name",
-        dataIndex: "firstName",
-        key: "firstName",
-        render: (_, record) => (
-          <Space>
-            <UserOutlined />
-            <div>
-              <div style={{ fontWeight: 500 }}>
-                {record.firstName} {record.lastName}
-              </div>
-              <Text type="secondary" style={{ fontSize: "12px" }}>
-                {record.email}
-              </Text>
-            </div>
-          </Space>
-        ),
-        sorter: true,
-      },
-      {
-        title: "Team",
-        dataIndex: "teamName",
-        key: "team",
-        render: (teamName: string | null | undefined) =>
-          teamName ? <Tag color="blue">{teamName}</Tag> : <Tag color="default">Unassigned</Tag>,
-      },
-      {
-        title: "Branch",
-        dataIndex: "branchName",
-        key: "branch",
-        render: (branchName, record) => record.branch?.name || branchName || "N/A",
-        sorter: true,
-      },
-      {
-        title: "Status",
-        dataIndex: "isActive",
-        key: "isActive",
-        render: (isActive: boolean) => (
-          <Badge status={isActive ? "success" : "error"} text={isActive ? "Active" : "Inactive"} />
-        ),
-        sorter: true,
-      },
-      {
-        title: "Registered Date",
-        dataIndex: "createdAt",
-        key: "createdAt",
-        render: (date: string, record) => {
-          const dateToShow = date || record.registeredDate;
-          return dateToShow ? new Date(dateToShow).toLocaleDateString() : "N/A";
-        },
-        sorter: true,
-      },
-      {
-        title: "Actions",
-        key: "actions",
-        render: (_, record) => {
-          const isCurrentUser = currentUser?.email === record.email;
-          const tooltip = "You cannot edit or delete your own account";
+type UseUserColumnsParams = {
+  currentUserEmail?: string;
+  canEdit: boolean;
+  isDeleting: boolean;
+  onEdit: (user: User) => void;
+  onDelete: (id: string) => void;
+};
+
+export function useUserColumns({
+  currentUserEmail,
+  canEdit,
+  isDeleting,
+  onEdit,
+  onDelete,
+}: UseUserColumnsParams) {
+  const renderCell = useCallback(
+    (record: User, colId: string) => {
+      const isCurrentUser = currentUserEmail === record.email;
+      const selfTooltip = "You cannot edit or delete your own account";
+      const fullName = `${record.firstName ?? ""} ${record.lastName ?? ""}`.trim();
+
+      switch (colId) {
+        case "name":
           return (
-            <Space>
-              {canEdit && (
-                <Tooltip title={isCurrentUser ? tooltip : undefined}>
-                  <Button
-                    type="text"
-                    icon={<EditOutlined />}
-                    onClick={() => openUserEdit({ user: record }, () => refresh())}
-                    disabled={isCurrentUser}
-                  />
-                </Tooltip>
-              )}
-              {canEdit && (
-                <Tooltip title={isCurrentUser ? tooltip : undefined}>
-                  <Popconfirm
-                    title="Are you sure you want to delete this user?"
-                    description="This action cannot be undone."
-                    onConfirm={() => runDelete(record.id)}
-                    okText="Yes"
-                    cancelText="No"
-                  >
-                    <Button type="text" danger icon={<DeleteOutlined />} disabled={isCurrentUser} />
-                  </Popconfirm>
-                </Tooltip>
-              )}
-            </Space>
+            <div className="flex items-center gap-3">
+              <UserAvatar fullName={fullName} showName={false} size="sm" />
+              <div className="flex flex-col">
+                <span className="font-medium">{fullName}</span>
+                <span className="text-xs text-default-500">{record.email}</span>
+              </div>
+            </div>
           );
-        },
-      },
-    ],
-    [canEdit, currentUser, openUserEdit, refresh, runDelete],
+        case "team":
+          return record.teamName ? (
+            <Chip color="accent" size="sm" variant="soft">
+              {record.teamName}
+            </Chip>
+          ) : (
+            <Chip size="sm" variant="soft">
+              Unassigned
+            </Chip>
+          );
+        case "branch":
+          return record.branch?.name ?? record.branchName ?? "N/A";
+        case "status":
+          return (
+            <Chip color={record.isActive ? "success" : "danger"} size="sm" variant="soft">
+              {record.isActive ? "Active" : "Inactive"}
+            </Chip>
+          );
+        case "registered": {
+          const date = record.createdAt ?? record.registeredDate;
+          return date ? new Date(date).toLocaleDateString() : "N/A";
+        }
+        case "actions":
+          if (!canEdit) return null;
+          return (
+            <div className="flex items-center gap-1">
+              <Button
+                isIconOnly
+                size="sm"
+                variant="tertiary"
+                aria-label={isCurrentUser ? selfTooltip : "Edit user"}
+                isDisabled={isCurrentUser}
+                onPress={() => onEdit(record)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="danger-soft"
+                aria-label={isCurrentUser ? selfTooltip : "Delete user"}
+                isDisabled={isCurrentUser || isDeleting}
+                onPress={() => onDelete(record.id)}
+              >
+                <TrashBin className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        default:
+          return null;
+      }
+    },
+    [currentUserEmail, canEdit, isDeleting, onEdit, onDelete],
   );
+
+  return { columns: USER_COLUMNS, renderCell };
 }

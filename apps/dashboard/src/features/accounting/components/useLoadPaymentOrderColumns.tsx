@@ -1,139 +1,131 @@
-import { EditOutlined, EyeOutlined } from "@ant-design/icons";
-import { Button, Space, Tooltip } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { Eye, Pencil } from "@gravity-ui/icons";
 import { renderCurrency, renderDate } from "@/utils/formatters";
 import type { PaymentOrder } from "../types/paymentOrder";
 import PaymentStatusTag from "./PaymentStatusTag";
 
+export interface LoadPaymentOrderColumn {
+  key: string;
+  label: string;
+  render: (record: PaymentOrder) => React.ReactNode;
+  width?: string;
+}
+
 export function useLoadPaymentOrderColumns(
   openModal: (record: PaymentOrder, mode: "edit" | "view") => void,
-): ColumnsType<PaymentOrder> {
+): LoadPaymentOrderColumn[] {
   return [
     {
-      title: "Reference",
-      dataIndex: "referenceNumber",
       key: "referenceNumber",
-      width: 140,
-      fixed: "left",
-      render: (text: string) => <strong>{text}</strong>,
+      label: "Reference",
+      width: "w-32",
+      render: (r) => <strong>{r.referenceNumber}</strong>,
     },
-    { title: "Branch", dataIndex: "branchName", key: "branchName", width: 140 },
+    { key: "branchName", label: "Branch", width: "w-32", render: (r) => r.branchName },
     {
-      title: "Carrier",
-      dataIndex: "carrierName",
       key: "carrierName",
-      width: 160,
-      render: (v: string | null) => v ?? "—",
+      label: "Carrier",
+      width: "w-40",
+      render: (r) => r.carrierName ?? "—",
     },
     {
-      title: "Broker Receivable",
-      dataIndex: "brokerReceivable",
       key: "brokerReceivable",
-      width: 150,
-      render: renderCurrency,
+      label: "Broker Receivable",
+      width: "w-36",
+      render: (r) => renderCurrency(r.brokerReceivable),
     },
     {
-      title: "Carrier Payable",
-      dataIndex: "carrierPayable",
       key: "carrierPayable",
-      width: 140,
-      render: renderCurrency,
+      label: "Carrier Payable",
+      width: "w-36",
+      render: (r) => renderCurrency(r.carrierPayable),
     },
     {
-      title: "Service Fee",
-      dataIndex: "serviceFee",
       key: "serviceFee",
-      width: 120,
-      render: renderCurrency,
+      label: "Service Fee",
+      width: "w-28",
+      render: (r) => renderCurrency(r.serviceFee),
     },
     {
-      title: "Income %",
-      dataIndex: "incomePercentage",
       key: "incomePercentage",
-      width: 110,
-      render: (v: number | null) => (v != null ? `${v.toFixed(2)}%` : "—"),
+      label: "Income %",
+      width: "w-24",
+      render: (r) => (r.incomePercentage != null ? `${r.incomePercentage.toFixed(2)}%` : "—"),
     },
     {
-      title: "Charges",
-      dataIndex: "charges",
       key: "charges",
-      width: 110,
-      render: renderCurrency,
+      label: "Charges",
+      width: "w-24",
+      render: (r) => renderCurrency(r.charges),
     },
+    { key: "profit", label: "Profit", width: "w-28", render: (r) => renderCurrency(r.profit) },
     {
-      title: "Profit",
-      dataIndex: "profit",
-      key: "profit",
-      width: 120,
-      render: renderCurrency,
-    },
-    {
-      title: "Carrier Paid",
-      dataIndex: "carrierPaidAmount",
       key: "carrierPaidAmount",
-      width: 130,
-      render: renderCurrency,
+      label: "Carrier Paid",
+      width: "w-28",
+      render: (r) => renderCurrency(r.carrierPaidAmount),
     },
     {
-      title: "Carrier Paid Date",
-      dataIndex: "carrierPaidDate",
       key: "carrierPaidDate",
-      width: 140,
-      render: renderDate,
+      label: "Carrier Paid Date",
+      width: "w-36",
+      render: (r) => renderDate(r.carrierPaidDate),
     },
     {
-      title: "Broker Received",
-      dataIndex: "brokerReceivedAmount",
       key: "brokerReceivedAmount",
-      width: 140,
-      render: renderCurrency,
+      label: "Broker Received",
+      width: "w-36",
+      render: (r) => renderCurrency(r.brokerReceivedAmount),
     },
     {
-      title: "Broker Received Date",
-      dataIndex: "brokerReceivedDate",
       key: "brokerReceivedDate",
-      width: 160,
-      render: renderDate,
+      label: "Broker Received Date",
+      width: "w-40",
+      render: (r) => renderDate(r.brokerReceivedDate),
     },
     {
-      title: "Invoices",
-      dataIndex: "invoices",
       key: "invoices",
-      width: 90,
-      align: "center",
-      render: (invoices: PaymentOrder["invoices"]) =>
-        invoices?.length > 0 ? `${invoices.length} file${invoices.length > 1 ? "s" : ""}` : "—",
+      label: "Invoices",
+      width: "w-20",
+      render: (r) =>
+        r.invoices?.length > 0
+          ? `${r.invoices.length} file${r.invoices.length > 1 ? "s" : ""}`
+          : "—",
     },
     {
-      title: "Payment Status",
-      dataIndex: "paymentStatus",
       key: "paymentStatus",
-      width: 150,
-      render: (_: unknown, record: PaymentOrder) => (
-        <PaymentStatusTag status={record.paymentStatus} />
-      ),
+      label: "Payment Status",
+      width: "w-36",
+      render: (r) => <PaymentStatusTag status={r.paymentStatus} />,
     },
     {
-      title: "Created",
-      dataIndex: "createdAt",
       key: "createdAt",
-      width: 130,
-      render: renderDate,
+      label: "Created",
+      width: "w-28",
+      render: (r) => renderDate(r.createdAt),
     },
     {
-      title: "Actions",
       key: "actions",
-      fixed: "right",
-      width: 100,
-      render: (_: unknown, record: PaymentOrder) => (
-        <Space>
-          <Tooltip title="Edit">
-            <Button type="text" icon={<EditOutlined />} onClick={() => openModal(record, "edit")} />
-          </Tooltip>
-          <Tooltip title="View">
-            <Button type="text" icon={<EyeOutlined />} onClick={() => openModal(record, "view")} />
-          </Tooltip>
-        </Space>
+      label: "Actions",
+      width: "w-20",
+      render: (r) => (
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
+            onClick={() => openModal(r, "edit")}
+            title="Edit"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
+            onClick={() => openModal(r, "view")}
+            title="View"
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </button>
+        </div>
       ),
     },
   ];

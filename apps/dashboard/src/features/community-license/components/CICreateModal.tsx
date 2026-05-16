@@ -1,87 +1,125 @@
-import { useRequest } from "ahooks";
-import { App, Button, DatePicker, Form, Input, Modal, Space } from "antd";
-import dayjs from "dayjs";
-import type React from "react";
-import { getErrorMessage } from "@/utils/errorUtils";
+import { Button, FieldError, Input, Label, Modal, TextField, toast } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Controller } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
+import { z } from "zod";
+import { FormTextField } from "@/components/form";
+import { useZodForm } from "@/libs/form";
+import { useApiMutation } from "@/libs/query";
 import { createCommunityLicense } from "../api/ciApi";
-import type { CreateCIFormData } from "../types/communityLicense";
 
-interface CICreateModalProps {
-  open: boolean;
-  onCancel: () => void;
-  onSuccess: () => void;
-}
+const schema = z.object({
+  ciNumber: z
+    .string()
+    .min(1, "CI number is required")
+    .max(50, "CI number must be at most 50 characters"),
+  validFrom: z.string().min(1, "Valid from date is required"),
+  validTo: z.string().nullable().optional(),
+});
 
-const CICreateModal: React.FC<CICreateModalProps> = ({ open, onCancel, onSuccess }) => {
-  const { message } = App.useApp();
-  const [form] = Form.useForm();
+type FormValues = z.infer<typeof schema>;
 
-  const { loading, run: submit } = useRequest(
-    async (values: { ciNumber: string; validFrom: unknown; validTo: unknown }) => {
-      const data: CreateCIFormData = {
-        ciNumber: values.ciNumber,
-        validFrom: dayjs(values.validFrom as Parameters<typeof dayjs>[0]).format("YYYY-MM-DD"),
-        validTo: values.validTo
-          ? dayjs(values.validTo as Parameters<typeof dayjs>[0]).format("YYYY-MM-DD")
-          : null,
-      };
-      await createCommunityLicense(data);
+const CICreateModal = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const close = () => navigate("..");
+
+  const { control, handleSubmit } = useZodForm(schema, {
+    ciNumber: "",
+    validFrom: "",
+    validTo: null,
+  });
+
+  const mutation = useApiMutation(createCommunityLicense, {
+    onSuccess: async () => {
+      toast.success("Community license created successfully");
+      await queryClient.invalidateQueries({ queryKey: ["community-licenses"] });
+      close();
     },
-    {
-      manual: true,
-      onSuccess: () => {
-        message.success("Community license created successfully");
-        form.resetFields();
-        onSuccess();
-      },
-      onError: (error) => {
-        message.error(getErrorMessage(error));
-      },
-    },
-  );
+  });
+
+  const onSubmit = handleSubmit((values: FormValues) => {
+    mutation.mutate({
+      ciNumber: values.ciNumber,
+      validFrom: values.validFrom,
+      validTo: values.validTo ?? null,
+    });
+  });
 
   return (
-    <Modal
-      title="Add Community License"
-      open={open}
-      onCancel={onCancel}
-      footer={null}
-      width={520}
-      destroyOnHidden
-    >
-      <Form form={form} layout="vertical" onFinish={submit}>
-        <Form.Item
-          name="ciNumber"
-          label="CI Number"
-          rules={[
-            { required: true, message: "CI number is required" },
-            { max: 50, message: "CI number must be at most 50 characters" },
-          ]}
-        >
-          <Input placeholder="e.g. CI-123456" />
-        </Form.Item>
+    <Modal>
+      <Modal.Backdrop
+        isOpen
+        onOpenChange={(open) => {
+          if (!open) close();
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>Add Community License</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="p-2">
+              <form id="ci-create-form" onSubmit={onSubmit} className="flex flex-col gap-4">
+                <FormTextField
+                  control={control}
+                  name="ciNumber"
+                  label="CI Number"
+                  placeholder="e.g. CI-123456"
+                />
 
-        <Form.Item
-          name="validFrom"
-          label="Valid From"
-          rules={[{ required: true, message: "Valid from date is required" }]}
-        >
-          <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
-        </Form.Item>
+                <Controller
+                  name="validFrom"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      isInvalid={!!fieldState.error}
+                      fullWidth
+                    >
+                      <Label>Valid From</Label>
+                      <Input type="date" />
+                      {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
+                    </TextField>
+                  )}
+                />
 
-        <Form.Item name="validTo" label="Valid To">
-          <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
-        </Form.Item>
-
-        <Form.Item>
-          <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={onCancel}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={loading}>
-              Create
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
+                <Controller
+                  name="validTo"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      value={field.value ?? ""}
+                      onChange={(v) => field.onChange(v || null)}
+                      isInvalid={!!fieldState.error}
+                      fullWidth
+                    >
+                      <Label>Valid To</Label>
+                      <Input type="date" />
+                      {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
+                    </TextField>
+                  )}
+                />
+              </form>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="ghost" onPress={close}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                form="ci-create-form"
+                isPending={mutation.isPending}
+              >
+                {({ isPending }) => (isPending ? "Creating..." : "Create")}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   );
 };

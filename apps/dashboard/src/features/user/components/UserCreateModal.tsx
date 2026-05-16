@@ -1,107 +1,155 @@
-import { useRequest } from "ahooks";
-import { App, Button, Col, Form, Input, Modal, Row, Space, Switch } from "antd";
-import type React from "react";
+import { Button, Label, Modal, Switch, toast } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Controller } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
+import { z } from "zod";
+import { FormTextField } from "@/components/form";
 import BranchSelect from "@/features/branch/components/BranchSelect";
 import TeamSelect from "@/features/team/components/TeamSelect";
-import { getErrorMessage } from "@/utils/errorUtils";
+import { useZodForm } from "@/libs/form";
+import { useApiMutation } from "@/libs/query";
 import { createUser } from "../api/userApi";
-import type { UserFormData } from "../types/user";
 
-interface UserCreateModalProps {
-  open: boolean;
-  onCancel: () => void;
-  onSuccess: () => void;
-}
+const schema = z.object({
+  firstName: z.string().min(2, "First name must be at least 2 characters"),
+  lastName: z.string().min(2, "Last name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email"),
+  branch: z.string().nullable().optional(),
+  teamId: z.string().nullable().optional(),
+  isActive: z.boolean(),
+});
 
-const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onCancel, onSuccess }) => {
-  const { message } = App.useApp();
-  const [form] = Form.useForm();
+type FormValues = z.infer<typeof schema>;
 
-  const { loading, run: submit } = useRequest(
-    async (values: UserFormData) => {
-      await createUser(values);
+const UserCreateModal = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const close = () => navigate("..");
+
+  const { control, handleSubmit } = useZodForm(schema, {
+    isActive: true,
+    firstName: "",
+    lastName: "",
+    email: "",
+    branch: null,
+    teamId: null,
+  });
+
+  const mutation = useApiMutation(createUser, {
+    onSuccess: async () => {
+      toast.success("User created successfully");
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
+      close();
     },
-    {
-      manual: true,
-      onSuccess: () => {
-        message.success("User created successfully");
-        onSuccess();
-      },
-      onError: (error) => {
-        message.error(getErrorMessage(error));
-      },
-    },
-  );
+  });
+
+  const onSubmit = handleSubmit((values: FormValues) => {
+    mutation.mutate({
+      firstName: values.firstName,
+      lastName: values.lastName,
+      email: values.email,
+      isActive: values.isActive,
+      branch: values.branch ?? null,
+      teamId: values.teamId ?? null,
+    });
+  });
 
   return (
-    <Modal
-      title="Create New User"
-      open={open}
-      onCancel={onCancel}
-      footer={null}
-      width={600}
-      destroyOnHidden
-    >
-      <Form form={form} layout="vertical" onFinish={submit} id="userCreateForm">
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="firstName"
-              label="First Name"
-              rules={[
-                { required: true, message: "Please enter first name" },
-                { min: 2, message: "First name must be at least 2 characters" },
-              ]}
-            >
-              <Input placeholder="Enter first name" id="create-firstName" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="lastName"
-              label="Last Name"
-              rules={[
-                { required: true, message: "Please enter last name" },
-                { min: 2, message: "Last name must be at least 2 characters" },
-              ]}
-            >
-              <Input placeholder="Enter last name" id="create-lastName" />
-            </Form.Item>
-          </Col>
-        </Row>
+    <Modal>
+      <Modal.Backdrop
+        isOpen
+        onOpenChange={(open) => {
+          if (!open) close();
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>Create New User</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="p-2">
+              <form id="user-create-form" onSubmit={onSubmit} className="flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormTextField
+                    control={control}
+                    name="firstName"
+                    label="First Name"
+                    placeholder="e.g. Jane"
+                  />
+                  <FormTextField
+                    control={control}
+                    name="lastName"
+                    label="Last Name"
+                    placeholder="e.g. Doe"
+                  />
+                </div>
 
-        <Form.Item
-          name="email"
-          label="Email"
-          rules={[
-            { required: true, message: "Please enter email" },
-            { type: "email", message: "Please enter a valid email" },
-          ]}
-        >
-          <Input placeholder="Enter email address" id="create-email" />
-        </Form.Item>
+                <FormTextField
+                  control={control}
+                  name="email"
+                  type="email"
+                  label="Email"
+                  placeholder="name@example.com"
+                />
 
-        <Form.Item name="branch" label="Branch">
-          <BranchSelect />
-        </Form.Item>
+                <Controller
+                  name="branch"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <BranchSelect
+                      label="Branch"
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      isInvalid={!!fieldState.error}
+                    />
+                  )}
+                />
+                <Controller
+                  name="teamId"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <TeamSelect
+                      label="Team"
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      isInvalid={!!fieldState.error}
+                    />
+                  )}
+                />
 
-        <Form.Item name="teamId" label="Team">
-          <TeamSelect />
-        </Form.Item>
-
-        <Form.Item name="isActive" label="Status" valuePropName="checked" initialValue={true}>
-          <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-        </Form.Item>
-
-        <Form.Item>
-          <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={onCancel}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={loading}>
-              Create User
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
+                <Controller
+                  name="isActive"
+                  control={control}
+                  render={({ field }) => (
+                    <Switch isSelected={field.value} onChange={field.onChange}>
+                      <Switch.Control>
+                        <Switch.Thumb />
+                      </Switch.Control>
+                      <Switch.Content>
+                        <Label>{field.value ? "Active" : "Inactive"}</Label>
+                      </Switch.Content>
+                    </Switch>
+                  )}
+                />
+              </form>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="ghost" onPress={close}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                form="user-create-form"
+                isPending={mutation.isPending}
+              >
+                {({ isPending }) => (isPending ? "Creating..." : "Create User")}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   );
 };

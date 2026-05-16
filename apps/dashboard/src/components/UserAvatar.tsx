@@ -1,9 +1,7 @@
-import { useRequest } from "ahooks";
-import { Avatar, Space, Typography } from "antd";
+import { Avatar } from "@heroui/react";
 import type React from "react";
 import { filesApi } from "@/features/files/api/filesApi";
-
-const { Text } = Typography;
+import { useApiQuery } from "@/libs/query";
 
 type UserAvatarProps = {
   fullName?: string;
@@ -11,7 +9,7 @@ type UserAvatarProps = {
   lastName?: string;
   showName?: boolean;
   pictureFileId?: string | null;
-  size?: number | "small" | "default" | "large";
+  size?: "sm" | "md" | "lg";
 };
 
 const getInitials = (name: string): string => {
@@ -28,30 +26,25 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   lastName,
   showName = true,
   pictureFileId,
-  size,
+  size = "sm",
 }) => {
-  const name = fullName || `${firstName ?? ""} ${lastName ?? ""}`.trim();
+  const name = fullName ?? `${firstName ?? ""} ${lastName ?? ""}`.trim();
 
-  const { data: pictureData } = useRequest(() => filesApi.getDownloadUrl(pictureFileId ?? ""), {
-    ready: !!pictureFileId,
-    cacheKey: pictureFileId ? `user-avatar-${pictureFileId}` : undefined,
-    staleTime: 30 * 60 * 1000,
-    refreshDeps: [pictureFileId],
-  });
+  const { data: pictureData } = useApiQuery(
+    ["user-avatar", pictureFileId],
+    () => filesApi.getDownloadUrl(pictureFileId ?? ""),
+    { enabled: !!pictureFileId, staleTime: 30 * 60 * 1000 },
+  );
 
   const src = pictureData?.downloadUrl;
 
   return (
-    <Space>
-      <Avatar
-        src={src}
-        size={size}
-        style={src ? undefined : { backgroundColor: "#1677ff", verticalAlign: "middle" }}
-        onError={() => false}
-      >
-        {!src && getInitials(name)}
+    <div className="flex items-center gap-2">
+      <Avatar size={size}>
+        {src && <Avatar.Image src={src} alt={name} />}
+        <Avatar.Fallback>{getInitials(name)}</Avatar.Fallback>
       </Avatar>
-      {showName && <Text>{name}</Text>}
-    </Space>
+      {showName && <span className="text-sm">{name}</span>}
+    </div>
   );
 };

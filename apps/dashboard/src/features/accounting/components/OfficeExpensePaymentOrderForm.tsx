@@ -1,19 +1,4 @@
-import {
-  Col,
-  DatePicker,
-  Form,
-  type FormInstance,
-  type FormProps,
-  Input,
-  InputNumber,
-  Row,
-  Select,
-  Space,
-  Switch,
-} from "antd";
-import type { Dayjs } from "dayjs";
-import dayjs from "dayjs";
-import { useState } from "react";
+import type React from "react";
 import { AttachedFilesField } from "@/features/files";
 import { officeExpenseApi } from "../api/officeExpensePaymentOrderApi";
 import {
@@ -26,154 +11,195 @@ import {
   type OfficeExpenseService,
 } from "../types/officeExpensePaymentOrder";
 
-const { TextArea } = Input;
-
-const CURRENCY_SYMBOL: Record<Currency, string> = { USD: "$", EUR: "€" };
-
 export interface OfficeExpenseFormValues {
-  serviceName: OfficeExpenseService;
+  serviceName: OfficeExpenseService | "";
   paymentPurpose: string;
-  date: Dayjs | null;
-  dateRange: [Dayjs, Dayjs] | null;
+  isRange: boolean;
+  date: string;
+  dateStart: string;
+  dateEnd: string;
   currency: Currency;
-  amount: number;
+  amount: string;
   paymentStatus: OfficeExpensePaymentStatus;
 }
 
-interface Props {
-  form: FormInstance<OfficeExpenseFormValues>;
-  order: OfficeExpensePaymentOrder;
-  readOnly: boolean;
-  onFinish: (values: OfficeExpenseFormValues) => void;
-  onFilesChanged: () => void;
-  onUploadingChange: (uploading: boolean) => void;
-  onValuesChange?: FormProps<OfficeExpenseFormValues>["onValuesChange"];
-}
-
-const buildInitialValues = (order: OfficeExpensePaymentOrder): OfficeExpenseFormValues => {
+export function buildInitialValues(order: OfficeExpensePaymentOrder): OfficeExpenseFormValues {
   const sameDay = order.periodStart === order.periodEnd;
   return {
     serviceName: order.serviceName,
     paymentPurpose: order.paymentPurpose,
-    date: sameDay ? dayjs(order.periodStart) : null,
-    dateRange: sameDay ? null : [dayjs(order.periodStart), dayjs(order.periodEnd)],
+    isRange: !sameDay,
+    date: sameDay ? order.periodStart : "",
+    dateStart: sameDay ? "" : order.periodStart,
+    dateEnd: sameDay ? "" : order.periodEnd,
     currency: order.currency,
-    amount: order.amount,
+    amount: String(order.amount),
     paymentStatus: order.paymentStatus,
   };
-};
+}
 
-export default function OfficeExpensePaymentOrderForm({
-  form,
+export interface UpdateOfficeExpensePeriod {
+  periodStart: string;
+  periodEnd: string;
+}
+
+export function formValuesToPeriod(
+  values: OfficeExpenseFormValues,
+): UpdateOfficeExpensePeriod | null {
+  if (values.isRange) {
+    if (!values.dateStart || !values.dateEnd) return null;
+    return { periodStart: values.dateStart, periodEnd: values.dateEnd };
+  }
+  if (!values.date) return null;
+  return { periodStart: values.date, periodEnd: values.date };
+}
+
+const fieldClass =
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-50 disabled:text-gray-500";
+const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+
+interface Props {
+  values: OfficeExpenseFormValues;
+  onChange: (values: OfficeExpenseFormValues) => void;
+  order: OfficeExpensePaymentOrder;
+  readOnly: boolean;
+  onFilesChanged: () => void;
+  onUploadingChange: (uploading: boolean) => void;
+}
+
+const OfficeExpensePaymentOrderForm: React.FC<Props> = ({
+  values,
+  onChange,
   order,
   readOnly,
-  onFinish,
   onFilesChanged,
   onUploadingChange,
-  onValuesChange,
-}: Props) {
-  const [isRange, setIsRange] = useState(() => order.periodStart !== order.periodEnd);
+}) => {
+  const set = <K extends keyof OfficeExpenseFormValues>(key: K, val: OfficeExpenseFormValues[K]) =>
+    onChange({ ...values, [key]: val });
 
-  const watchedCurrency = Form.useWatch("currency", form);
-  const amountPrefix = CURRENCY_SYMBOL[(watchedCurrency ?? order.currency) as Currency];
+  const currencySymbol = values.currency === "EUR" ? "€" : "$";
 
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      disabled={readOnly}
-      initialValues={buildInitialValues(order)}
-      onFinish={(values: OfficeExpenseFormValues) => {
-        if (readOnly) return;
-        onFinish(values);
-      }}
-      onValuesChange={onValuesChange}
-      style={{ marginTop: 16 }}
-    >
-      <Form.Item
-        name="serviceName"
-        label="Service name"
-        rules={[{ required: true, message: "Service name is required" }]}
-      >
-        <Select
-          options={OFFICE_EXPENSE_SERVICE_OPTIONS}
-          placeholder="Select service"
+    <div className="mt-2 flex flex-col gap-4">
+      <label className={labelClass}>
+        Service Name
+        <select
+          value={values.serviceName}
+          onChange={(e) => set("serviceName", e.target.value as OfficeExpenseService)}
+          disabled={readOnly}
+          className={fieldClass}
+        >
+          {OFFICE_EXPENSE_SERVICE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className={labelClass}>
+        Payment Purpose
+        <textarea
+          rows={3}
+          className={fieldClass}
+          value={values.paymentPurpose}
+          onChange={(e) => set("paymentPurpose", e.target.value)}
           disabled={readOnly}
         />
-      </Form.Item>
+      </label>
 
-      <Form.Item
-        name="paymentPurpose"
-        label="Payment purpose"
-        rules={[{ required: true, message: "Payment purpose is required" }]}
-      >
-        <TextArea rows={3} disabled={readOnly} />
-      </Form.Item>
-
-      <Form.Item label="Date">
-        <Space align="center" style={{ marginBottom: 8 }}>
-          <span style={{ fontSize: 13 }}>Single date</span>
-          <Switch
-            size="small"
-            checked={isRange}
-            disabled={readOnly}
-            onChange={(checked) => {
-              setIsRange(checked);
-              form.setFieldsValue({ date: null, dateRange: null });
-            }}
-          />
-          <span style={{ fontSize: 13 }}>Date range</span>
-        </Space>
-        {isRange ? (
-          <Form.Item
-            name="dateRange"
-            noStyle
-            rules={[{ required: true, message: "Date range is required" }]}
-          >
-            <DatePicker.RangePicker style={{ width: "100%" }} disabled={readOnly} />
-          </Form.Item>
-        ) : (
-          <Form.Item name="date" noStyle rules={[{ required: true, message: "Date is required" }]}>
-            <DatePicker style={{ width: "100%" }} disabled={readOnly} />
-          </Form.Item>
-        )}
-      </Form.Item>
-
-      <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item name="currency" label="Currency" rules={[{ required: true }]}>
-            <Select options={CURRENCY_OPTIONS} style={{ width: "100%" }} disabled={readOnly} />
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item
-            name="amount"
-            label="Amount"
-            rules={[
-              { required: true, message: "Amount is required" },
-              { type: "number", min: 0.01, message: "Amount must be greater than 0" },
-            ]}
-          >
-            <InputNumber
-              style={{ width: "100%" }}
-              min={0.01}
-              precision={2}
-              prefix={amountPrefix}
+      <div>
+        <div className="mb-2 flex items-center gap-3">
+          <span className={`${labelClass} mb-0`}>Date</span>
+          {!readOnly && (
+            <label className="flex items-center gap-1.5 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={values.isRange}
+                onChange={(e) => set("isRange", e.target.checked)}
+              />
+              Date range
+            </label>
+          )}
+        </div>
+        {values.isRange ? (
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="date"
+              className={fieldClass}
+              value={values.dateStart}
+              onChange={(e) => set("dateStart", e.target.value)}
               disabled={readOnly}
             />
-          </Form.Item>
-        </Col>
-      </Row>
+            <input
+              type="date"
+              className={fieldClass}
+              value={values.dateEnd}
+              onChange={(e) => set("dateEnd", e.target.value)}
+              disabled={readOnly}
+            />
+          </div>
+        ) : (
+          <input
+            type="date"
+            className={fieldClass}
+            value={values.date}
+            onChange={(e) => set("date", e.target.value)}
+            disabled={readOnly}
+          />
+        )}
+      </div>
 
-      <Form.Item
-        name="paymentStatus"
-        label="Payment status"
-        rules={[{ required: true, message: "Status is required" }]}
-      >
-        <Select options={OFFICE_EXPENSE_STATUS_OPTIONS} disabled={readOnly} />
-      </Form.Item>
+      <div className="grid grid-cols-2 gap-4">
+        <label className={labelClass}>
+          Currency
+          <select
+            value={values.currency}
+            onChange={(e) => set("currency", e.target.value as Currency)}
+            disabled={readOnly}
+            className={fieldClass}
+          >
+            {CURRENCY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={labelClass}>
+          Amount ({currencySymbol})
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            className={fieldClass}
+            value={values.amount}
+            onChange={(e) => set("amount", e.target.value)}
+            disabled={readOnly}
+            placeholder="0.00"
+          />
+        </label>
+      </div>
 
-      <Form.Item label="Documents">
+      <label className={labelClass}>
+        Payment Status
+        <select
+          value={values.paymentStatus}
+          onChange={(e) => set("paymentStatus", e.target.value as OfficeExpensePaymentStatus)}
+          disabled={readOnly}
+          className={fieldClass}
+        >
+          {OFFICE_EXPENSE_STATUS_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div>
+        <span className={labelClass}>Documents</span>
         <AttachedFilesField
           files={order.files.map((f) => ({ fileId: f.fileId, fileName: f.fileName }))}
           onAdd={(file) => officeExpenseApi.addFile(order.id, file)}
@@ -183,7 +209,9 @@ export default function OfficeExpensePaymentOrderForm({
           readOnly={readOnly}
           buttonLabel="Upload file"
         />
-      </Form.Item>
-    </Form>
+      </div>
+    </div>
   );
-}
+};
+
+export default OfficeExpensePaymentOrderForm;

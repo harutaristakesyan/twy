@@ -1,6 +1,7 @@
-import { useRequest } from "ahooks";
-import { Flex, Table, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { ChevronDown, ChevronRight } from "@gravity-ui/icons";
+import { Spinner } from "@heroui/react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import type { AdvancedFilter } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { formatCurrency, formatPercent, renderCurrency } from "@/utils/formatters";
@@ -9,49 +10,64 @@ import { useBillingFilters } from "../hooks/useBillingFilters";
 import { useInternalExpandedLoads } from "../hooks/useInternalExpandedLoads";
 import type { InternalBillingBranch } from "../types/billing";
 
-const { Title, Text } = Typography;
+const thClass =
+  "py-2 px-3 text-left text-xs font-medium text-default-600 border-b border-default-200";
+const tdClass = "py-2 px-3 text-sm text-default-800 border-b border-default-100";
 
-const columns: ColumnsType<InternalBillingBranch> = [
-  {
-    title: "Branch",
-    dataIndex: "branchName",
-    key: "branchName",
-    render: (name: string) => <strong>{name}</strong>,
-  },
-  { title: "Loads", dataIndex: "loadCount", key: "loadCount", width: 80 },
-  {
-    title: "Total Service Fee",
-    dataIndex: "totalServiceFee",
-    key: "totalServiceFee",
-    width: 150,
-    render: renderCurrency,
-  },
-  {
-    title: "Total Charges",
-    dataIndex: "totalCharges",
-    key: "totalCharges",
-    width: 130,
-    render: renderCurrency,
-  },
-  {
-    title: "Avg Income %",
-    dataIndex: "avgIncomePercentage",
-    key: "avgIncomePercentage",
-    width: 130,
-    render: formatPercent,
-  },
-  {
-    title: "Total Profit",
-    dataIndex: "totalProfit",
-    key: "totalProfit",
-    width: 130,
-    render: (v: number) => (
-      <Text strong style={{ color: v >= 0 ? "#389e0d" : "#cf1322" }}>
-        {formatCurrency(v)}
-      </Text>
-    ),
-  },
-];
+const BranchRow = ({
+  branch,
+  onExpand,
+  expandedRowRender,
+}: {
+  branch: InternalBillingBranch;
+  onExpand: (expanded: boolean, record: InternalBillingBranch) => Promise<void>;
+  expandedRowRender: (record: InternalBillingBranch) => React.ReactNode;
+}) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const toggle = () => {
+    const next = !expanded;
+    setExpanded(next);
+    void onExpand(next, branch);
+  };
+
+  return (
+    <>
+      <tr className="cursor-pointer bg-default-50 hover:bg-default-100" onClick={toggle}>
+        <td className={`${tdClass} font-bold`}>
+          <span className="inline-flex items-center gap-1">
+            {expanded ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
+            {branch.branchName}
+            <span className="ml-1 text-xs font-normal text-default-500">
+              ({branch.loadCount} loads)
+            </span>
+          </span>
+        </td>
+        <td className={tdClass}>{renderCurrency(branch.totalServiceFee)}</td>
+        <td className={tdClass}>{renderCurrency(branch.totalCharges)}</td>
+        <td className={tdClass}>{formatPercent(branch.avgIncomePercentage)}</td>
+        <td className={tdClass}>
+          <span
+            className={`font-semibold ${branch.totalProfit >= 0 ? "text-success" : "text-danger"}`}
+          >
+            {formatCurrency(branch.totalProfit)}
+          </span>
+        </td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={5} className="bg-white p-0">
+            <div className="px-4 py-2">{expandedRowRender(branch)}</div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+};
 
 export default function InternalBillingTable() {
   const {
@@ -70,23 +86,22 @@ export default function InternalBillingTable() {
     resetLoads();
   };
 
-  const { data: branches, loading } = useRequest(() => billingApi.listInternalByBranch(apiParams), {
-    refreshDeps: [apiParams],
+  const { data: branches, isLoading } = useQuery({
+    queryKey: ["billing-internal", apiParams],
+    queryFn: () => billingApi.listInternalByBranch(apiParams),
   });
 
   return (
     <>
-      <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>
-          Internal Billing
-        </Title>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-base font-semibold">Internal Billing</h2>
         <AdvancedFilterPopover
           fields={fields}
           initialFilter={activeFilter}
           initialQuery={activeQuery}
           onApply={onFilterApply}
         />
-      </Flex>
+      </div>
 
       <ActiveFilterChips
         filter={activeFilter}
@@ -96,14 +111,42 @@ export default function InternalBillingTable() {
         onClearQuery={() => setActiveQuery("")}
       />
 
-      <Table<InternalBillingBranch>
-        loading={loading}
-        dataSource={branches ?? []}
-        columns={columns}
-        rowKey="branchId"
-        expandable={{ expandedRowRender, onExpand }}
-        pagination={false}
-      />
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <Spinner size="lg" />
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className={thClass}>Branch</th>
+                <th className={thClass}>Total Service Fee</th>
+                <th className={thClass}>Total Charges</th>
+                <th className={thClass}>Avg Income %</th>
+                <th className={thClass}>Total Profit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(branches ?? []).map((branch) => (
+                <BranchRow
+                  key={branch.branchId}
+                  branch={branch}
+                  onExpand={onExpand}
+                  expandedRowRender={expandedRowRender}
+                />
+              ))}
+              {(branches ?? []).length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-sm text-default-500">
+                    No data
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }

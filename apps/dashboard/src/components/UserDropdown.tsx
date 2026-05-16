@@ -1,42 +1,55 @@
-import { DownOutlined, LogoutOutlined, UserOutlined } from "@ant-design/icons";
-import { Dropdown, Flex, type MenuProps } from "antd";
+import { ArrowRightFromSquare, Person } from "@gravity-ui/icons";
+import { Avatar, Button, Dropdown, Label } from "@heroui/react";
+import type { Key } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserAvatar } from "@/components/UserAvatar.tsx";
-import { useCurrentUser } from "@/hooks/useCurrentUser.ts";
-import { useAuth } from "@/providers/AuthProvider.tsx";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useAuth } from "@/providers/AuthProvider";
 
 const UserDropdown = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const { user } = useCurrentUser();
 
-  const menuItems: MenuProps["items"] = [
-    {
-      key: "profile",
-      onClick: () => navigate("/profile"),
-      icon: <UserOutlined />,
-      label: "My Profile",
-    },
-    { type: "divider" },
-    {
-      key: "logout",
-      onClick: () => logout(),
-      icon: <LogoutOutlined />,
-      danger: true,
-      label: "Log Out",
-    },
-  ];
+  const handleAction = (key: Key) => {
+    if (key === "profile") navigate("/profile");
+    else if (key === "logout") logout();
+  };
+
+  const initials =
+    [user?.firstName, user?.lastName]
+      .filter(Boolean)
+      .map((n) => n?.[0]?.toUpperCase())
+      .join("") || "?";
+
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
 
   return (
-    <Dropdown menu={{ items: menuItems }} trigger={["click"]} placement="bottomRight">
-      <Flex justify="space-between" align="center" style={{ cursor: "pointer" }}>
-        <UserAvatar
-          firstName={user?.firstName ?? undefined}
-          lastName={user?.lastName ?? undefined}
-          pictureFileId={user?.profilePictureFileId}
-        />
-        <DownOutlined style={{ marginLeft: 6, fontSize: 12 }} />
-      </Flex>
+    <Dropdown>
+      <Button variant="ghost" className="flex w-full items-center justify-start gap-2 px-2 py-1.5">
+        <Avatar size="sm">
+          <Avatar.Fallback>{initials}</Avatar.Fallback>
+        </Avatar>
+        <div className="flex min-w-0 flex-col text-left">
+          <p className="truncate text-sm font-medium leading-5">{fullName || "—"}</p>
+          <p className="truncate text-xs leading-none text-muted">{user?.email}</p>
+        </div>
+      </Button>
+      <Dropdown.Popover>
+        <Dropdown.Menu onAction={handleAction}>
+          <Dropdown.Item id="profile" textValue="My Profile">
+            <div className="flex w-full items-center justify-between gap-2">
+              <Label>My Profile</Label>
+              <Person className="size-3.5 text-muted" />
+            </div>
+          </Dropdown.Item>
+          <Dropdown.Item id="logout" textValue="Log Out" variant="danger">
+            <div className="flex w-full items-center justify-between gap-2">
+              <Label>Log Out</Label>
+              <ArrowRightFromSquare className="size-3.5 text-danger" />
+            </div>
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      </Dropdown.Popover>
     </Dropdown>
   );
 };

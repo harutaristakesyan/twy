@@ -1,171 +1,116 @@
-import { ArrowRightOutlined, CheckOutlined, CloseOutlined, LockOutlined } from "@ant-design/icons";
-import { useRequest } from "ahooks";
-import { App as AntdApp, Button, Col, Form, Input, List, Row, Space, Typography } from "antd";
-import React from "react";
+import { Button, FieldError, Input, Label, TextField, toast } from "@heroui/react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import ApiClient from "@/libs/ApiClient.ts";
-import { mapErrorToModalProps } from "@/utils/errorUtils.ts";
+import { z } from "zod";
+import ApiClient from "@/libs/ApiClient";
+import { getErrorMessage } from "@/utils/errorUtils";
 
-const { Text } = Typography;
-
-interface RegistrationFormValues {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-}
+const passwordChecks = [
+  { key: "length", label: "At least 8 characters", test: (v: string) => v.length >= 8 },
+  { key: "uppercase", label: "One uppercase letter", test: (v: string) => /[A-Z]/.test(v) },
+  { key: "number", label: "One number", test: (v: string) => /[0-9]/.test(v) },
+  {
+    key: "special",
+    label: "One special character (!@#$%^&*)",
+    test: (v: string) => /[!@#$%^&*]/.test(v),
+  },
+];
 
 function validatePassword(value = "") {
-  const checks = [
-    { key: "length", label: "At least 8 characters", valid: value.length >= 8 },
-    {
-      key: "uppercase",
-      label: "One uppercase letter",
-      valid: /[A-Z]/.test(value),
-    },
-    { key: "number", label: "One number", valid: /[0-9]/.test(value) },
-    {
-      key: "special",
-      label: "One special character (!@#$%^&*)",
-      valid: /[!@#$%^&*]/.test(value),
-    },
-  ];
-  const errors = checks.filter((r) => !r.valid).map((r) => r.label);
-  const isValid = errors.length === 0;
-  return { isValid, errors, results: checks };
+  const results = passwordChecks.map((c) => ({ ...c, valid: c.test(value) }));
+  const isValid = results.every((r) => r.valid);
+  return { isValid, results };
 }
 
+const schema = z.object({
+  firstName: z.string().min(1, "Required"),
+  lastName: z.string().min(1, "Required"),
+  email: z.string().email("Valid email required"),
+  password: z
+    .string()
+    .refine((v) => validatePassword(v).isValid, "Password does not meet complexity requirements"),
+});
+
+type RegistrationFormValues = z.infer<typeof schema>;
+
 const RegistrationForm = () => {
-  const [form] = Form.useForm();
   const navigate = useNavigate();
-  const { modal } = AntdApp.useApp();
-  const { run, loading } = useRequest(
-    async (values: RegistrationFormValues) => {
-      return ApiClient.post<{ userSub: string; message: string }>("/signup", values, true);
-    },
-    {
-      manual: true,
-      onSuccess: (_data, params) => {
-        const [values] = params;
-        navigate("/verification", {
-          state: {
-            email: values.email,
-            signUp: true,
-          },
-        });
-      },
-      onError: (error) => {
-        modal.error(mapErrorToModalProps(error));
-      },
-    },
-  );
+  const [loading, setLoading] = useState(false);
 
-  const passwordValue = Form.useWatch("password", form);
-  const formValues = Form.useWatch([], form);
-  const [submittable, setSubmittable] = React.useState(false);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isValid },
+  } = useForm<RegistrationFormValues>({
+    resolver: zodResolver(schema),
+    mode: "onChange",
+  });
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: formValues is a change signal, not read inside the effect
-  React.useEffect(() => {
-    form
-      .validateFields({ validateOnly: true })
-      .then(() => setSubmittable(true))
-      .catch(() => setSubmittable(false));
-  }, [form, formValues]);
+  const passwordValue = watch("password") ?? "";
+  const passwordResult = validatePassword(passwordValue);
 
-  const passwordResult = validatePassword(passwordValue || "");
-  const isPasswordValid = passwordResult.isValid;
-
-  const passwordValidationUI = passwordValue ? (
-    <List
-      size="small"
-      dataSource={passwordResult.results}
-      renderItem={(item) => (
-        <List.Item>
-          <Space>
-            {item.valid ? (
-              <CheckOutlined style={{ color: "green" }} />
-            ) : (
-              <CloseOutlined style={{ color: "red" }} />
-            )}
-            <Text style={{ color: item.valid ? "green" : undefined }}>{item.label}</Text>
-          </Space>
-        </List.Item>
-      )}
-    />
-  ) : null;
+  const onSubmit = async (values: RegistrationFormValues) => {
+    setLoading(true);
+    try {
+      await ApiClient.post<{ userSub: string; message: string }>("/signup", values, true);
+      navigate("/verification", { state: { email: values.email, signUp: true } });
+    } catch (error) {
+      toast.danger(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <Form layout="vertical" form={form} onFinish={run}>
-      <Row gutter={16}>
-        <Col xs={24} md={12}>
-          <Form.Item
-            label="First Name"
-            name="firstName"
-            rules={[{ required: true, message: "Required" }]}
-          >
-            <Input placeholder="Enter your first name" />
-          </Form.Item>
-        </Col>
-        <Col xs={24} md={12}>
-          <Form.Item
-            label="Last Name"
-            name="lastName"
-            rules={[{ required: true, message: "Required" }]}
-          >
-            <Input placeholder="Enter your last name" />
-          </Form.Item>
-        </Col>
-      </Row>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4">
+        <TextField isInvalid={!!errors.firstName}>
+          <Label>First Name</Label>
+          <Input placeholder="Enter your first name" {...register("firstName")} />
+          <FieldError>{errors.firstName?.message}</FieldError>
+        </TextField>
+        <TextField isInvalid={!!errors.lastName}>
+          <Label>Last Name</Label>
+          <Input placeholder="Enter your last name" {...register("lastName")} />
+          <FieldError>{errors.lastName?.message}</FieldError>
+        </TextField>
+      </div>
 
-      <Form.Item
-        label="Email Address"
-        name="email"
-        rules={[
-          {
-            required: true,
-            type: "email",
-            message: "Valid email required",
-          },
-        ]}
+      <TextField isInvalid={!!errors.email}>
+        <Label>Email Address</Label>
+        <Input type="email" placeholder="Enter your email address" {...register("email")} />
+        <FieldError>{errors.email?.message}</FieldError>
+      </TextField>
+
+      <TextField isInvalid={!!errors.password}>
+        <Label>Password</Label>
+        <Input type="password" placeholder="Enter password" {...register("password")} />
+        <FieldError>{errors.password?.message}</FieldError>
+      </TextField>
+
+      {passwordValue ? (
+        <ul className="text-sm space-y-1 px-1">
+          {passwordResult.results.map((item) => (
+            <li key={item.key} className={item.valid ? "text-green-600" : "text-red-500"}>
+              {item.valid ? "✓" : "✗"} {item.label}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <Button
+        type="submit"
+        variant="primary"
+        className="w-full"
+        isDisabled={!isValid || loading}
+        isPending={loading}
       >
-        <Input placeholder="Enter your email address" />
-      </Form.Item>
-
-      <Form.Item
-        label="Password"
-        name="password"
-        rules={[
-          {
-            required: true,
-            validator: (_, value) => {
-              const { isValid, errors } = validatePassword(value || "");
-              return isValid
-                ? Promise.resolve()
-                : Promise.reject(errors[0] || "Password does not meet complexity requirements");
-            },
-          },
-        ]}
-        hasFeedback
-        help={!isPasswordValid && passwordValidationUI}
-        validateTrigger={["onChange", "onBlur"]}
-      >
-        <Input.Password prefix={<LockOutlined />} placeholder="Enter password" />
-      </Form.Item>
-
-      <Form.Item>
-        <Button
-          block
-          htmlType="submit"
-          iconPosition="end"
-          disabled={!submittable}
-          icon={<ArrowRightOutlined />}
-          loading={loading}
-          type="primary"
-        >
-          Create Account
-        </Button>
-      </Form.Item>
-    </Form>
+        Create Account
+      </Button>
+    </form>
   );
 };
 

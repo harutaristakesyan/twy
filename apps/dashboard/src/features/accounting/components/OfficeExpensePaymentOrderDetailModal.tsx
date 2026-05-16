@@ -1,6 +1,6 @@
-import { useRequest } from "ahooks";
-import { App, Button, Form, Modal, Space } from "antd";
+import { Button, Modal, Spinner, toast } from "@heroui/react";
 import { useCallback, useState } from "react";
+import { useApiMutation } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { getDirtyFields } from "@/utils/getDirtyFields";
 import { officeExpenseApi } from "../api/officeExpensePaymentOrderApi";
@@ -11,6 +11,8 @@ import {
   type UpdateOfficeExpenseDto,
 } from "../types/officeExpensePaymentOrder";
 import OfficeExpensePaymentOrderForm, {
+  buildInitialValues,
+  formValuesToPeriod,
   type OfficeExpenseFormValues,
 } from "./OfficeExpensePaymentOrderForm";
 
@@ -39,23 +41,14 @@ const buildOriginalDto = (order: OfficeExpensePaymentOrder): UpdateOfficeExpense
 });
 
 const buildUpdateDto = (values: OfficeExpenseFormValues): UpdateOfficeExpenseDto | null => {
-  let periodStart: string;
-  let periodEnd: string;
-  if (values.date) {
-    periodStart = values.date.format("YYYY-MM-DD");
-    periodEnd = periodStart;
-  } else if (values.dateRange?.[0] && values.dateRange[1]) {
-    periodStart = values.dateRange[0].format("YYYY-MM-DD");
-    periodEnd = values.dateRange[1].format("YYYY-MM-DD");
-  } else {
-    return null;
-  }
+  const period = formValuesToPeriod(values);
+  if (!period) return null;
+  if (!values.serviceName) return null;
   return {
     serviceName: values.serviceName,
     paymentPurpose: values.paymentPurpose,
-    periodStart,
-    periodEnd,
-    amount: values.amount,
+    ...period,
+    amount: Number(values.amount),
     currency: values.currency,
     paymentStatus: values.paymentStatus,
   };
@@ -69,92 +62,84 @@ export default function OfficeExpensePaymentOrderDetailModal({
   onSuccess,
 }: Props) {
   const readOnly = mode === "view";
-  const { message } = App.useApp();
-  const [form] = Form.useForm<OfficeExpenseFormValues>();
-  const [uploading, setUploading] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
-
-  const handleClose = () => {
-    setIsDirty(false);
-    onClose();
-  };
-
-  const handleValuesChange = useCallback(
-    (_changed: Partial<OfficeExpenseFormValues>, allValues: OfficeExpenseFormValues) => {
-      if (!order) return;
-      const currentDto = buildUpdateDto(allValues);
-      if (!currentDto) {
-        setIsDirty(false);
-        return;
-      }
-      setIsDirty(Object.keys(getDirtyFields(buildOriginalDto(order), currentDto)).length > 0);
-    },
-    [order],
+  const [formValues, setFormValues] = useState<OfficeExpenseFormValues | null>(() =>
+    order ? buildInitialValues(order) : null,
   );
+  const [uploading, setUploading] = useState(false);
 
-  const { loading: saving, run: save } = useRequest(
-    async (values: OfficeExpenseFormValues) => {
-      if (!order) return false;
-      const currentDto = buildUpdateDto(values);
-      if (!currentDto) return false;
+  const isDirty = (() => {
+    if (!order || !formValues) return false;
+    const currentDto = buildUpdateDto(formValues);
+    if (!currentDto) return false;
+    return Object.keys(getDirtyFields(buildOriginalDto(order), currentDto)).length > 0;
+  })();
+
+  const mutation = useApiMutation(
+    async () => {
+      if (!order || !formValues) return;
+      const currentDto = buildUpdateDto(formValues);
+      if (!currentDto) return;
       const dirty = getDirtyFields(buildOriginalDto(order), currentDto);
-      if (Object.keys(dirty).length === 0) return false;
+      if (Object.keys(dirty).length === 0) return;
       await officeExpenseApi.update(order.id, dirty);
-      return true;
     },
     {
-      manual: true,
-      onSuccess: (saved) => {
-        if (!saved) return;
-        message.success("Office expense payment order updated");
+      onSuccess: () => {
+        toast.success("Office expense payment order updated");
         onSuccess();
-        handleClose();
+        onClose();
       },
-      onError: (err) => message.error(getErrorMessage(err)),
+      onError: (err) => toast.danger(getErrorMessage(err)),
     },
+  );
+
+  const handleOpenChange = useCallback(
+    (isOpen: boolean) => {
+      if (!isOpen) onClose();
+    },
+    [onClose],
   );
 
   const modalTitle = order
-    ? `${readOnly ? "View" : "Edit"} Office Expense Payment Order — ${titleSuffix(order.serviceName, order.paymentPurpose)}`
-    : `${readOnly ? "View" : "Edit"} Office Expense Payment Order`;
+    ? `${readOnly ? "View" : "Edit"} Office Expense — ${titleSuffix(order.serviceName, order.paymentPurpose)}`
+    : `${readOnly ? "View" : "Edit"} Office Expense`;
 
   return (
-    <Modal
-      title={modalTitle}
-      open={open}
-      onCancel={handleClose}
-      width={640}
-      destroyOnHidden
-      footer={
-        readOnly ? (
-          <Button onClick={handleClose}>Close</Button>
+    <Modal isOpen={open} onOpenChange={handleOpenChange}>
+      <Modal.Header>{modalTitle}</Modal.Header>
+      <Modal.Body className="p-2">
+        {order && formValues && (
+          <OfficeExpensePaymentOrderForm
+            key={order.id}
+            values={formValues}
+            onChange={setFormValues}
+            order={order}
+            readOnly={readOnly}
+            onFilesChanged={onSuccess}
+            onUploadingChange={setUploading}
+          />
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        {readOnly ? (
+          <Button variant="ghost" onPress={onClose}>
+            Close
+          </Button>
         ) : (
-          <Space>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button
-              type="primary"
-              loading={saving}
-              disabled={!isDirty || uploading}
-              onClick={() => form.submit()}
-            >
-              Save
+          <>
+            <Button variant="ghost" onPress={onClose}>
+              Cancel
             </Button>
-          </Space>
-        )
-      }
-    >
-      {order && (
-        <OfficeExpensePaymentOrderForm
-          key={order.id}
-          form={form}
-          order={order}
-          readOnly={readOnly}
-          onFinish={save}
-          onFilesChanged={onSuccess}
-          onUploadingChange={setUploading}
-          onValuesChange={readOnly ? undefined : handleValuesChange}
-        />
-      )}
+            <Button
+              variant="primary"
+              isDisabled={!isDirty || uploading || mutation.isPending}
+              onPress={() => mutation.mutate(undefined)}
+            >
+              {mutation.isPending ? <Spinner size="sm" /> : "Save"}
+            </Button>
+          </>
+        )}
+      </Modal.Footer>
     </Modal>
   );
 }

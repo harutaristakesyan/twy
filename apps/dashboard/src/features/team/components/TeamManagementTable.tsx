@@ -1,111 +1,69 @@
-import { PlusOutlined } from "@ant-design/icons";
-import { useAntdTable, useRequest } from "ahooks";
-import { App, Button, Card, Empty, Flex, Table, Typography } from "antd";
+import { Spinner, Table } from "@heroui/react";
 import type React from "react";
-import { useState } from "react";
-import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
-import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { getErrorMessage } from "@/utils/errorUtils";
-import { deleteTeam, getTeams } from "../api/teamApi";
-import { useTeamModal } from "../providers/TeamModalProvider";
-import { useTeamColumns } from "./useTeamColumns";
+import type { ReactNode } from "react";
+import PageControls from "@/components/PageControls";
+import type { Team } from "../types/team";
+import type { TeamColumnDef } from "./useTeamColumns";
 
-const { Title } = Typography;
+type TeamManagementTableProps = {
+  items: Team[];
+  columns: TeamColumnDef[];
+  renderCell: (record: Team, colId: string) => ReactNode;
+  total: number;
+  page: number;
+  pageSize: number;
+  isLoading: boolean;
+  onPageChange: (page: number) => void;
+};
 
-const BOOL_OPTIONS = [
-  { label: "Yes", value: "true" },
-  { label: "No", value: "false" },
-];
-
-const FILTER_FIELDS: FilterField[] = [
-  { key: "branchRestricted", label: "Branch restricted", type: "select", options: BOOL_OPTIONS },
-  { key: "onlyOwnData", label: "Only own data", type: "select", options: BOOL_OPTIONS },
-];
-
-const TeamManagementTable: React.FC = () => {
-  const { message } = App.useApp();
-  const { permissions } = useCurrentUser();
-  const { openTeamCreate } = useTeamModal();
-  const canAdd = permissions.teams.add;
-
-  const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
-  const [activeQuery, setActiveQuery] = useState("");
-
-  const { tableProps, refresh } = useAntdTable(
-    async ({ current, pageSize, sorter }) => {
-      const s = Array.isArray(sorter) ? sorter[0] : sorter;
-      const result = await getTeams({
-        page: current - 1,
-        limit: pageSize,
-        sortOrder: (s?.order ?? undefined) as "ascend" | "descend" | undefined,
-        query: activeQuery || undefined,
-        filters: activeFilter ? JSON.stringify(activeFilter) : undefined,
-      });
-      return { total: result.total, list: result.teams };
-    },
-    { refreshDeps: [activeQuery, activeFilter], defaultPageSize: 10 },
-  );
-
-  const { run: runDelete } = useRequest(deleteTeam, {
-    manual: true,
-    onSuccess: () => {
-      message.success("Team deleted successfully");
-      refresh();
-    },
-    onError: (error) => message.error(getErrorMessage(error)),
-  });
-
-  const handleFilterApply = (filter: AdvancedFilter | undefined, query: string | undefined) => {
-    setActiveFilter(filter);
-    setActiveQuery(query ?? "");
-  };
-
-  const columns = useTeamColumns(refresh, runDelete);
+const TeamManagementTable: React.FC<TeamManagementTableProps> = ({
+  items,
+  columns,
+  renderCell,
+  total,
+  page,
+  pageSize,
+  isLoading,
+  onPageChange,
+}) => {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <Card>
-        <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
-          <Title level={4} style={{ margin: 0 }}>
-            Teams ({tableProps.pagination.total ?? 0})
-          </Title>
-          <Flex align="middle" gap="middle">
-            <AdvancedFilterPopover
-              fields={FILTER_FIELDS}
-              initialFilter={activeFilter}
-              initialQuery={activeQuery}
-              onApply={handleFilterApply}
-            />
-            {canAdd && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => openTeamCreate(refresh)}
-              >
-                Add Team
-              </Button>
+    <Table>
+      <Table.ScrollContainer>
+        <Table.Content aria-label="Teams" className="min-w-full">
+          <Table.Header columns={columns}>
+            {(col) => <Table.Column isRowHeader={col.isRowHeader}>{col.label}</Table.Column>}
+          </Table.Header>
+          <Table.Body items={items}>
+            {(record) => (
+              <Table.Row id={record.id}>
+                <Table.Collection items={columns}>
+                  {(col) => <Table.Cell>{renderCell(record, col.id)}</Table.Cell>}
+                </Table.Collection>
+              </Table.Row>
             )}
-          </Flex>
-        </Flex>
-
-        <ActiveFilterChips
-          filter={activeFilter}
-          fields={FILTER_FIELDS}
-          query={activeQuery}
-          onChange={setActiveFilter}
-          onClearQuery={() => setActiveQuery("")}
-        />
-
-        <Table
-          columns={columns}
-          rowKey="id"
-          scroll={{ x: 900 }}
-          {...tableProps}
-          locale={{ emptyText: <Empty description="No teams found" /> }}
-        />
-      </Card>
-    </div>
+          </Table.Body>
+        </Table.Content>
+      </Table.ScrollContainer>
+      {total > pageSize && (
+        <Table.Footer>
+          <div className="flex justify-center pt-3">
+            <PageControls
+              totalPages={Math.ceil(total / pageSize)}
+              page={page}
+              onPageChange={onPageChange}
+            />
+          </div>
+        </Table.Footer>
+      )}
+    </Table>
   );
 };
 

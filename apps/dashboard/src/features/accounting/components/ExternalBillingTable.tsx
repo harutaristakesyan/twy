@@ -1,7 +1,7 @@
-import { BankOutlined, UserOutlined } from "@ant-design/icons";
-import { useRequest } from "ahooks";
-import { Flex, Table, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { ChevronDown, ChevronRight } from "@gravity-ui/icons";
+import { Spinner } from "@heroui/react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import type { AdvancedFilter } from "@/components/AdvancedFilter";
 import { ActiveFilterChips, AdvancedFilterPopover } from "@/components/AdvancedFilter";
 import { formatCurrency, renderCurrency } from "@/utils/formatters";
@@ -12,237 +12,126 @@ import { useExpandedLoads } from "../hooks/useExpandedLoads";
 import type { ExternalBillingBranch, ExternalBillingLoad } from "../types/billing";
 import PaymentStatusTag from "./PaymentStatusTag";
 
-const { Title, Text } = Typography;
-
-// ---------------------------------------------------------------------------
-// Shared renderers
-// ---------------------------------------------------------------------------
-
 const renderDate = (v: string | null | undefined) =>
   v
     ? new Date(v).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
     : "—";
 
 const renderOwed = (v: number) => (
-  <Text strong style={{ color: v > 0 ? "#cf1322" : "#389e0d" }}>
+  <span className={`font-semibold ${v > 0 ? "text-danger" : "text-success"}`}>
     {formatCurrency(v)}
-  </Text>
+  </span>
 );
 
-// ---------------------------------------------------------------------------
-// Innermost: load table (one per user group). Keeps the original per-load columns.
-// ---------------------------------------------------------------------------
+const thClass =
+  "py-2 px-3 text-left text-xs font-medium text-default-600 border-b border-default-200";
+const tdClass = "py-2 px-3 text-sm text-default-800 border-b border-default-100";
 
-const loadColumns: ColumnsType<ExternalBillingLoad> = [
-  {
-    title: "Reference",
-    dataIndex: "referenceNumber",
-    key: "referenceNumber",
-    width: 140,
-    render: (text: string) => <strong>{text}</strong>,
-  },
-  {
-    title: "Carrier",
-    dataIndex: "carrierName",
-    key: "carrierName",
-    width: 160,
-    render: (v: string | null) => v ?? "—",
-  },
-  {
-    title: "Broker Receivable",
-    dataIndex: "brokerReceivable",
-    key: "brokerReceivable",
-    width: 150,
-    render: renderCurrency,
-  },
-  {
-    title: "Broker Received",
-    dataIndex: "brokerReceivedAmount",
-    key: "brokerReceivedAmount",
-    width: 150,
-    render: renderCurrency,
-  },
-  {
-    title: "Broker Received Date",
-    dataIndex: "brokerReceivedDate",
-    key: "brokerReceivedDate",
-    width: 170,
-    render: renderDate,
-  },
-  {
-    title: "Carrier Payable",
-    dataIndex: "carrierPayable",
-    key: "carrierPayable",
-    width: 140,
-    render: renderCurrency,
-  },
-  {
-    title: "Carrier Paid",
-    dataIndex: "carrierPaidAmount",
-    key: "carrierPaidAmount",
-    width: 120,
-    render: renderCurrency,
-  },
-  {
-    title: "Carrier Paid Date",
-    dataIndex: "carrierPaidDate",
-    key: "carrierPaidDate",
-    width: 150,
-    render: renderDate,
-  },
-  {
-    title: "Status",
-    dataIndex: "paymentStatus",
-    key: "paymentStatus",
-    width: 140,
-    render: (_: unknown, record: ExternalBillingLoad) => (
-      <PaymentStatusTag status={record.paymentStatus} />
-    ),
-  },
-];
-
-const LoadTable = ({ loads }: { loads: ExternalBillingLoad[] }) => (
-  <Table<ExternalBillingLoad>
-    size="small"
-    dataSource={loads}
-    columns={loadColumns}
-    rowKey="loadId"
-    pagination={false}
-    style={{ margin: "8px 0" }}
-  />
+const LoadRow = ({ load }: { load: ExternalBillingLoad }) => (
+  <tr className="hover:bg-default-50">
+    <td className={tdClass}>
+      <strong>{load.referenceNumber}</strong>
+    </td>
+    <td className={tdClass}>{load.carrierName ?? "—"}</td>
+    <td className={tdClass}>{renderCurrency(load.brokerReceivable)}</td>
+    <td className={tdClass}>{renderCurrency(load.brokerReceivedAmount)}</td>
+    <td className={tdClass}>{renderDate(load.brokerReceivedDate)}</td>
+    <td className={tdClass}>{renderCurrency(load.carrierPayable)}</td>
+    <td className={tdClass}>{renderCurrency(load.carrierPaidAmount)}</td>
+    <td className={tdClass}>{renderDate(load.carrierPaidDate)}</td>
+    <td className={tdClass}>
+      <PaymentStatusTag status={load.paymentStatus} />
+    </td>
+  </tr>
 );
 
-// ---------------------------------------------------------------------------
-// Middle: user table (one per branch). Each user row expands into a LoadTable.
-// ---------------------------------------------------------------------------
+const UserGroupRow = ({ group }: { group: ExternalBillingUserGroup }) => {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <>
+      <tr className="cursor-pointer hover:bg-accent-50" onClick={() => setExpanded((x) => !x)}>
+        <td className={`${tdClass} font-medium`} colSpan={2}>
+          <span className="inline-flex items-center gap-1 text-default-700">
+            {expanded ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
+            {group.userName}
+          </span>
+        </td>
+        <td className={tdClass}>{renderCurrency(group.totalBrokerReceivable)}</td>
+        <td className={tdClass}>{renderCurrency(group.totalBrokerReceived)}</td>
+        <td className={tdClass} />
+        <td className={tdClass}>{renderCurrency(group.totalCarrierPayable)}</td>
+        <td className={tdClass}>{renderCurrency(group.totalCarrierPaid)}</td>
+        <td className={tdClass} />
+        <td className={tdClass}>{renderOwed(group.owedToBranch)}</td>
+      </tr>
+      {expanded && group.loads.map((l) => <LoadRow key={l.loadId} load={l} />)}
+    </>
+  );
+};
 
-const userColumns: ColumnsType<ExternalBillingUserGroup> = [
-  {
-    title: "User",
-    dataIndex: "userName",
-    key: "userName",
-    render: (name: string, row) => (
-      <Text type={row.userId === null ? "secondary" : undefined}>
-        <UserOutlined style={{ marginRight: 6 }} />
-        {name}
-      </Text>
-    ),
-  },
-  { title: "Loads", dataIndex: "loadCount", key: "loadCount", width: 80 },
-  {
-    title: "Broker Receivable",
-    dataIndex: "totalBrokerReceivable",
-    key: "totalBrokerReceivable",
-    width: 160,
-    render: renderCurrency,
-  },
-  {
-    title: "Broker Received",
-    dataIndex: "totalBrokerReceived",
-    key: "totalBrokerReceived",
-    width: 160,
-    render: renderCurrency,
-  },
-  {
-    title: "Carrier Payable",
-    dataIndex: "totalCarrierPayable",
-    key: "totalCarrierPayable",
-    width: 150,
-    render: renderCurrency,
-  },
-  {
-    title: "Carrier Paid",
-    dataIndex: "totalCarrierPaid",
-    key: "totalCarrierPaid",
-    width: 130,
-    render: renderCurrency,
-  },
-  {
-    title: "Owed to Branch",
-    dataIndex: "owedToBranch",
-    key: "owedToBranch",
-    width: 150,
-    render: (v: number) => renderOwed(v),
-  },
-];
-
-const userRowKey = (g: ExternalBillingUserGroup) => g.userId ?? "unknown";
-
-const UserTable = ({
-  userGroups,
-  loading,
+const BranchRow = ({
+  branch,
+  onExpand,
+  data,
+  isExpanding,
 }: {
-  userGroups: ExternalBillingUserGroup[];
-  loading?: boolean;
-}) => (
-  <Table<ExternalBillingUserGroup>
-    size="small"
-    loading={loading}
-    dataSource={userGroups}
-    columns={userColumns}
-    rowKey={userRowKey}
-    pagination={false}
-    style={{ margin: "8px 0" }}
-    expandable={{
-      expandedRowRender: (user) => <LoadTable loads={user.loads} />,
-      rowExpandable: (user) => user.loads.length > 0,
-    }}
-  />
-);
+  branch: ExternalBillingBranch;
+  onExpand: (expanded: boolean, branchId: string) => Promise<void>;
+  data: { userGroups: ExternalBillingUserGroup[] } | undefined;
+  isExpanding: boolean;
+}) => {
+  const [expanded, setExpanded] = useState(false);
 
-// ---------------------------------------------------------------------------
-// Outer: branch table. Each branch row expands into a UserTable.
-// ---------------------------------------------------------------------------
+  const toggle = () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next) void onExpand(true, branch.branchId);
+  };
 
-const branchColumns: ColumnsType<ExternalBillingBranch> = [
-  {
-    title: "Branch",
-    dataIndex: "branchName",
-    key: "branchName",
-    render: (name: string) => (
-      <strong>
-        <BankOutlined style={{ marginRight: 6 }} />
-        {name}
-      </strong>
-    ),
-  },
-  { title: "Loads", dataIndex: "loadCount", key: "loadCount", width: 80 },
-  {
-    title: "Broker Receivable",
-    dataIndex: "totalBrokerReceivable",
-    key: "totalBrokerReceivable",
-    width: 160,
-    render: renderCurrency,
-  },
-  {
-    title: "Broker Received",
-    dataIndex: "totalBrokerReceived",
-    key: "totalBrokerReceived",
-    width: 160,
-    render: renderCurrency,
-  },
-  {
-    title: "Carrier Payable",
-    dataIndex: "totalCarrierPayable",
-    key: "totalCarrierPayable",
-    width: 150,
-    render: renderCurrency,
-  },
-  {
-    title: "Carrier Paid",
-    dataIndex: "totalCarrierPaid",
-    key: "totalCarrierPaid",
-    width: 130,
-    render: renderCurrency,
-  },
-  {
-    title: "Owed to Branch",
-    dataIndex: "owedToBranch",
-    key: "owedToBranch",
-    width: 150,
-    render: (v: number) => renderOwed(v),
-  },
-];
+  return (
+    <>
+      <tr
+        className="cursor-pointer bg-default-50 hover:bg-default-100 font-semibold"
+        onClick={toggle}
+      >
+        <td className={`${tdClass} font-bold`} colSpan={2}>
+          <span className="inline-flex items-center gap-1">
+            {expanded ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
+            {branch.branchName}
+            <span className="ml-1 text-xs font-normal text-default-500">
+              ({branch.loadCount} loads)
+            </span>
+          </span>
+        </td>
+        <td className={tdClass}>{renderCurrency(branch.totalBrokerReceivable)}</td>
+        <td className={tdClass}>{renderCurrency(branch.totalBrokerReceived)}</td>
+        <td className={tdClass} />
+        <td className={tdClass}>{renderCurrency(branch.totalCarrierPayable)}</td>
+        <td className={tdClass}>{renderCurrency(branch.totalCarrierPaid)}</td>
+        <td className={tdClass} />
+        <td className={tdClass}>{renderOwed(branch.owedToBranch)}</td>
+      </tr>
+      {expanded && isExpanding && (
+        <tr>
+          <td colSpan={9} className="py-3 text-center">
+            <Spinner size="sm" />
+          </td>
+        </tr>
+      )}
+      {expanded &&
+        !isExpanding &&
+        data?.userGroups.map((g) => <UserGroupRow key={g.userId ?? "unknown"} group={g} />)}
+    </>
+  );
+};
 
 export default function ExternalBillingTable() {
   const {
@@ -261,33 +150,22 @@ export default function ExternalBillingTable() {
     resetLoads();
   };
 
-  const { data: branches, loading } = useRequest(() => billingApi.listExternalByBranch(apiParams), {
-    refreshDeps: [apiParams],
+  const { data: branches, isLoading } = useQuery({
+    queryKey: ["billing-external", apiParams],
+    queryFn: () => billingApi.listExternalByBranch(apiParams),
   });
-
-  const renderBranchExpansion = (branch: ExternalBillingBranch) => {
-    const data = loadsByBranch.get(branch.branchId);
-    return (
-      <UserTable
-        userGroups={data?.userGroups ?? []}
-        loading={expandingBranchId === branch.branchId}
-      />
-    );
-  };
 
   return (
     <>
-      <Flex justify="space-between" align="middle" gap="large" wrap style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>
-          External Billing
-        </Title>
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+        <h2 className="text-base font-semibold">External Billing</h2>
         <AdvancedFilterPopover
           fields={fields}
           initialFilter={activeFilter}
           initialQuery={activeQuery}
           onApply={onFilterApply}
         />
-      </Flex>
+      </div>
 
       <ActiveFilterChips
         filter={activeFilter}
@@ -297,17 +175,47 @@ export default function ExternalBillingTable() {
         onClearQuery={() => setActiveQuery("")}
       />
 
-      <Table<ExternalBillingBranch>
-        loading={loading}
-        dataSource={branches ?? []}
-        columns={branchColumns}
-        rowKey="branchId"
-        pagination={false}
-        expandable={{
-          expandedRowRender: renderBranchExpansion,
-          onExpand: (expanded, record) => onExpand(expanded, record.branchId),
-        }}
-      />
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <Spinner size="lg" />
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className={thClass}>Branch / User</th>
+                <th className={thClass}>Carrier</th>
+                <th className={thClass}>Broker Receivable</th>
+                <th className={thClass}>Broker Received</th>
+                <th className={thClass}>Broker Received Date</th>
+                <th className={thClass}>Carrier Payable</th>
+                <th className={thClass}>Carrier Paid</th>
+                <th className={thClass}>Carrier Paid Date</th>
+                <th className={thClass}>Owed / Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(branches ?? []).map((branch) => (
+                <BranchRow
+                  key={branch.branchId}
+                  branch={branch}
+                  onExpand={onExpand}
+                  data={loadsByBranch.get(branch.branchId)}
+                  isExpanding={expandingBranchId === branch.branchId}
+                />
+              ))}
+              {(branches ?? []).length === 0 && (
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-sm text-default-500">
+                    No data
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }

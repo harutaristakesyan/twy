@@ -1,14 +1,11 @@
-import { App, Flex, Space, Typography } from "antd";
+import { toast } from "@heroui/react";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import ApiClient from "@/libs/ApiClient.ts";
-
-const { Text, Link } = Typography;
+import ApiClient from "@/libs/ApiClient";
 
 const ResendCode = () => {
-  const { message } = App.useApp();
   const location = useLocation();
-  const email = location.state?.email;
+  const email = location.state?.email as string | undefined;
 
   const [timer, setTimer] = useState(119);
 
@@ -25,21 +22,31 @@ const ResendCode = () => {
   const handleResendCode = async () => {
     if (!email) return;
     await ApiClient.post("/resend-code", { email });
-    message.success("Verification code resent");
+    toast.success("Verification code resent");
     setTimer(119);
   };
 
+  const timerLabel = `${Math.floor(timer / 60)}:${(timer % 60).toString().padStart(2, "0")}`;
+  const canResend = !!email && timer === 0;
+
   return (
-    <Flex justify="center" align="center" style={{ marginTop: 24 }}>
-      <Space>
-        <Text type="secondary">Didn&#39;t receive the code?</Text>
-        <Link disabled={!email || timer > 0} onClick={handleResendCode}>
-          Resend Code
-        </Link>
-        <Text type="secondary">|</Text>
-        <Text>{`${Math.floor(timer / 60)}:${(timer % 60).toString().padStart(2, "0")}`}</Text>
-      </Space>
-    </Flex>
+    <div className="flex justify-center items-center gap-2 mt-6 text-sm text-gray-500">
+      <span>Didn&#39;t receive the code?</span>
+      <button
+        type="button"
+        disabled={!canResend}
+        onClick={handleResendCode}
+        className={
+          canResend
+            ? "text-blue-600 hover:underline cursor-pointer"
+            : "text-gray-400 cursor-not-allowed"
+        }
+      >
+        Resend Code
+      </button>
+      <span>|</span>
+      <span>{timerLabel}</span>
+    </div>
   );
 };
 

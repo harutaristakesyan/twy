@@ -1,72 +1,95 @@
-import { useDebounceFn, useRequest } from "ahooks";
-import type { AutoCompleteProps } from "antd";
-import { AutoComplete, Spin } from "antd";
-import { useEffect, useState } from "react";
-import { LabeledOption } from "@/components/LabeledOption";
+import { ComboBox, Input, type Key, Label, ListBox } from "@heroui/react";
+import type React from "react";
+import { useMemo, useState } from "react";
 import type { BranchCI } from "@/features/branch/types/branch";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useApiQuery } from "@/libs/query";
 import { getCommunityLicenses } from "../api/ciApi";
 
-type CIAutocompleteProps = Pick<
-  AutoCompleteProps,
-  "value" | "onChange" | "placeholder" | "size" | "disabled" | "id"
-> & {
+type CIAutocompleteProps = {
+  value?: string | null;
+  onChange?: (uuid: string | null, ciNumber: string) => void;
+  label?: string;
+  placeholder?: string;
+  disabled?: boolean;
   existingCI?: BranchCI | null;
+  variant?: "primary" | "secondary";
+  isInvalid?: boolean;
 };
 
 const CIAutocomplete: React.FC<CIAutocompleteProps> = ({
   value,
   onChange,
+  label = "Community License",
+  placeholder = "Search by CI number",
+  disabled,
   existingCI,
-  ...props
+  variant,
+  isInvalid,
 }) => {
-  const [displayValue, setDisplayValue] = useState(existingCI?.ciNumber ?? "");
-  const [query, setQuery] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const debounced = useDebouncedValue(inputValue, 250);
 
-  // Reset display when the form clears the field
-  useEffect(() => {
-    if (value == null || value === "") setDisplayValue("");
-  }, [value]);
-
-  const { run: onSearch } = useDebounceFn(setQuery, { wait: 300 });
-
-  const { data: result, loading } = useRequest(
-    async () => getCommunityLicenses({ query: query || undefined, limit: 10, page: 0 }),
-    { refreshDeps: [query] },
+  const { data } = useApiQuery(["ci-search", debounced], () =>
+    getCommunityLicenses({ query: debounced || undefined, limit: 25, page: 0 }),
   );
 
-  const options = (result?.communityLicenses ?? []).map((ci) => ({
-    value: ci.id,
-    label: ci.ciNumber,
-    description: `${ci.validFrom} – ${ci.validTo ?? "open-ended"}`,
-  }));
+  const items = useMemo(() => {
+    const fetched = data?.communityLicenses ?? [];
+    if (existingCI && !fetched.find((c) => c.id === existingCI.id)) {
+      return [
+        {
+          id: existingCI.id,
+          ciNumber: existingCI.ciNumber,
+          validFrom: existingCI.validFrom,
+          validTo: existingCI.validTo,
+          createdAt: "",
+        },
+        ...fetched,
+      ];
+    }
+    return fetched;
+  }, [data?.communityLicenses, existingCI]);
 
   return (
-    <AutoComplete
-      {...props}
-      value={displayValue}
-      options={options}
-      onSelect={(ciId, option) => {
-        setDisplayValue(String(option.label ?? ""));
-        onChange?.(ciId, option as never);
+    <ComboBox
+      allowsEmptyCollection
+      isDisabled={disabled}
+      isInvalid={isInvalid}
+      value={value ?? null}
+      onChange={(key: Key | null) => {
+        if (!key) {
+          onChange?.(null, "");
+          return;
+        }
+        const id = String(key);
+        const item = items.find((c) => c.id === id);
+        onChange?.(id, item?.ciNumber ?? "");
       }}
-      onChange={(text, option) => {
-        if (!text) onChange?.(text, option as never);
-      }}
-      showSearch={{
-        filterOption: () => true,
-        onSearch: (text) => {
-          setDisplayValue(text);
-          onSearch(text);
-        },
-      }}
-      notFoundContent={loading ? <Spin size="small" /> : undefined}
-      optionRender={(option) => (
-        <LabeledOption
-          label={String(option.data.label)}
-          description={String(option.data.description)}
-        />
-      )}
-    />
+      inputValue={inputValue}
+      onInputChange={setInputValue}
+    >
+      <Label>{label}</Label>
+      <ComboBox.InputGroup>
+        <Input variant={variant} placeholder={placeholder} />
+        <ComboBox.Trigger />
+      </ComboBox.InputGroup>
+      <ComboBox.Popover>
+        <ListBox>
+          {items.map((ci) => (
+            <ListBox.Item key={ci.id} id={ci.id} textValue={ci.ciNumber}>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">{ci.ciNumber}</span>
+                <span className="text-xs text-default-500">
+                  {ci.validFrom} – {ci.validTo ?? "open-ended"}
+                </span>
+              </div>
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </ComboBox.Popover>
+    </ComboBox>
   );
 };
 

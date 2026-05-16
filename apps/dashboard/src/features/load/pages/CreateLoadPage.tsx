@@ -1,24 +1,7 @@
-import { ArrowLeftOutlined } from "@ant-design/icons";
-import { useRequest } from "ahooks";
-import {
-  App,
-  Button,
-  Card,
-  Col,
-  Divider,
-  Flex,
-  Form,
-  Grid,
-  Input,
-  Row,
-  Space,
-  Steps,
-  Switch,
-  Typography,
-} from "antd";
-import type { NamePath } from "antd/es/form/interface";
+import { ArrowLeft } from "@gravity-ui/icons";
+import { Button, Spinner, toast } from "@heroui/react";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CarrierAutocomplete from "@/features/carrier/components/CarrierAutocomplete";
 import type { FileUploaderHandle, FileUploaderValueItem } from "@/features/files";
@@ -27,21 +10,17 @@ import { loadApi } from "@/features/load/api/loadApi";
 import { LoadStopsFormList } from "@/features/load/components/LoadStopsFormList";
 import type { CreateLoadDto, Location } from "@/features/load/types/load";
 import BrokerAutocomplete from "@/features/outside-broker/components/BrokerAutocomplete";
+import { useApiMutation } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 
-const { Title } = Typography;
-
-const FORM_COL = { xs: 24 as const, md: 12 as const };
-
-const STEP_ITEMS_META = [
+const STEPS = [
   { title: "Customer & carrier", description: "Who pays and who hauls" },
   { title: "Service & booking", description: "How the load is classified" },
   { title: "Pick-up", description: "Origin stops" },
   { title: "Drop-off", description: "Destination stops" },
   { title: "Files", description: "Optional documents" },
-] as const;
-
-const LAST_STEP_INDEX = STEP_ITEMS_META.length - 1;
+];
+const LAST_STEP = STEPS.length - 1;
 
 const toNumberOrNull = (value?: string, fieldName?: string): number | null | undefined => {
   if (value === undefined) return undefined;
@@ -75,117 +54,140 @@ const toNullableString = (value?: string | null): string | null | undefined => {
   return trimmed.length ? trimmed : null;
 };
 
-const getFieldsForStep = (form: ReturnType<typeof Form.useForm>[0], step: number): NamePath[] => {
-  switch (step) {
-    case 0:
-      return [
-        "customer",
-        "referenceNumber",
-        "contactName",
-        "customerRate",
-        "paymentMethod",
-        "paymentTerms",
-        "carrierRate",
-      ];
-    case 1:
-      return [
-        "loadType",
-        "serviceType",
-        "serviceGivenAs",
-        "commodity",
-        "bookedAs",
-        "soldAs",
-        "weight",
-      ];
-    case 2: {
-      const list = (form.getFieldValue("pickups") ?? []) as unknown[];
-      return list.flatMap((_, i) => [
-        ["pickups", i, "carrier"],
-        ["pickups", i, "name"],
-        ["pickups", i, "address"],
-      ]);
-    }
-    case 3: {
-      const list = (form.getFieldValue("dropoffs") ?? []) as unknown[];
-      return list.flatMap((_, i) => [
-        ["dropoffs", i, "carrier"],
-        ["dropoffs", i, "name"],
-        ["dropoffs", i, "address"],
-      ]);
-    }
-    default:
-      return [];
-  }
+type FormState = {
+  customer: string;
+  referenceNumber: string;
+  customerRate: string;
+  contactName: string;
+  paymentMethod: string;
+  paymentTerms: string;
+  carrier: string;
+  carrierPaymentMethod: string;
+  carrierRate: string;
+  chargeServiceFeeToOffice: boolean;
+  loadType: string;
+  serviceType: string;
+  serviceGivenAs: string;
+  commodity: string;
+  bookedAs: string;
+  soldAs: string;
+  weight: string;
+  temperature: string;
+  pickups: Location[];
+  dropoffs: Location[];
 };
 
+const emptyForm: FormState = {
+  customer: "",
+  referenceNumber: "",
+  customerRate: "",
+  contactName: "",
+  paymentMethod: "",
+  paymentTerms: "",
+  carrier: "",
+  carrierPaymentMethod: "",
+  carrierRate: "",
+  chargeServiceFeeToOffice: false,
+  loadType: "",
+  serviceType: "",
+  serviceGivenAs: "",
+  commodity: "",
+  bookedAs: "",
+  soldAs: "",
+  weight: "",
+  temperature: "",
+  pickups: [{ cityZipCode: null, phone: null, carrier: "", name: "", address: "" }],
+  dropoffs: [{ cityZipCode: null, phone: null, carrier: "", name: "", address: "" }],
+};
+
+const fieldClass =
+  "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent";
+const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+
 const CreateLoadPage: React.FC = () => {
-  const { message } = App.useApp();
   const navigate = useNavigate();
-  const screens = Grid.useBreakpoint();
-  const [form] = Form.useForm();
+  const [form, setForm] = useState<FormState>(emptyForm);
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStepVisited, setMaxStepVisited] = useState(0);
+  const [stepErrors, setStepErrors] = useState<string[]>([]);
   const [uploaderItems, setUploaderItems] = useState<FileUploaderValueItem[]>([]);
   const uploaderRef = useRef<FileUploaderHandle>(null);
-  const stepContentRef = useRef<HTMLDivElement>(null);
   const isBusy = uploaderItems.some((i) => i.status === "uploading");
 
-  useEffect(() => {
-    void currentStep;
-    if (!screens.md) {
-      stepContentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [currentStep, screens.md]);
-
-  const stepItems = STEP_ITEMS_META.map((meta, index) => ({
-    title: meta.title,
-    description: meta.description,
-    disabled: index > maxStepVisited,
-  }));
-
-  const handleStepChange = (next: number) => {
-    if (next <= maxStepVisited) setCurrentStep(next);
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleNext = async () => {
-    try {
-      await form.validateFields(getFieldsForStep(form, currentStep));
-      const advanced = currentStep + 1;
-      setMaxStepVisited((prev) => Math.max(prev, advanced));
-      setCurrentStep(advanced);
-    } catch {
-      // field-level errors shown by Ant Design
+  const validateStep = (step: number): string[] => {
+    const errs: string[] = [];
+    if (step === 0) {
+      if (!form.customer.trim()) errs.push("Customer is required");
+      if (!form.referenceNumber.trim()) errs.push("Reference number is required");
+      const cr = Number(form.customerRate);
+      if (!form.customerRate.trim() || Number.isNaN(cr) || cr <= 0)
+        errs.push("Customer rate must be greater than 0");
+      if (!form.contactName.trim()) errs.push("Contact name is required");
+      if (!form.paymentMethod.trim()) errs.push("Payment method is required");
+      if (!form.paymentTerms.trim()) errs.push("Payment terms is required");
+      const rr = Number(form.carrierRate);
+      if (!form.carrierRate.trim() || Number.isNaN(rr) || rr <= 0)
+        errs.push("Carrier rate must be greater than 0");
+    } else if (step === 1) {
+      if (!form.loadType.trim()) errs.push("Load type is required");
+      if (!form.serviceType.trim()) errs.push("Service type is required");
+      if (!form.serviceGivenAs.trim()) errs.push("Service given as is required");
+      if (!form.commodity.trim()) errs.push("Commodity is required");
+      if (!form.bookedAs.trim()) errs.push("Booked as is required");
+      if (!form.soldAs.trim()) errs.push("Sold as is required");
+      if (!form.weight.trim()) errs.push("Weight is required");
+    } else if (step === 2) {
+      form.pickups.forEach((p, i) => {
+        if (!p.carrier.trim()) errs.push(`Pickup ${i + 1}: carrier is required`);
+        if (!p.name.trim()) errs.push(`Pickup ${i + 1}: name is required`);
+        if (!p.address.trim()) errs.push(`Pickup ${i + 1}: address is required`);
+      });
+    } else if (step === 3) {
+      form.dropoffs.forEach((d, i) => {
+        if (!d.carrier.trim()) errs.push(`Dropoff ${i + 1}: carrier is required`);
+        if (!d.name.trim()) errs.push(`Dropoff ${i + 1}: name is required`);
+        if (!d.address.trim()) errs.push(`Dropoff ${i + 1}: address is required`);
+      });
     }
+    return errs;
   };
 
-  const handlePrev = () => setCurrentStep(currentStep - 1);
+  const handleNext = () => {
+    const errs = validateStep(currentStep);
+    if (errs.length > 0) {
+      setStepErrors(errs);
+      return;
+    }
+    setStepErrors([]);
+    const next = currentStep + 1;
+    setMaxStepVisited((p) => Math.max(p, next));
+    setCurrentStep(next);
+  };
 
-  const { loading, run: create } = useRequest(
-    async (payload: CreateLoadDto) => loadApi.create(payload),
-    {
-      manual: true,
-      onSuccess: () => {
-        uploaderRef.current?.commit();
-        message.success("Load created successfully");
-        navigate("/loads");
-      },
-      onError: (error) => message.error(getErrorMessage(error)),
+  const mutation = useApiMutation(async (payload: CreateLoadDto) => loadApi.create(payload), {
+    onSuccess: () => {
+      uploaderRef.current?.commit();
+      toast.success("Load created successfully");
+      navigate("/loads");
     },
-  );
+    onError: (err: unknown) => toast.danger(getErrorMessage(err)),
+  });
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (isBusy) {
-      message.warning("Wait for files to finish uploading.");
+      toast.danger("Wait for files to finish uploading.");
       return;
     }
-    try {
-      await form.validateFields();
-    } catch {
+    const errs = validateStep(currentStep);
+    if (errs.length > 0) {
+      setStepErrors(errs);
       return;
     }
-    const values = form.getFieldsValue(true);
-    const pickups = (values.pickups ?? []) as Location[];
-    const dropoffs = (values.dropoffs ?? []) as Location[];
+    setStepErrors([]);
     const filesPayload = uploaderItems
       .filter((i) => i.status === "done" && i.fileId)
       .map((i) => ({
@@ -193,33 +195,33 @@ const CreateLoadPage: React.FC = () => {
         fileName: i.name,
         documentCategory: null as string | null,
       }));
-    create({
-      customer: values.customer,
-      referenceNumber: values.referenceNumber,
-      customerRate: toNumberOrNull(values.customerRate, "customerRate"),
-      contactName: values.contactName,
-      paymentMethod: values.paymentMethod,
-      paymentTerms: values.paymentTerms,
-      carrier: toNullableString(values.carrier),
-      carrierPaymentMethod: toNullableString(values.carrierPaymentMethod),
-      carrierRate: toNumberOrNull(values.carrierRate, "carrierRate"),
-      chargeServiceFeeToOffice: values.chargeServiceFeeToOffice ?? false,
-      loadType: values.loadType,
-      serviceType: values.serviceType,
-      serviceGivenAs: values.serviceGivenAs,
-      commodity: values.commodity,
-      bookedAs: values.bookedAs,
-      soldAs: values.soldAs,
-      weight: values.weight,
-      temperature: toNullableString(values.temperature),
-      pickups: pickups.map((p) => ({
+    mutation.mutate({
+      customer: form.customer,
+      referenceNumber: form.referenceNumber,
+      customerRate: toNumberOrNull(form.customerRate, "customerRate"),
+      contactName: form.contactName,
+      paymentMethod: form.paymentMethod,
+      paymentTerms: form.paymentTerms,
+      carrier: toNullableString(form.carrier),
+      carrierPaymentMethod: toNullableString(form.carrierPaymentMethod),
+      carrierRate: toNumberOrNull(form.carrierRate, "carrierRate"),
+      chargeServiceFeeToOffice: form.chargeServiceFeeToOffice,
+      loadType: form.loadType,
+      serviceType: form.serviceType,
+      serviceGivenAs: form.serviceGivenAs,
+      commodity: form.commodity,
+      bookedAs: form.bookedAs,
+      soldAs: form.soldAs,
+      weight: form.weight,
+      temperature: toNullableString(form.temperature),
+      pickups: form.pickups.map((p) => ({
         cityZipCode: toNullableString(p.cityZipCode),
         phone: toNullableString(p.phone),
         carrier: p.carrier,
         name: p.name,
         address: p.address,
       })),
-      dropoffs: dropoffs.map((d) => ({
+      dropoffs: form.dropoffs.map((d) => ({
         cityZipCode: toNullableString(d.cityZipCode),
         phone: toNullableString(d.phone),
         carrier: d.carrier,
@@ -230,235 +232,233 @@ const CreateLoadPage: React.FC = () => {
     });
   };
 
-  const renderStepContent = () => {
+  const renderStep = () => {
     switch (currentStep) {
       case 0:
         return (
-          <>
-            <Divider titlePlacement="start">Customer</Divider>
-            <Row gutter={[16, 16]}>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Customer"
-                  name="customer"
-                  rules={[{ required: true, message: "Please enter customer name" }]}
-                >
-                  <BrokerAutocomplete placeholder="Enter customer name" size="large" />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Reference Number"
-                  name="referenceNumber"
-                  rules={[{ required: true, message: "Please enter reference number" }]}
-                >
-                  <Input placeholder="Enter reference number" size="large" />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Customer Rate"
-                  name="customerRate"
-                  rules={[
-                    { required: true, message: "Please enter customer rate" },
-                    {
-                      validator: (_, value) => {
-                        const n =
-                          value === "" || value === null || value === undefined
-                            ? null
-                            : Number(value);
-                        if (n === null || Number.isNaN(n) || n <= 0)
-                          return Promise.reject(
-                            new Error("Please enter a valid customer rate greater than 0"),
-                          );
-                        return Promise.resolve();
-                      },
-                    },
-                  ]}
-                >
-                  <Input
-                    placeholder="Enter customer rate"
-                    size="large"
+          <div className="flex flex-col gap-4">
+            <p className="text-sm font-semibold text-gray-600 border-b pb-1">Customer</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className={labelClass}>Customer *</span>
+                <BrokerAutocomplete
+                  value={form.customer}
+                  onChange={(_, name) => set("customer", name)}
+                  placeholder="Enter customer name"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Reference Number *
+                  <input
+                    className={fieldClass}
+                    value={form.referenceNumber}
+                    onChange={(e) => set("referenceNumber", e.target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Customer Rate *
+                  <input
                     type="number"
+                    className={fieldClass}
+                    value={form.customerRate}
+                    onChange={(e) => set("customerRate", e.target.value)}
                     min="0"
                     step="0.01"
                   />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Contact Name"
-                  name="contactName"
-                  rules={[{ required: true, message: "Please enter contact name" }]}
-                >
-                  <Input placeholder="Enter contact name" size="large" />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Payment Method"
-                  name="paymentMethod"
-                  rules={[{ required: true, message: "Please enter payment method" }]}
-                >
-                  <Input placeholder="Enter payment method" size="large" />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Payment Terms"
-                  name="paymentTerms"
-                  rules={[{ required: true, message: "Please enter payment terms" }]}
-                >
-                  <Input placeholder="Enter payment terms" size="large" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Divider titlePlacement="start">Carrier</Divider>
-            <Row gutter={[16, 16]}>
-              <Col {...FORM_COL}>
-                <Form.Item label="Carrier" name="carrier">
-                  <CarrierAutocomplete placeholder="Enter carrier" size="large" />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item label="Carrier Payment Method" name="carrierPaymentMethod">
-                  <Input placeholder="Enter payment method" size="large" />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Carrier Rate"
-                  name="carrierRate"
-                  rules={[
-                    { required: true, message: "Please enter carrier rate" },
-                    {
-                      validator: (_, value) => {
-                        const n =
-                          value === "" || value === null || value === undefined
-                            ? null
-                            : Number(value);
-                        if (n === null || Number.isNaN(n) || n <= 0)
-                          return Promise.reject(
-                            new Error("Please enter a valid carrier rate greater than 0"),
-                          );
-                        return Promise.resolve();
-                      },
-                    },
-                  ]}
-                >
-                  <Input
-                    placeholder="Enter carrier rate"
-                    size="large"
+                </label>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Contact Name *
+                  <input
+                    className={fieldClass}
+                    value={form.contactName}
+                    onChange={(e) => set("contactName", e.target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Payment Method *
+                  <input
+                    className={fieldClass}
+                    value={form.paymentMethod}
+                    onChange={(e) => set("paymentMethod", e.target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Payment Terms *
+                  <input
+                    className={fieldClass}
+                    value={form.paymentTerms}
+                    onChange={(e) => set("paymentTerms", e.target.value)}
+                  />
+                </label>
+              </div>
+            </div>
+            <p className="text-sm font-semibold text-gray-600 border-b pb-1 mt-2">Carrier</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className={labelClass}>Carrier</span>
+                <CarrierAutocomplete
+                  value={form.carrier}
+                  onChange={(_, name) => set("carrier", name)}
+                  placeholder="Enter carrier"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Carrier Payment Method
+                  <input
+                    className={fieldClass}
+                    value={form.carrierPaymentMethod}
+                    onChange={(e) => set("carrierPaymentMethod", e.target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Carrier Rate *
+                  <input
                     type="number"
+                    className={fieldClass}
+                    value={form.carrierRate}
+                    onChange={(e) => set("carrierRate", e.target.value)}
                     min="0"
                     step="0.01"
                   />
-                </Form.Item>
-              </Col>
-            </Row>
-          </>
+                </label>
+              </div>
+            </div>
+          </div>
         );
-
       case 1:
         return (
-          <>
-            <Divider titlePlacement="start">Service</Divider>
-            <Row gutter={[16, 16]}>
-              <Col span={24}>
-                <Form.Item
-                  label="Charge Service Fee to Office"
-                  name="chargeServiceFeeToOffice"
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Load Type"
-                  name="loadType"
-                  rules={[{ required: true, message: "Please enter load type" }]}
-                >
-                  <Input placeholder="Enter load type" size="large" />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Service Type"
-                  name="serviceType"
-                  rules={[{ required: true, message: "Please enter service type" }]}
-                >
-                  <Input placeholder="Enter service type" size="large" />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Service Given As"
-                  name="serviceGivenAs"
-                  rules={[{ required: true, message: "Please enter service given as" }]}
-                >
-                  <Input placeholder="Enter service given as" size="large" />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Commodity"
-                  name="commodity"
-                  rules={[{ required: true, message: "Please enter commodity" }]}
-                >
-                  <Input placeholder="Enter commodity" size="large" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Divider titlePlacement="start">Booking</Divider>
-            <Row gutter={[16, 16]}>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Booked As"
-                  name="bookedAs"
-                  rules={[{ required: true, message: "Please enter booked as" }]}
-                >
-                  <Input placeholder="Enter booked as" size="large" />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Sold As"
-                  name="soldAs"
-                  rules={[{ required: true, message: "Please enter sold as" }]}
-                >
-                  <Input placeholder="Enter sold as" size="large" />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item
-                  label="Weight"
-                  name="weight"
-                  rules={[{ required: true, message: "Please enter weight" }]}
-                >
-                  <Input placeholder="Enter weight" size="large" />
-                </Form.Item>
-              </Col>
-              <Col {...FORM_COL}>
-                <Form.Item label="Temperature" name="temperature">
-                  <Input placeholder="Enter temperature" size="large" />
-                </Form.Item>
-              </Col>
-            </Row>
-          </>
+          <div className="flex flex-col gap-4">
+            <p className="text-sm font-semibold text-gray-600 border-b pb-1">Service</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="chargeServiceFee"
+                checked={form.chargeServiceFeeToOffice}
+                onChange={(e) => set("chargeServiceFeeToOffice", e.target.checked)}
+              />
+              <label htmlFor="chargeServiceFee" className="text-sm">
+                Charge Service Fee to Office
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>
+                  Load Type *
+                  <input
+                    className={fieldClass}
+                    value={form.loadType}
+                    onChange={(e) => set("loadType", e.target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Service Type *
+                  <input
+                    className={fieldClass}
+                    value={form.serviceType}
+                    onChange={(e) => set("serviceType", e.target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Service Given As *
+                  <input
+                    className={fieldClass}
+                    value={form.serviceGivenAs}
+                    onChange={(e) => set("serviceGivenAs", e.target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Commodity *
+                  <input
+                    className={fieldClass}
+                    value={form.commodity}
+                    onChange={(e) => set("commodity", e.target.value)}
+                  />
+                </label>
+              </div>
+            </div>
+            <p className="text-sm font-semibold text-gray-600 border-b pb-1 mt-2">Booking</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>
+                  Booked As *
+                  <input
+                    className={fieldClass}
+                    value={form.bookedAs}
+                    onChange={(e) => set("bookedAs", e.target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Sold As *
+                  <input
+                    className={fieldClass}
+                    value={form.soldAs}
+                    onChange={(e) => set("soldAs", e.target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Weight *
+                  <input
+                    className={fieldClass}
+                    value={form.weight}
+                    onChange={(e) => set("weight", e.target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Temperature
+                  <input
+                    className={fieldClass}
+                    value={form.temperature}
+                    onChange={(e) => set("temperature", e.target.value)}
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
         );
-
       case 2:
-        return <LoadStopsFormList name="pickups" legLabel="Pick-up" />;
-
+        return (
+          <LoadStopsFormList
+            stops={form.pickups}
+            onChange={(s) => set("pickups", s)}
+            legLabel="Pick-up"
+          />
+        );
       case 3:
-        return <LoadStopsFormList name="dropoffs" legLabel="Drop-off" />;
-
+        return (
+          <LoadStopsFormList
+            stops={form.dropoffs}
+            onChange={(s) => set("dropoffs", s)}
+            legLabel="Drop-off"
+          />
+        );
       case 4:
         return (
-          <Form.Item label="Upload Files">
+          <div>
+            <p className={labelClass}>Upload Files</p>
             <FileUploader
               ref={uploaderRef}
               max={MAX_FILES_DEFAULT}
@@ -466,79 +466,96 @@ const CreateLoadPage: React.FC = () => {
               onChange={setUploaderItems}
               helpText="Supporting documents related to this load — multiple files allowed."
             />
-          </Form.Item>
+          </div>
         );
-
       default:
         return null;
     }
   };
 
   return (
-    <Flex vertical gap={24}>
-      <Flex justify="space-between" align="center">
-        <Title level={2} style={{ margin: 0 }}>
-          Create New Load
-        </Title>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/loads")}>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Create New Load</h1>
+        <Button variant="ghost" onPress={() => navigate("/loads")}>
+          <ArrowLeft className="h-4 w-4" />
           Back to Loads
         </Button>
-      </Flex>
+      </div>
 
-      <Card>
-        <Steps
-          current={currentStep}
-          items={stepItems}
-          direction={screens.md ? "horizontal" : "vertical"}
-          size={screens.md ? "default" : "small"}
-          onChange={handleStepChange}
-          style={{ marginBottom: 24 }}
-        />
+      <div className="bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-6">
+        {/* Step indicator */}
+        <div className="flex gap-1">
+          {STEPS.map((step, i) => (
+            <button
+              key={step.title}
+              type="button"
+              className={`flex-1 text-xs py-2 px-1 border-b-2 transition-colors ${
+                i === currentStep
+                  ? "border-primary text-primary font-medium"
+                  : i < currentStep
+                    ? "border-green-500 text-green-600"
+                    : "border-gray-200 text-gray-400 cursor-not-allowed"
+              }`}
+              onClick={() => {
+                if (i <= maxStepVisited) setCurrentStep(i);
+              }}
+              disabled={i > maxStepVisited}
+            >
+              <div>
+                {i + 1}. {step.title}
+              </div>
+              <div className="text-xs text-gray-400 hidden sm:block">{step.description}</div>
+            </button>
+          ))}
+        </div>
 
-        <Form
-          form={form}
-          layout="vertical"
-          scrollToFirstError={{ behavior: "smooth", block: "center" }}
-          size="large"
-          initialValues={{
-            chargeServiceFeeToOffice: false,
-            pickups: [{ cityZipCode: null, phone: null, carrier: "", name: "", address: "" }],
-            dropoffs: [{ cityZipCode: null, phone: null, carrier: "", name: "", address: "" }],
-          }}
-        >
-          <div ref={stepContentRef}>{renderStepContent()}</div>
-        </Form>
+        {stepErrors.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            {stepErrors.map((e) => (
+              <p key={e} className="text-red-600 text-xs">
+                {e}
+              </p>
+            ))}
+          </div>
+        )}
 
-        <Flex justify="space-between" style={{ marginTop: 32 }} wrap="wrap" gap={8}>
-          <Button onClick={() => navigate("/loads")} size="large">
+        {renderStep()}
+
+        <div className="flex items-center justify-between pt-4 border-t">
+          <Button variant="ghost" onPress={() => navigate("/loads")}>
             Cancel
           </Button>
-          <Space wrap>
+          <div className="flex gap-2">
             {currentStep > 0 && (
-              <Button onClick={handlePrev} size="large">
+              <Button
+                variant="secondary"
+                onPress={() => {
+                  setCurrentStep((s) => s - 1);
+                  setStepErrors([]);
+                }}
+              >
                 Previous
               </Button>
             )}
-            {currentStep < LAST_STEP_INDEX && (
-              <Button type="primary" onClick={() => void handleNext()} size="large">
+            {currentStep < LAST_STEP && (
+              <Button variant="primary" onPress={handleNext}>
                 Next
               </Button>
             )}
-            {currentStep === LAST_STEP_INDEX && (
+            {currentStep === LAST_STEP && (
               <Button
-                type="primary"
-                onClick={() => void handleSubmit()}
-                loading={loading}
-                disabled={isBusy}
-                size="large"
+                variant="primary"
+                onPress={handleSubmit}
+                isDisabled={mutation.isPending || isBusy}
               >
-                Create Load
+                {mutation.isPending ? <Spinner size="sm" /> : "Create Load"}
               </Button>
             )}
-          </Space>
-        </Flex>
-      </Card>
-    </Flex>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

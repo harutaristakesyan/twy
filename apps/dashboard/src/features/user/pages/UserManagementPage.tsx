@@ -1,12 +1,10 @@
-import { Spin, Tabs } from "antd";
+import { Spinner, Tabs } from "@heroui/react";
 import type React from "react";
 import { useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import TeamManagementTable from "@/features/team/components/TeamManagementTable";
-import { TeamModalProvider } from "@/features/team/providers/TeamModalProvider";
-import UserManagementTable from "@/features/user/components/UserManagementTable";
-import { UserModalProvider } from "@/features/user/providers/UserModalProvider";
+import TeamsPage from "@/features/team/pages/TeamsPage";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import UsersPage from "./UsersPage";
 
 const UserManagementPage: React.FC = () => {
   const { permissions, loading } = useCurrentUser();
@@ -26,55 +24,37 @@ const UserManagementPage: React.FC = () => {
   );
 
   if (loading) {
-    return <Spin size="large" />;
+    return <Spinner size="lg" />;
   }
 
   if (showTabs) {
     return (
-      <Tabs
-        activeKey={activeTab}
-        onChange={handleTabChange}
-        items={[
-          {
-            key: "users",
-            label: "Users",
-            children: (
-              <UserModalProvider>
-                <UserManagementTable />
-              </UserModalProvider>
-            ),
-          },
-          {
-            key: "teams",
-            label: "Teams",
-            children: (
-              <TeamModalProvider>
-                <TeamManagementTable />
-              </TeamModalProvider>
-            ),
-          },
-        ]}
-      />
+      <div className="p-6">
+        <Tabs selectedKey={activeTab} onSelectionChange={(key) => handleTabChange(String(key))}>
+          <Tabs.List>
+            <Tabs.Tab id="users">Users</Tabs.Tab>
+            <Tabs.Tab id="teams">Teams</Tabs.Tab>
+          </Tabs.List>
+          <Tabs.Panel id="users">
+            <UsersPage />
+          </Tabs.Panel>
+          <Tabs.Panel id="teams">
+            <TeamsPage />
+          </Tabs.Panel>
+        </Tabs>
+      </div>
     );
   }
 
   if (canViewTeams) {
-    return (
-      <TeamModalProvider>
-        <TeamManagementTable />
-      </TeamModalProvider>
-    );
+    return <TeamsPage />;
   }
 
   if (!canViewUsers) {
     return null;
   }
 
-  return (
-    <UserModalProvider>
-      <UserManagementTable />
-    </UserModalProvider>
-  );
+  return <UsersPage />;
 };
 
 export default UserManagementPage;

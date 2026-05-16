@@ -1,43 +1,20 @@
-import { useRequest } from "ahooks";
-import {
-  App,
-  Button,
-  Checkbox,
-  Descriptions,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Space,
-  Tag,
-} from "antd";
+import { Button, Modal, Spinner, toast } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { loadApi } from "@/features/load/api/loadApi";
-import type { Load, LoadStatus } from "@/features/load/types/load";
+import type { LoadStatus } from "@/features/load/types/load";
 import { getAllowedTransitions } from "@/features/load/utils/statusMachine";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useApiMutation, useApiQuery } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 
-interface StatusUpdateModalProps {
-  open: boolean;
-  load: Load | null;
-  onCancel: () => void;
-  onSuccess: () => void;
-}
-
-interface StatusFormValues {
-  status: LoadStatus;
-  isChargable: boolean;
-  chargeAmount: number | null;
-  comment: string | undefined;
-}
-
-const statusColors: Record<LoadStatus, string> = {
-  Pending: "gold",
-  Approved: "green",
-  Delivered: "cyan",
-  Declined: "red",
-  Hold: "orange",
+const statusBadge: Record<LoadStatus, string> = {
+  Pending: "bg-yellow-100 text-yellow-800",
+  Approved: "bg-green-100 text-green-800",
+  Delivered: "bg-blue-100 text-blue-800",
+  Declined: "bg-red-100 text-red-800",
+  Hold: "bg-orange-100 text-orange-800",
 };
 
 const commentLabel = (status: LoadStatus | undefined, chargable: boolean): string | null => {
@@ -47,176 +24,273 @@ const commentLabel = (status: LoadStatus | undefined, chargable: boolean): strin
   return null;
 };
 
-const StatusUpdateModal = ({ open, load, onCancel, onSuccess }: StatusUpdateModalProps) => {
-  const { message: antMessage } = App.useApp();
-  const [form] = Form.useForm<StatusFormValues>();
-  const selectedStatus = Form.useWatch("status", form);
-  const isChargable = Form.useWatch("isChargable", form);
+const StatusUpdateModal = () => {
+  const { loadId } = useParams<{ loadId: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { permissions } = useCurrentUser();
 
-  const { loading, run: submit } = useRequest(
-    async (
-      status: LoadStatus,
-      chargable: boolean,
-      chargeAmount: number | null,
-      comment: string | undefined,
-    ) => {
-      await loadApi.changeStatus(load?.id ?? "", {
+  const close = () => navigate("..");
+
+  const { data: load } = useApiQuery(
+    ["load", loadId],
+    () => {
+      if (!loadId) return Promise.reject(new Error("No loadId"));
+      return loadApi.getById(loadId);
+    },
+    { enabled: !!loadId },
+  );
+
+  const allowedStatuses = load
+    ? getAllowedTransitions(load.status).filter((s) =>
+        Boolean(
+          (permissions as Record<string, Record<string, boolean>>).loads?.[`transition:${s}`],
+        ),
+      )
+    : [];
+  const isTerminal = load ? allowedStatuses.length === 0 : false;
+
+  const [selectedStatus, setSelectedStatus] = useState<LoadStatus | null>(null);
+  const [isChargable, setIsChargable] = useState<boolean | null>(null);
+  const [chargeAmount, setChargeAmount] = useState<string | null>(null);
+  const [comment, setComment] = useState("");
+  const [errors, setErrors] = useState<{ chargeAmount?: string; comment?: string }>({});
+
+  const effectiveStatus: LoadStatus | undefined =
+    selectedStatus ?? (load ? (allowedStatuses[0] ?? load.status) : undefined);
+  const effectiveIsChargable: boolean = isChargable ?? (load ? (load.isChargable ?? false) : false);
+  const effectiveChargeAmount: string =
+    chargeAmount ?? (load && load.chargeAmount != null ? String(load.chargeAmount) : "");
+
+  const mutation = useApiMutation(
+    async ({
+      status,
+      chargable,
+      amount,
+      cmt,
+    }: {
+      status: LoadStatus;
+      chargable: boolean;
+      amount: number | null;
+      cmt?: string;
+    }) => {
+      if (!loadId) return;
+      await loadApi.changeStatus(loadId, {
         status,
         isChargable: chargable,
-        chargeAmount: chargable ? chargeAmount : null,
-        comment,
+        chargeAmount: chargable ? amount : null,
+        comment: cmt,
       });
     },
     {
-      manual: true,
-      onSuccess: () => {
-        antMessage.success("Load status updated successfully");
-        onSuccess();
+      onSuccess: async () => {
+        toast.success("Load status updated successfully");
+        await queryClient.invalidateQueries({ queryKey: ["loads"] });
+        close();
       },
-      onError: (error) => antMessage.error(getErrorMessage(error)),
+      onError: (err: unknown) => toast.danger(getErrorMessage(err)),
     },
   );
 
-  const handleSubmit = async () => {
-    if (!load) return;
-    let values: StatusFormValues;
-    try {
-      values = await form.validateFields();
-    } catch (e) {
-      if ((e as { errorFields?: unknown }).errorFields) return;
-      throw e;
+  const validate = (): boolean => {
+    const errs: { chargeAmount?: string; comment?: string } = {};
+    if (effectiveStatus === "Approved" && effectiveIsChargable) {
+      const amt = Number(effectiveChargeAmount);
+      if (!effectiveChargeAmount.trim() || Number.isNaN(amt) || amt <= 0)
+        errs.chargeAmount = "Charge amount must be greater than 0";
     }
-    const { status, isChargable: chargable, chargeAmount, comment } = values;
-    if (
-      status === load.status &&
-      (chargable ?? false) === (load.isChargable ?? false) &&
-      (chargeAmount ?? null) === (load.chargeAmount ?? null)
-    ) {
-      onCancel();
-      return;
-    }
-    submit(status, chargable ?? false, chargeAmount ?? null, comment?.trim() || undefined);
+    const label = commentLabel(effectiveStatus, effectiveIsChargable);
+    if (label !== null && !comment.trim()) errs.comment = `${label} is required`;
+    if (label !== null && comment.length > 500)
+      errs.comment = "Comment cannot exceed 500 characters";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
-  if (!load) return null;
+  const handleSubmit = () => {
+    if (!validate()) return;
+    if (!effectiveStatus) return;
+    const amt =
+      effectiveIsChargable && effectiveChargeAmount ? Number(effectiveChargeAmount) : null;
+    mutation.mutate({
+      status: effectiveStatus,
+      chargable: effectiveIsChargable,
+      amount: amt,
+      cmt: comment.trim() || undefined,
+    });
+  };
 
-  const allowedStatuses = getAllowedTransitions(load.status).filter((s) =>
-    Boolean((permissions as Record<string, Record<string, boolean>>).loads?.[`transition:${s}`]),
-  );
-  const statusOptions = allowedStatuses.map((s) => ({ value: s, label: s }));
-  const isTerminal = allowedStatuses.length === 0;
-  const commentFieldLabel = commentLabel(selectedStatus, isChargable ?? false);
+  const fieldClass =
+    "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary";
+  const errorClass = "text-red-500 text-xs mt-1";
+  const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+  const cLabel = commentLabel(effectiveStatus, effectiveIsChargable);
 
-  return (
-    <Modal
-      title="Update Load Status"
-      open={open}
-      onCancel={onCancel}
-      destroyOnHidden
-      footer={
-        <Space>
-          <Button onClick={onCancel}>Cancel</Button>
-          {!isTerminal && (
-            <Button type="primary" onClick={handleSubmit} loading={loading}>
-              Update Status
-            </Button>
-          )}
-        </Space>
-      }
-      width={500}
-    >
-      <Descriptions column={1} size="small" style={{ marginBottom: 24 }}>
-        <Descriptions.Item label="Reference Number">{load.referenceNumber}</Descriptions.Item>
-        <Descriptions.Item label="Current Status">
-          <Tag color={statusColors[load.status]}>{load.status}</Tag>
-        </Descriptions.Item>
-      </Descriptions>
-
-      {isTerminal ? (
-        <p style={{ color: "var(--ant-color-text-secondary)" }}>
-          This load is in a terminal state and cannot be transitioned further.
-        </p>
-      ) : (
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{
-            status: load.status,
-            isChargable: load.isChargable ?? false,
-            chargeAmount: load.chargeAmount ?? null,
+  if (!load) {
+    return (
+      <Modal>
+        <Modal.Backdrop
+          isOpen
+          onOpenChange={(open) => {
+            if (!open) close();
           }}
         >
-          <Form.Item name="status" label="New Status">
-            <Select
-              options={statusOptions}
-              onChange={(v) => {
-                if (v !== "Approved") {
-                  form.setFieldsValue({ isChargable: false, chargeAmount: null });
-                }
-                form.resetFields(["comment"]);
-              }}
-            />
-          </Form.Item>
+          <Modal.Container>
+            <Modal.Dialog>
+              <Modal.CloseTrigger />
+              <Modal.Header>
+                <Modal.Heading>Update Load Status</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body className="p-2">
+                <div className="flex justify-center py-8">
+                  <Spinner size="lg" />
+                </div>
+              </Modal.Body>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
+    );
+  }
 
-          {selectedStatus === "Approved" && (
-            <>
-              <Form.Item name="isChargable" valuePropName="checked">
-                <Checkbox
-                  onChange={(e) => {
-                    if (!e.target.checked) form.resetFields(["chargeAmount"]);
-                    form.resetFields(["comment"]);
-                  }}
-                >
-                  Is Chargable
-                </Checkbox>
-              </Form.Item>
+  return (
+    <Modal>
+      <Modal.Backdrop
+        isOpen
+        onOpenChange={(open) => {
+          if (!open) close();
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>Update Load Status</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="p-2">
+              <div className="flex flex-col gap-4">
+                <div className="flex gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Reference:</span>{" "}
+                    {load.referenceNumber}
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Current Status:</span>{" "}
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusBadge[load.status] ?? ""}`}
+                    >
+                      {load.status}
+                    </span>
+                  </div>
+                </div>
 
-              {isChargable && (
-                <Form.Item
-                  name="chargeAmount"
-                  label="Charge Amount"
-                  rules={[
-                    {
-                      validator: (_, v) =>
-                        typeof v === "number" && v > 0
-                          ? Promise.resolve()
-                          : Promise.reject(new Error("Charge Amount must be greater than 0")),
-                    },
-                  ]}
-                >
-                  <InputNumber
-                    min={0.01}
-                    precision={2}
-                    prefix="€"
-                    style={{ width: "100%" }}
-                    placeholder="Enter charge amount"
-                  />
-                </Form.Item>
+                {isTerminal ? (
+                  <p className="text-gray-500 text-sm">
+                    This load is in a terminal state and cannot be transitioned further.
+                  </p>
+                ) : (
+                  <>
+                    <div>
+                      <label className={labelClass}>
+                        New Status
+                        <select
+                          className={fieldClass}
+                          value={effectiveStatus}
+                          onChange={(e) => {
+                            const s = e.target.value as LoadStatus;
+                            setSelectedStatus(s);
+                            if (s !== "Approved") {
+                              setIsChargable(false);
+                              setChargeAmount("");
+                            }
+                            setComment("");
+                            setErrors({});
+                          }}
+                        >
+                          {allowedStatuses.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    {effectiveStatus === "Approved" && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="isChargable"
+                            checked={effectiveIsChargable}
+                            onChange={(e) => {
+                              setIsChargable(e.target.checked);
+                              if (!e.target.checked) setChargeAmount("");
+                              setComment("");
+                              setErrors({});
+                            }}
+                          />
+                          <label htmlFor="isChargable" className="text-sm">
+                            Is Chargable
+                          </label>
+                        </div>
+
+                        {effectiveIsChargable && (
+                          <div>
+                            <label className={labelClass}>
+                              Charge Amount
+                              <input
+                                type="number"
+                                className={fieldClass}
+                                placeholder="Enter charge amount"
+                                min="0.01"
+                                step="0.01"
+                                value={effectiveChargeAmount}
+                                onChange={(e) => setChargeAmount(e.target.value)}
+                              />
+                            </label>
+                            {errors.chargeAmount && (
+                              <p className={errorClass}>{errors.chargeAmount}</p>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {cLabel !== null && (
+                      <div>
+                        <label className={labelClass}>
+                          {cLabel}
+                          <textarea
+                            className={fieldClass}
+                            rows={3}
+                            placeholder={`Enter ${cLabel.toLowerCase()}…`}
+                            maxLength={500}
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                          />
+                        </label>
+                        <p className="text-xs text-gray-400 mt-1">{comment.length}/500</p>
+                        {errors.comment && <p className={errorClass}>{errors.comment}</p>}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="ghost" onPress={close}>
+                Cancel
+              </Button>
+              {!isTerminal && (
+                <Button variant="primary" onPress={handleSubmit} isDisabled={mutation.isPending}>
+                  {mutation.isPending ? <Spinner size="sm" /> : "Update Status"}
+                </Button>
               )}
-            </>
-          )}
-
-          {commentFieldLabel !== null && (
-            <Form.Item
-              name="comment"
-              label={commentFieldLabel}
-              preserve={false}
-              rules={[
-                { required: true, message: `${commentFieldLabel} is required` },
-                { max: 500, message: "Comment cannot exceed 500 characters" },
-              ]}
-            >
-              <Input.TextArea
-                rows={3}
-                placeholder={`Enter ${commentFieldLabel.toLowerCase()}…`}
-                showCount
-                maxLength={500}
-              />
-            </Form.Item>
-          )}
-        </Form>
-      )}
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   );
 };

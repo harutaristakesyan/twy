@@ -1,10 +1,7 @@
-import { Flex, Tag, Typography } from "antd";
+import { Xmark } from "@gravity-ui/icons";
+import { Button, Chip as HeroChip } from "@heroui/react";
 import { useMemo } from "react";
 import type { AdvancedFilter, FilterField } from "./types.js";
-
-const { Text } = Typography;
-
-const containerStyle = { marginBottom: 12 };
 
 interface Props {
   filter: AdvancedFilter | undefined;
@@ -22,9 +19,7 @@ interface Chip {
 
 function removeKeys(filter: AdvancedFilter, keys: string[]): AdvancedFilter | undefined {
   const next = { ...filter };
-  for (const k of keys) {
-    delete next[k];
-  }
+  for (const k of keys) delete next[k];
   return Object.keys(next).length > 0 ? next : undefined;
 }
 
@@ -68,7 +63,7 @@ export function ActiveFilterChips({ filter, fields = [], query, onChange, onClea
         const gte = filter[`${field.key}__gte`];
         const lte = filter[`${field.key}__lte`];
         if (gte === undefined && lte === undefined) continue;
-        const valueStr = gte && lte ? `${gte} – ${lte}` : gte ? `≥ ${gte}` : `≤ ${lte ?? ""}`;
+        const valueStr = gte && lte ? `${gte}–${lte}` : gte ? `≥ ${gte}` : `≤ ${lte ?? ""}`;
         result.push({
           id: `__field__${field.key}`,
           label: `${field.label}: ${valueStr}`,
@@ -92,24 +87,33 @@ export function ActiveFilterChips({ filter, fields = [], query, onChange, onClea
   if (!chips.length) return null;
 
   return (
-    <Flex align="center" gap={6} wrap style={containerStyle}>
-      <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
-        Active filters:
-      </Text>
+    <div className="mb-3 flex flex-wrap items-center gap-1.5">
+      <span className="whitespace-nowrap text-xs text-default-500">Active filters:</span>
       {chips.map((chip) => (
-        <Tag key={chip.id} closable onClose={chip.onRemove} style={{ margin: 0, fontSize: 12 }}>
-          {chip.label}
-        </Tag>
+        <HeroChip key={chip.id} color="accent" size="sm" variant="soft">
+          <span className="inline-flex items-center gap-1">
+            {chip.label}
+            <button
+              type="button"
+              onClick={chip.onRemove}
+              aria-label="Remove filter"
+              className="rounded p-0.5 hover:bg-accent-200"
+            >
+              <Xmark className="h-3 w-3" />
+            </button>
+          </span>
+        </HeroChip>
       ))}
-      <Typography.Link
-        style={{ fontSize: 12 }}
-        onClick={() => {
+      <Button
+        size="sm"
+        variant="tertiary"
+        onPress={() => {
           onChange(undefined);
           onClearQuery();
         }}
       >
         Clear all
-      </Typography.Link>
-    </Flex>
+      </Button>
+    </div>
   );
 }

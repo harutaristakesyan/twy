@@ -1,4 +1,4 @@
-import { useRequest } from "ahooks";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import type { AdvancedFilter, FilterField } from "@/components/AdvancedFilter";
 import { getBranches } from "@/features/branch/api/branchApi";
@@ -16,14 +16,22 @@ export function useBillingFilters() {
   const [activeFilter, setActiveFilter] = useState<AdvancedFilter | undefined>();
   const [activeQuery, setActiveQuery] = useState("");
 
-  const { data: branchesData } = useRequest(() => getBranches({ limit: 200 }), {
-    cacheKey: "branches-for-filter",
+  const { data: branchesData } = useQuery({
+    queryKey: ["branches-filter"],
+    queryFn: () => getBranches({ limit: 200 }),
+    staleTime: 5 * 60 * 1000,
   });
-  const { data: carriersData } = useRequest(() => getCarriers({ kind: "outside", limit: 200 }), {
-    cacheKey: "carriers-outside-for-filter",
+
+  const { data: carriersData } = useQuery({
+    queryKey: ["carriers-outside-filter"],
+    queryFn: () => getCarriers({ kind: "outside", limit: 200 }),
+    staleTime: 5 * 60 * 1000,
   });
-  const { data: brokersData } = useRequest(() => getOutsideBrokers({ limit: 200 }), {
-    cacheKey: "brokers-for-filter",
+
+  const { data: brokersData } = useQuery({
+    queryKey: ["brokers-filter"],
+    queryFn: () => getOutsideBrokers({ limit: 200 }),
+    staleTime: 5 * 60 * 1000,
   });
 
   const fields: FilterField[] = useMemo(

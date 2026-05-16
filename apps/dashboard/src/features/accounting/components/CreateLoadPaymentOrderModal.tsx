@@ -1,22 +1,13 @@
-import { useDebounce, useRequest } from "ahooks";
-import { App, Descriptions, Modal, Select, Spin, Typography } from "antd";
-import { useMemo, useState } from "react";
+import { Button, Modal, Spinner, toast } from "@heroui/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { loadApi } from "@/features/load/api/loadApi";
 import type { Load } from "@/features/load/types/load";
+import { useApiMutation } from "@/libs/query";
+import { getErrorMessage } from "@/utils/errorUtils";
 import { renderCurrency } from "@/utils/formatters";
 import { paymentOrderApi } from "../api/paymentOrderApi";
-
-interface Props {
-  open: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-interface LoadOption {
-  value: string;
-  label: string;
-  load: Load;
-}
 
 const computeFinancials = (load: Load) => {
   const customerRate = load.customerRate ?? null;
@@ -24,126 +15,174 @@ const computeFinancials = (load: Load) => {
   const serviceFee = load.serviceFee ?? 30;
   const profit =
     customerRate != null && carrierRate != null ? customerRate - carrierRate + serviceFee : null;
-  return {
-    brokerReceivable: customerRate,
-    carrierPayable: carrierRate,
-    profit,
-    serviceFee,
-  };
+  return { brokerReceivable: customerRate, carrierPayable: carrierRate, profit, serviceFee };
 };
 
-export default function CreateLoadPaymentOrderModal({ open, onClose, onSuccess }: Props) {
-  const { message } = App.useApp();
+const CreateLoadPaymentOrderModal = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchText, setSearchText] = useState("");
-  const debouncedQuery = useDebounce(searchText, { wait: 300 });
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = useState<ReturnType<typeof setTimeout> | null>(null);
   const [selected, setSelected] = useState<Load | null>(null);
 
-  const { data, loading } = useRequest(
-    async () => {
-      if (!debouncedQuery || debouncedQuery.length < 2) return { loads: [], total: 0 };
-      return loadApi.getAll({
-        limit: 20,
-        query: debouncedQuery,
-        excludeWithExistingPO: true,
-      });
-    },
-    { refreshDeps: [debouncedQuery] },
-  );
-
-  const options: LoadOption[] = useMemo(
-    () =>
-      (data?.loads ?? []).map((l) => ({
-        value: l.id,
-        label: `#${l.referenceNumber} — ${l.customer}${l.carrier ? ` → ${l.carrier}` : ""}`,
-        load: l,
-      })),
-    [data],
-  );
-
-  const { run: submit, loading: submitting } = useRequest(
-    async (loadId: string) => paymentOrderApi.create(loadId),
-    {
-      manual: true,
-      onSuccess: () => {
-        message.success("Load payment order created");
-        onSuccess();
-        handleClose();
-      },
-      onError: (err: Error & { response?: { data?: { message?: string }; status?: number } }) => {
-        const status = err.response?.status;
-        const apiMsg = err.response?.data?.message;
-        if (status === 409) {
-          message.error("A payment order already exists for this load");
-        } else if (status === 422) {
-          message.error(apiMsg ?? "Cannot create payment order — load is missing required fields");
-        } else {
-          message.error(apiMsg ?? "Failed to create payment order");
-        }
-      },
-    },
-  );
-
-  const handleClose = () => {
-    setSearchText("");
-    setSelected(null);
-    onClose();
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSearchText(val);
+    if (debounceRef[0]) clearTimeout(debounceRef[0]);
+    const timer = setTimeout(() => setDebouncedSearch(val), 300);
+    debounceRef[1](timer);
   };
 
+  const { data, isFetching } = useQuery({
+    queryKey: ["loads-for-po-search", debouncedSearch],
+    queryFn: () =>
+      debouncedSearch.length >= 2
+        ? loadApi.getAll({ limit: 20, query: debouncedSearch, excludeWithExistingPO: true })
+        : Promise.resolve({ loads: [], total: 0 }),
+    enabled: debouncedSearch.length >= 2,
+  });
+
+  const mutation = useApiMutation((loadId: string) => paymentOrderApi.create(loadId), {
+    onSuccess: async () => {
+      toast.success("Load payment order created");
+      await queryClient.invalidateQueries({ queryKey: ["payment-orders"] });
+      navigate("..");
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { message?: string }; status?: number } };
+      const status = e.response?.status;
+      const apiMsg = e.response?.data?.message;
+      if (status === 409) {
+        toast.danger("A payment order already exists for this load");
+      } else if (status === 422) {
+        toast.danger(apiMsg ?? "Cannot create payment order — load is missing required fields");
+      } else {
+        toast.danger(apiMsg ?? getErrorMessage(err));
+      }
+    },
+  });
+
+  const handleClose = useCallback(() => {
+    setSearchText("");
+    setDebouncedSearch("");
+    setSelected(null);
+    navigate("..");
+  }, [navigate]);
+
   const financials = selected ? computeFinancials(selected) : null;
+  const loads = data?.loads ?? [];
+
+  const fieldClass =
+    "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent";
 
   return (
-    <Modal
-      title="Create Load Payment Order"
-      open={open}
-      onCancel={handleClose}
-      onOk={() => selected && submit(selected.id)}
-      okText="Create Load PO"
-      okButtonProps={{ disabled: !selected, loading: submitting }}
-      destroyOnHidden
-    >
-      <Typography.Text strong>Load *</Typography.Text>
-      <Select<string, LoadOption>
-        showSearch={{ filterOption: false, onSearch: setSearchText }}
-        placeholder="Search by load #, customer, carrier…"
-        style={{ width: "100%", marginTop: 4 }}
-        options={options}
-        notFoundContent={loading ? <Spin size="small" /> : null}
-        onChange={(_value, opt) => {
-          if (!Array.isArray(opt)) setSelected(opt?.load ?? null);
+    <Modal>
+      <Modal.Backdrop
+        isOpen={true}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) handleClose();
         }}
-        value={selected?.id}
-        allowClear
-        onClear={() => setSelected(null)}
-      />
+      >
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>Create Load Payment Order</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="p-2">
+              <div className="flex flex-col gap-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Load *
+                  <div className="relative">
+                    <input
+                      className={fieldClass}
+                      placeholder="Search by load #, customer, carrier…"
+                      value={searchText}
+                      onChange={handleSearchChange}
+                    />
+                    {isFetching && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Spinner size="sm" />
+                      </div>
+                    )}
+                  </div>
+                  {loads.length > 0 && !selected && (
+                    <ul className="mt-1 border border-gray-200 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                      {loads.map((l) => (
+                        <li key={l.id}>
+                          <button
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                            onClick={() => {
+                              setSelected(l);
+                              setSearchText(
+                                `#${l.referenceNumber} — ${l.customer}${l.carrier ? ` → ${l.carrier}` : ""}`,
+                              );
+                            }}
+                          >
+                            #{l.referenceNumber} — {l.customer}
+                            {l.carrier ? ` → ${l.carrier}` : ""}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {selected && (
+                    <button
+                      type="button"
+                      className="text-xs text-gray-500 hover:text-gray-700 mt-1"
+                      onClick={() => {
+                        setSelected(null);
+                        setSearchText("");
+                        setDebouncedSearch("");
+                      }}
+                    >
+                      Clear selection
+                    </button>
+                  )}
+                </label>
 
-      {selected && financials && (
-        <Descriptions
-          column={1}
-          size="small"
-          style={{ marginTop: 16 }}
-          title="Preview"
-          items={[
-            {
-              key: "load",
-              label: "Load",
-              children: `#${selected.referenceNumber} — ${selected.customer}`,
-            },
-            { key: "branch", label: "Branch", children: selected.branchName },
-            { key: "carrier", label: "Carrier", children: selected.carrier ?? "—" },
-            {
-              key: "br",
-              label: "Broker Receivable",
-              children: renderCurrency(financials.brokerReceivable),
-            },
-            {
-              key: "cp",
-              label: "Carrier Payable",
-              children: renderCurrency(financials.carrierPayable),
-            },
-            { key: "status", label: "Status", children: "Pending" },
-          ]}
-        />
-      )}
+                {selected && financials && (
+                  <div className="bg-gray-50 rounded-lg p-4 flex flex-col gap-2">
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Preview</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                      <span className="text-gray-500">Load</span>
+                      <span>
+                        #{selected.referenceNumber} — {selected.customer}
+                      </span>
+                      <span className="text-gray-500">Branch</span>
+                      <span>{selected.branchName}</span>
+                      <span className="text-gray-500">Carrier</span>
+                      <span>{selected.carrier ?? "—"}</span>
+                      <span className="text-gray-500">Broker Receivable</span>
+                      <span>{renderCurrency(financials.brokerReceivable)}</span>
+                      <span className="text-gray-500">Carrier Payable</span>
+                      <span>{renderCurrency(financials.carrierPayable)}</span>
+                      <span className="text-gray-500">Status</span>
+                      <span>Pending</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="ghost" onPress={handleClose}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onPress={() => selected && mutation.mutate(selected.id)}
+                isDisabled={!selected || mutation.isPending}
+              >
+                {mutation.isPending ? <Spinner size="sm" /> : "Create Load PO"}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   );
-}
+};
+
+export default CreateLoadPaymentOrderModal;

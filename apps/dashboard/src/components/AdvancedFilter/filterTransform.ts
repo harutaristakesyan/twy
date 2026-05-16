@@ -30,10 +30,9 @@ export function valuesToFilter(
       if (v.min != null) result[`${field.key}__gte`] = String(v.min);
       if (v.max != null) result[`${field.key}__lte`] = String(v.max);
     } else if (field.type === "dateRange") {
-      // val is [dayjs | null, dayjs | null] — call .format() via duck-typing
-      const pair = val as Array<{ format: (f: string) => string } | null>;
-      if (pair[0]) result[`${field.key}__from`] = pair[0].format("YYYY-MM-DD");
-      if (pair[1]) result[`${field.key}__to`] = pair[1].format("YYYY-MM-DD");
+      const pair = val as [string | null, string | null];
+      if (pair[0]) result[`${field.key}__from`] = pair[0];
+      if (pair[1]) result[`${field.key}__to`] = pair[1];
     }
   }
 

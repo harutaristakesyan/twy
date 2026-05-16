@@ -1,10 +1,9 @@
-import { Card } from "antd";
 import InternalBillingTable from "../components/InternalBillingTable";
 
 export default function InternalBillingPage() {
   return (
-    <Card>
+    <div className="p-6">
       <InternalBillingTable />
-    </Card>
+    </div>
   );
 }

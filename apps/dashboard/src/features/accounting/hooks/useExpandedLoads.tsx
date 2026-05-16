@@ -1,4 +1,3 @@
-import { useRequest } from "ahooks";
 import { useCallback, useState } from "react";
 import { billingApi } from "../api/billingApi";
 import type { ExternalBillingLoad } from "../types/billing";
@@ -23,12 +22,9 @@ export function useExpandedLoads(apiParams: ApiParams) {
 
   const resetLoads = useCallback(() => setLoadsByBranch(new Map()), []);
 
-  const { runAsync: fetchLoads } = useRequest(billingApi.listExternalLoads, { manual: true });
-
   const onExpand = useCallback(
     async (expanded: boolean, branchId: string) => {
       if (!expanded) return;
-      // Use functional setState to read current cache without depending on it.
       let alreadyCached = false;
       setLoadsByBranch((prev) => {
         if (prev.has(branchId)) alreadyCached = true;
@@ -38,14 +34,14 @@ export function useExpandedLoads(apiParams: ApiParams) {
 
       setExpandingBranchId(branchId);
       try {
-        const loads = await fetchLoads(branchId, apiParams);
+        const loads = await billingApi.listExternalLoads(branchId, apiParams);
         const userGroups = groupLoadsByCreator(loads);
         setLoadsByBranch((prev) => new Map(prev).set(branchId, { loads, userGroups }));
       } finally {
         setExpandingBranchId(null);
       }
     },
-    [apiParams, fetchLoads],
+    [apiParams],
   );
 
   return { onExpand, resetLoads, loadsByBranch, expandingBranchId };

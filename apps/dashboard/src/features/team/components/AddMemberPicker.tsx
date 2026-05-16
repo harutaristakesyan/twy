@@ -1,10 +1,8 @@
-import { useDebounceFn, useInfiniteScroll, useRequest } from "ahooks";
-import { App, Button, Flex, Select } from "antd";
+import { Spinner, toast } from "@heroui/react";
 import type React from "react";
-import { useRef, useState } from "react";
-import { LabeledOption } from "@/components/LabeledOption";
+import { useCallback, useState } from "react";
+import { useApiMutation, useApiQuery } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
-import { createPopupScrollHandler } from "@/utils/selectUtils";
 import { addTeamMember, getUnassignedUsers } from "../api/teamApi";
 
 interface AddMemberPickerProps {
@@ -14,77 +12,74 @@ interface AddMemberPickerProps {
 }
 
 const AddMemberPicker: React.FC<AddMemberPickerProps> = ({ teamId, onAdded, onCancel }) => {
-  const { message } = App.useApp();
   const [query, setQuery] = useState("");
-  const queryRef = useRef(query);
-  queryRef.current = query;
+  const [selectedUserId, setSelectedUserId] = useState("");
 
-  const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
-
-  const { data, loading, loadMore } = useInfiniteScroll(
-    async (currentData) => {
-      const limit = 10;
-      const nextPage = Math.floor((currentData?.list?.length ?? 0) / limit);
-      const response = await getUnassignedUsers({ page: nextPage, limit, query: queryRef.current });
-      return { list: response.items, total: response.total };
-    },
-    {
-      reloadDeps: [query],
-      isNoMore: (d) => (d ? d.list.length >= d.total : false),
-    },
+  const { data, isLoading } = useApiQuery(["unassigned-users", query], () =>
+    getUnassignedUsers({ page: 0, limit: 20, query: query || undefined }),
   );
 
-  const { loading: adding, run: add } = useRequest(
+  const mutation = useApiMutation(
     async () => {
-      if (!selectedUserId) return;
+      if (!selectedUserId) throw new Error("No user selected");
       await addTeamMember(teamId, selectedUserId);
     },
     {
-      manual: true,
       onSuccess: () => {
-        setSelectedUserId(undefined);
+        toast.success("Member added");
+        setSelectedUserId("");
         onAdded();
-        message.success("Member added");
       },
-      onError: (error) => {
-        message.error(getErrorMessage(error));
-      },
+      onError: (err) => toast.danger(getErrorMessage(err)),
     },
   );
 
-  const { run: onSearch } = useDebounceFn((val: string) => setQuery(val), { wait: 300 });
+  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+  }, []);
 
-  const handlePopupScroll = createPopupScrollHandler(loadMore);
+  const users = data?.items ?? [];
 
   return (
-    <Flex gap="small">
-      <Select
-        style={{ flex: 1 }}
-        size="small"
-        showSearch={{ filterOption: false, onSearch }}
-        onPopupScroll={handlePopupScroll}
-        loading={loading}
+    <div className="flex items-center gap-2">
+      <div className="relative flex-1">
+        <input
+          type="text"
+          className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search unassigned users…"
+          value={query}
+          onChange={handleSearch}
+        />
+      </div>
+      <select
         value={selectedUserId}
-        onChange={setSelectedUserId}
-        placeholder="Search unassigned users"
-        options={
-          data?.list?.map((u) => ({
-            value: u.id,
-            label: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim(),
-            email: u.email,
-          })) ?? []
-        }
-        optionRender={(option) => (
-          <LabeledOption label={option.label} description={option.data.email} />
-        )}
-      />
-      <Button type="primary" size="small" onClick={add} loading={adding} disabled={!selectedUserId}>
-        Add
-      </Button>
-      <Button size="small" onClick={onCancel}>
+        onChange={(e) => setSelectedUserId(e.target.value)}
+        className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="">Select user</option>
+        {isLoading && <option disabled>Loading…</option>}
+        {users.map((u) => (
+          <option key={u.id} value={u.id}>
+            {u.firstName} {u.lastName} — {u.email}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        disabled={!selectedUserId || mutation.isPending}
+        onClick={() => mutation.mutate(undefined)}
+        className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {mutation.isPending ? <Spinner size="sm" /> : "Add"}
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+      >
         Cancel
-      </Button>
-    </Flex>
+      </button>
+    </div>
   );
 };
 

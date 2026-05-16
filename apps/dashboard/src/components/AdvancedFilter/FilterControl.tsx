@@ -1,5 +1,4 @@
-import { DatePicker, InputNumber, Select, Space } from "antd";
-import type dayjs from "dayjs";
+import { Checkbox, Input, Label, ListBox, Select, TextField } from "@heroui/react";
 import type { FilterField } from "./types.js";
 
 interface Props {
@@ -11,40 +10,92 @@ interface Props {
 
 export function FilterControl({ field, value, onChange, onReset }: Props) {
   if (field.type === "select") {
+    const current = (value as string | undefined) ?? "";
     return (
       <Select
-        allowClear
-        style={{ width: "100%" }}
-        placeholder={field.placeholder ?? `Select ${field.label.toLowerCase()}`}
-        value={(value as string | undefined) ?? undefined}
-        options={field.options}
-        onChange={(v: string | undefined) => (v ? onChange(v) : onReset())}
-      />
+        value={current || undefined}
+        onChange={(key) => {
+          const v = key === null || key === undefined ? "" : String(key);
+          if (v) onChange(v);
+          else onReset();
+        }}
+      >
+        <Select.Trigger>
+          <Select.Value>
+            {({ defaultChildren, isPlaceholder }) =>
+              isPlaceholder
+                ? (field.placeholder ?? `Select ${field.label.toLowerCase()}`)
+                : defaultChildren
+            }
+          </Select.Value>
+          <Select.Indicator />
+        </Select.Trigger>
+        <Select.Popover>
+          <ListBox>
+            {field.options?.map((opt) => (
+              <ListBox.Item key={opt.value} id={opt.value} textValue={opt.label}>
+                {opt.label}
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+      </Select>
     );
   }
 
   if (field.type === "multiSelect") {
+    const selected = (value as string[] | undefined) ?? [];
     return (
-      <Select
-        mode="multiple"
-        allowClear
-        style={{ width: "100%" }}
-        placeholder={field.placeholder ?? `Select ${field.label.toLowerCase()}`}
-        value={(value as string[] | undefined) ?? []}
-        options={field.options}
-        onChange={(v: string[]) => (v.length > 0 ? onChange(v) : onReset())}
-      />
+      <div className="flex flex-wrap gap-2">
+        {field.options?.map((opt) => {
+          const checked = selected.includes(opt.value);
+          return (
+            <Checkbox
+              key={opt.value}
+              isSelected={checked}
+              onChange={(isSelected) => {
+                const next = isSelected
+                  ? [...selected, opt.value]
+                  : selected.filter((v) => v !== opt.value);
+                if (next.length > 0) onChange(next);
+                else onReset();
+              }}
+            >
+              {opt.label}
+            </Checkbox>
+          );
+        })}
+      </div>
     );
   }
 
   if (field.type === "dateRange") {
-    type DayjsPair = [dayjs.Dayjs | null, dayjs.Dayjs | null];
+    const pair = (value as [string | null, string | null] | undefined) ?? [null, null];
     return (
-      <DatePicker.RangePicker
-        style={{ width: "100%" }}
-        value={(value as DayjsPair | null | undefined) ?? null}
-        onChange={(dates) => (dates && (dates[0] || dates[1]) ? onChange(dates) : onReset())}
-      />
+      <div className="grid grid-cols-2 gap-2">
+        <TextField value={pair[0] ?? ""} fullWidth>
+          <Label className="sr-only">From</Label>
+          <Input
+            type="date"
+            onChange={(e) => {
+              const next: [string | null, string | null] = [e.target.value || null, pair[1]];
+              if (next[0] || next[1]) onChange(next);
+              else onReset();
+            }}
+          />
+        </TextField>
+        <TextField value={pair[1] ?? ""} fullWidth>
+          <Label className="sr-only">To</Label>
+          <Input
+            type="date"
+            onChange={(e) => {
+              const next: [string | null, string | null] = [pair[0], e.target.value || null];
+              if (next[0] || next[1]) onChange(next);
+              else onReset();
+            }}
+          />
+        </TextField>
+      </div>
     );
   }
 
@@ -53,26 +104,30 @@ export function FilterControl({ field, value, onChange, onReset }: Props) {
       min: null,
       max: null,
     };
-    const updateRange = (patch: Partial<typeof range>) => {
+    const update = (patch: Partial<typeof range>) => {
       const next = { ...range, ...patch };
       if (next.min === null && next.max === null) onReset();
       else onChange(next);
     };
     return (
-      <Space.Compact style={{ width: "100%" }}>
-        <InputNumber
-          style={{ width: "50%" }}
-          placeholder="Min"
-          value={range.min ?? undefined}
-          onChange={(v) => updateRange({ min: v ?? null })}
-        />
-        <InputNumber
-          style={{ width: "50%" }}
-          placeholder="Max"
-          value={range.max ?? undefined}
-          onChange={(v) => updateRange({ max: v ?? null })}
-        />
-      </Space.Compact>
+      <div className="grid grid-cols-2 gap-2">
+        <TextField value={range.min == null ? "" : String(range.min)} fullWidth>
+          <Label className="sr-only">Min</Label>
+          <Input
+            type="number"
+            placeholder="Min"
+            onChange={(e) => update({ min: e.target.value !== "" ? Number(e.target.value) : null })}
+          />
+        </TextField>
+        <TextField value={range.max == null ? "" : String(range.max)} fullWidth>
+          <Label className="sr-only">Max</Label>
+          <Input
+            type="number"
+            placeholder="Max"
+            onChange={(e) => update({ max: e.target.value !== "" ? Number(e.target.value) : null })}
+          />
+        </TextField>
+      </div>
     );
   }
 

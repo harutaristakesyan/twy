@@ -1,4 +1,4 @@
-import type { SortOrder } from "antd/es/table/interface";
+export type SortOrder = "ascend" | "descend";
 
 export interface SearchParams {
   query?: string;

@@ -1,185 +1,233 @@
-import { useRequest } from "ahooks";
-import { App, Button, Col, DatePicker, Form, Input, Modal, Row, Select, Space } from "antd";
-import dayjs from "dayjs";
-import type React from "react";
+import {
+  Button,
+  FieldError,
+  Input,
+  Label,
+  ListBox,
+  Modal,
+  Select,
+  Spinner,
+  TextField,
+  toast,
+} from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { Controller } from "react-hook-form";
+import { useNavigate, useParams } from "react-router-dom";
+import { z } from "zod";
+import { FormTextArea, FormTextField } from "@/components/form";
+import { useZodForm } from "@/libs/form";
+import { useApiMutation, useApiQuery } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
-import { updateCarrier } from "../api/carrierApi";
-import type { Carrier, CarrierFormData, UpdateCarrierRequest } from "../types/carrier";
+import { getCarrierById, updateCarrier } from "../api/carrierApi";
 import { CarrierStatus } from "../types/carrier";
 
-const { TextArea } = Input;
+const schema = z.object({
+  carrierName: z.string().min(2, "Carrier name must be at least 2 characters"),
+  mcDotNumber: z.string().min(1, "MC/DOT number is required"),
+  equipmentType: z.string().optional(),
+  insuranceExpiry: z.string().optional(),
+  phone: z.string().optional(),
+  email: z
+    .string()
+    .optional()
+    .refine((v) => !v || /\S+@\S+\.\S+/.test(v), { message: "Invalid email address" }),
+  notes: z.string().optional(),
+  status: z.nativeEnum(CarrierStatus),
+});
 
-type FormValues = Omit<CarrierFormData, "insuranceExpiry" | "kind"> & {
-  insuranceExpiry: dayjs.Dayjs;
-};
+type FormValues = z.infer<typeof schema>;
 
-interface CarrierEditModalProps {
-  open: boolean;
-  carrier: Carrier;
-  onCancel: () => void;
-  onSuccess: () => void;
-}
+const STATUS_OPTIONS = [
+  { id: CarrierStatus.APPROVED, label: "Approved" },
+  { id: CarrierStatus.DENIED, label: "Denied" },
+];
 
-const CarrierEditModal: React.FC<CarrierEditModalProps> = ({
-  open,
-  carrier,
-  onCancel,
-  onSuccess,
-}) => {
-  const { message } = App.useApp();
-  const [form] = Form.useForm();
+const CarrierEditModal = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const close = () => navigate("..");
+  const { carrierId } = useParams<{ carrierId: string }>();
 
-  const { loading, run: submit } = useRequest(
-    async (values: FormValues) => {
-      const updateData: UpdateCarrierRequest = {
-        id: carrier.id,
-        carrierName: values.carrierName,
-        mcDotNumber: values.mcDotNumber,
-        equipmentType: values.equipmentType,
-        insuranceExpiry: dayjs(values.insuranceExpiry).toISOString(),
-        phone: values.phone,
-        email: values.email,
-        notes: values.notes,
-        status: values.status,
-      };
-      await updateCarrier(updateData);
-    },
+  const { data: carrier, isLoading } = useApiQuery(
+    ["carrier", carrierId],
+    () => getCarrierById(carrierId ?? ""),
+    { enabled: !!carrierId },
+  );
+
+  const { control, handleSubmit, reset } = useZodForm(schema, {
+    carrierName: "",
+    mcDotNumber: "",
+    equipmentType: "",
+    insuranceExpiry: "",
+    phone: "",
+    email: "",
+    notes: "",
+    status: CarrierStatus.APPROVED,
+  });
+
+  useEffect(() => {
+    if (carrier) {
+      reset({
+        carrierName: carrier.carrierName,
+        mcDotNumber: carrier.mcDotNumber,
+        equipmentType: carrier.equipmentType ?? "",
+        insuranceExpiry: carrier.insuranceExpiry ?? "",
+        phone: carrier.phone ?? "",
+        email: carrier.email ?? "",
+        notes: carrier.notes ?? "",
+        status: carrier.status,
+      });
+    }
+  }, [carrier, reset]);
+
+  const mutation = useApiMutation(
+    (data: Parameters<typeof updateCarrier>[0]) => updateCarrier(data),
     {
-      manual: true,
-      onSuccess: () => {
-        message.success("Carrier updated successfully");
-        onSuccess();
+      onSuccess: async () => {
+        toast.success("Carrier updated successfully");
+        await queryClient.invalidateQueries({ queryKey: ["carriers"] });
+        close();
       },
-      onError: (error) => {
-        message.error(getErrorMessage(error));
-      },
+      onError: (err: unknown) => toast.danger(getErrorMessage(err)),
     },
   );
 
+  const onSubmit = handleSubmit((values: FormValues) => {
+    if (!carrier) return;
+    mutation.mutate({
+      id: carrier.id,
+      carrierName: values.carrierName.trim(),
+      mcDotNumber: values.mcDotNumber.trim(),
+      equipmentType: values.equipmentType?.trim() || undefined,
+      insuranceExpiry: values.insuranceExpiry?.trim() || undefined,
+      phone: values.phone?.trim() || undefined,
+      email: values.email?.trim() || undefined,
+      notes: values.notes?.trim() || undefined,
+      status: values.status,
+    });
+  });
+
   return (
-    <Modal
-      title="Edit Carrier"
-      open={open}
-      onCancel={onCancel}
-      footer={null}
-      width={600}
-      destroyOnHidden
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={submit}
-        initialValues={{
-          carrierName: carrier.carrierName,
-          mcDotNumber: carrier.mcDotNumber,
-          equipmentType: carrier.equipmentType || "",
-          insuranceExpiry: carrier.insuranceExpiry ? dayjs(carrier.insuranceExpiry) : null,
-          phone: carrier.phone || "",
-          email: carrier.email || "",
-          notes: carrier.notes || "",
-          status: carrier.status,
+    <Modal>
+      <Modal.Backdrop
+        isOpen
+        onOpenChange={(open) => {
+          if (!open) close();
         }}
       >
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="carrierName"
-              label="Carrier Name"
-              rules={[
-                { required: true, message: "Please enter carrier name" },
-                { min: 2, message: "Carrier name must be at least 2 characters" },
-              ]}
-            >
-              <Input placeholder="Enter carrier name" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="mcDotNumber"
-              label="MC / DOT Number"
-              rules={[{ required: true, message: "Please enter MC/DOT number" }]}
-            >
-              <Input placeholder="Enter MC/DOT number" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="equipmentType"
-              label="Equipment Type"
-              rules={[{ required: true, message: "Please enter equipment type" }]}
-            >
-              <Input placeholder="Enter equipment type (e.g., Flatbed, Dry Van, Refrigerated)" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="insuranceExpiry"
-              label="Insurance Expiry"
-              rules={[{ required: true, message: "Please select insurance expiry date" }]}
-            >
-              <DatePicker
-                style={{ width: "100%" }}
-                placeholder="Select insurance expiry date"
-                format="YYYY-MM-DD"
-              />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="phone"
-              label="Phone"
-              rules={[{ required: true, message: "Please enter phone number" }]}
-            >
-              <Input placeholder="Enter phone number" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="email"
-              label="Email"
-              rules={[
-                { required: true, message: "Please enter email address" },
-                { type: "email", message: "Please enter a valid email address" },
-              ]}
-            >
-              <Input placeholder="Enter email address" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item name="notes" label="Notes">
-          <TextArea placeholder="Enter notes" rows={2} />
-        </Form.Item>
-
-        <Form.Item
-          name="status"
-          label="Status"
-          rules={[{ required: true, message: "Please select a status" }]}
-        >
-          <Select
-            placeholder="Select status"
-            options={[
-              { value: CarrierStatus.APPROVED, label: "Approved" },
-              { value: CarrierStatus.DENIED, label: "Denied" },
-            ]}
-          />
-        </Form.Item>
-
-        <Form.Item>
-          <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={onCancel}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={loading}>
-              Update Carrier
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>Edit Carrier</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="p-2">
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Spinner size="lg" />
+                </div>
+              ) : (
+                <form id="carrier-edit-form" onSubmit={onSubmit}>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormTextField
+                      control={control}
+                      name="carrierName"
+                      label="Carrier Name"
+                      placeholder="Enter carrier name"
+                    />
+                    <FormTextField
+                      control={control}
+                      name="mcDotNumber"
+                      label="MC / DOT Number"
+                      placeholder="Enter MC/DOT number"
+                    />
+                    <FormTextField
+                      control={control}
+                      name="equipmentType"
+                      label="Equipment Type"
+                      placeholder="Enter equipment type"
+                    />
+                    <Controller
+                      name="insuranceExpiry"
+                      control={control}
+                      render={({ field, fieldState }) => (
+                        <TextField
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          isInvalid={!!fieldState.error}
+                          fullWidth
+                        >
+                          <Label>Insurance Expiry</Label>
+                          <Input type="date" />
+                          {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
+                        </TextField>
+                      )}
+                    />
+                    <FormTextField
+                      control={control}
+                      name="phone"
+                      label="Phone"
+                      placeholder="Enter phone number"
+                    />
+                    <FormTextField
+                      control={control}
+                      name="email"
+                      type="email"
+                      label="Email"
+                      placeholder="Enter email address"
+                    />
+                    <Controller
+                      name="status"
+                      control={control}
+                      render={({ field }) => (
+                        <Select value={field.value} onChange={(key) => field.onChange(key)}>
+                          <Label>Status</Label>
+                          <Select.Trigger>
+                            <Select.Value />
+                            <Select.Indicator />
+                          </Select.Trigger>
+                          <Select.Popover>
+                            <ListBox>
+                              {STATUS_OPTIONS.map((opt) => (
+                                <ListBox.Item key={opt.id} id={opt.id} textValue={opt.label}>
+                                  {opt.label}
+                                </ListBox.Item>
+                              ))}
+                            </ListBox>
+                          </Select.Popover>
+                        </Select>
+                      )}
+                    />
+                    <div className="col-span-2">
+                      <FormTextArea
+                        control={control}
+                        name="notes"
+                        label="Notes"
+                        placeholder="Enter notes"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                </form>
+              )}
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="ghost" onPress={close}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                form="carrier-edit-form"
+                isDisabled={mutation.isPending}
+              >
+                {mutation.isPending ? <Spinner size="sm" /> : "Update Carrier"}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   );
 };

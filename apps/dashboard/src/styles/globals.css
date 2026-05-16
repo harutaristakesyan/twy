@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+
+:root,
+.light,
+.default,
+[data-theme="light"],
+[data-theme="default"] {
+  /* Theme Colors */
+  --background: oklch(97.02% 0.0015 245.42);
+  --muted: oklch(55.17% 0.003 245.42);
+  --scrollbar: oklch(87.10% 0.0015 245.42);
+  --surface-secondary: oklch(95.24% 0.0023 245.42);
+  --surface-tertiary: oklch(93.73% 0.0023 245.42);
+  --default: oklch(94.00% 0.0015 245.42);
+  --accent: oklch(20.23% 0.0364 245.42);
+  --success: oklch(73.29% 0.194 149.83);
+  --warning: oklch(78.19% 0.1589 71.31);
+  --danger: oklch(65.32% 0.2335 24.72);
+  --field-border: oklch(13.63% 0.0171 247);
+  --border: oklch(90.00% 0.0015 245.42);
+  --separator: oklch(92.00% 0.0015 245.42);
+
+  /* Border Radius */
+  --radius: 0.25rem;
+
+  /* Border Width */
+  --border-width-field: 0.5px;
+  --field-border-width: 0.5px;
+}

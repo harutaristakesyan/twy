@@ -1,4 +1,4 @@
-import { Spin } from "antd";
+import { Spinner } from "@heroui/react";
 import type React from "react";
 import { Navigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -24,7 +24,7 @@ const RequirePermission: React.FC<RequirePermissionProps> = ({ children, resourc
           height: "100vh",
         }}
       >
-        <Spin size="large" />
+        <Spinner size="lg" />
       </div>
     );
   }

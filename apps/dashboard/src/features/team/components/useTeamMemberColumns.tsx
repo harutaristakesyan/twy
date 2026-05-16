@@ -1,50 +1,49 @@
-import { DeleteOutlined } from "@ant-design/icons";
-import { Button, Popconfirm, Tag, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { TrashBin } from "@gravity-ui/icons";
 import type { TeamMember } from "../types/team";
 
-const { Text } = Typography;
+interface Column {
+  key: string;
+  label: string;
+  render: (record: TeamMember) => React.ReactNode;
+}
 
-export function useTeamMemberColumns(
-  removeMember: (memberId: string) => void,
-): ColumnsType<TeamMember> {
+export function useTeamMemberColumns(removeMember: (memberId: string) => void): Column[] {
   return [
     {
-      title: "Name",
       key: "name",
-      render: (_, r) => (
-        <Text>
-          {r.firstName} {r.lastName}
-        </Text>
-      ),
+      label: "Name",
+      render: (r) => `${r.firstName} ${r.lastName}`,
     },
     {
-      title: "Email",
-      dataIndex: "email",
       key: "email",
+      label: "Email",
+      render: (r) => r.email,
     },
     {
-      title: "Status",
-      dataIndex: "isActive",
-      key: "isActive",
-      render: (active: boolean) => (
-        <Tag color={active ? "green" : "red"}>{active ? "Active" : "Inactive"}</Tag>
+      key: "status",
+      label: "Status",
+      render: (r) => (
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+            r.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+          }`}
+        >
+          {r.isActive ? "Active" : "Inactive"}
+        </span>
       ),
     },
     {
-      title: "",
       key: "actions",
-      width: 60,
-      render: (_, r) => (
-        <Popconfirm
-          title="Remove member?"
-          description="This will unassign the user from this team."
-          onConfirm={() => removeMember(r.id)}
-          okText="Remove"
-          cancelText="Cancel"
+      label: "",
+      render: (r) => (
+        <button
+          type="button"
+          title="Remove member"
+          onClick={() => removeMember(r.id)}
+          className="rounded p-1 text-red-400 hover:bg-red-50"
         >
-          <Button type="text" danger size="small" icon={<DeleteOutlined />} />
-        </Popconfirm>
+          <TrashBin className="h-3.5 w-3.5" />
+        </button>
       ),
     },
   ];

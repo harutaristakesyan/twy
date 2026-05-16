@@ -1,7 +1,5 @@
-import { useRequest } from "ahooks";
-import { Button, Flex, Popover, Table } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { useState } from "react";
+import { Spinner } from "@heroui/react";
+import { useCallback, useState } from "react";
 import { FileDownloadButton } from "@/features/files";
 import { formatPercent, renderCurrency } from "@/utils/formatters";
 import { billingApi } from "../api/billingApi";
@@ -10,89 +8,14 @@ import type { BillingInvoice, InternalBillingBranch, InternalBillingLoad } from 
 
 const InvoicesCell = ({ invoices }: { invoices: BillingInvoice[] }) => {
   if (invoices.length === 0) return <span>—</span>;
-
-  const content = (
-    <Flex vertical gap={4}>
-      {invoices.map((inv) => (
-        <FileDownloadButton
-          key={inv.fileId}
-          fileId={inv.fileId}
-          fileName={inv.fileName}
-          style={{ padding: 0, height: "auto" }}
-        />
-      ))}
-    </Flex>
-  );
-
   return (
-    <Popover content={content} title="Invoices" trigger="click" placement="left">
-      <Button type="link" size="small" style={{ padding: 0 }}>
-        {invoices.length} file{invoices.length > 1 ? "s" : ""}
-      </Button>
-    </Popover>
+    <div className="flex flex-col gap-1">
+      {invoices.map((inv) => (
+        <FileDownloadButton key={inv.fileId} fileId={inv.fileId} fileName={inv.fileName} />
+      ))}
+    </div>
   );
 };
-
-const innerColumns: ColumnsType<InternalBillingLoad> = [
-  {
-    title: "Reference",
-    dataIndex: "referenceNumber",
-    key: "referenceNumber",
-    width: 140,
-    render: (text: string) => <strong>{text}</strong>,
-  },
-  {
-    title: "Carrier",
-    dataIndex: "carrierName",
-    key: "carrierName",
-    width: 160,
-    render: (v: string | null) => v ?? "—",
-  },
-  {
-    title: "Service Fee",
-    dataIndex: "serviceFee",
-    key: "serviceFee",
-    width: 120,
-    render: renderCurrency,
-  },
-  {
-    title: "Income %",
-    dataIndex: "incomePercentage",
-    key: "incomePercentage",
-    width: 110,
-    render: formatPercent,
-  },
-  {
-    title: "Charges",
-    dataIndex: "charges",
-    key: "charges",
-    width: 110,
-    render: renderCurrency,
-  },
-  {
-    title: "Profit",
-    dataIndex: "profit",
-    key: "profit",
-    width: 120,
-    render: (v: number | null) => renderCurrency(v),
-  },
-  {
-    title: "Status",
-    dataIndex: "paymentStatus",
-    key: "paymentStatus",
-    width: 140,
-    render: (_: unknown, record: InternalBillingLoad) => (
-      <PaymentStatusTag status={record.paymentStatus} />
-    ),
-  },
-  {
-    title: "Invoices",
-    dataIndex: "invoices",
-    key: "invoices",
-    width: 100,
-    render: (invoices: BillingInvoice[]) => <InvoicesCell invoices={invoices} />,
-  },
-];
 
 interface ApiParams {
   query?: string;
@@ -104,31 +27,69 @@ export function useInternalExpandedLoads(apiParams: ApiParams) {
   const [loadsByBranch, setLoadsByBranch] = useState<Map<string, InternalBillingLoad[]>>(new Map());
   const [expandingBranchId, setExpandingBranchId] = useState<string | null>(null);
 
-  const resetLoads = () => setLoadsByBranch(new Map());
+  const resetLoads = useCallback(() => setLoadsByBranch(new Map()), []);
 
-  const { runAsync: fetchLoads } = useRequest(billingApi.listInternalLoads, { manual: true });
+  const onExpand = useCallback(
+    async (expanded: boolean, record: InternalBillingBranch) => {
+      if (!expanded || loadsByBranch.has(record.branchId)) return;
+      setExpandingBranchId(record.branchId);
+      try {
+        const loads = await billingApi.listInternalLoads(record.branchId, apiParams);
+        setLoadsByBranch((prev) => new Map(prev).set(record.branchId, loads));
+      } finally {
+        setExpandingBranchId(null);
+      }
+    },
+    [apiParams, loadsByBranch],
+  );
 
-  const onExpand = async (expanded: boolean, record: InternalBillingBranch) => {
-    if (!expanded || loadsByBranch.has(record.branchId)) return;
-    setExpandingBranchId(record.branchId);
-    try {
-      const loads = await fetchLoads(record.branchId, apiParams);
-      setLoadsByBranch((prev) => new Map(prev).set(record.branchId, loads));
-    } finally {
-      setExpandingBranchId(null);
-    }
-  };
-
-  const expandedRowRender = (record: InternalBillingBranch) => (
-    <Table<InternalBillingLoad>
-      size="small"
-      loading={expandingBranchId === record.branchId}
-      dataSource={loadsByBranch.get(record.branchId) ?? []}
-      columns={innerColumns}
-      rowKey="loadId"
-      pagination={false}
-      style={{ margin: "8px 0" }}
-    />
+  const expandedRowRender = useCallback(
+    (record: InternalBillingBranch) => {
+      const loads = loadsByBranch.get(record.branchId) ?? [];
+      if (expandingBranchId === record.branchId) {
+        return (
+          <div className="flex justify-center py-4">
+            <Spinner size="sm" />
+          </div>
+        );
+      }
+      if (loads.length === 0) return <div className="py-2 text-sm text-gray-500">No loads</div>;
+      return (
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="py-1 px-2 text-left font-medium text-gray-600">Reference</th>
+              <th className="py-1 px-2 text-left font-medium text-gray-600">Carrier</th>
+              <th className="py-1 px-2 text-left font-medium text-gray-600">Service Fee</th>
+              <th className="py-1 px-2 text-left font-medium text-gray-600">Income %</th>
+              <th className="py-1 px-2 text-left font-medium text-gray-600">Charges</th>
+              <th className="py-1 px-2 text-left font-medium text-gray-600">Profit</th>
+              <th className="py-1 px-2 text-left font-medium text-gray-600">Status</th>
+              <th className="py-1 px-2 text-left font-medium text-gray-600">Invoices</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loads.map((load) => (
+              <tr key={load.loadId} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="py-1 px-2 font-medium">{load.referenceNumber}</td>
+                <td className="py-1 px-2">{load.carrierName ?? "—"}</td>
+                <td className="py-1 px-2">{renderCurrency(load.serviceFee)}</td>
+                <td className="py-1 px-2">{formatPercent(load.incomePercentage)}</td>
+                <td className="py-1 px-2">{renderCurrency(load.charges)}</td>
+                <td className="py-1 px-2">{renderCurrency(load.profit)}</td>
+                <td className="py-1 px-2">
+                  <PaymentStatusTag status={load.paymentStatus} />
+                </td>
+                <td className="py-1 px-2">
+                  <InvoicesCell invoices={load.invoices} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    },
+    [loadsByBranch, expandingBranchId],
   );
 
   return { onExpand, expandedRowRender, resetLoads };

@@ -1,155 +1,161 @@
-import { useRequest } from "ahooks";
-import { App, Button, Col, DatePicker, Form, Input, Modal, Row, Space } from "antd";
-import dayjs from "dayjs";
-import type React from "react";
+import { Button, FieldError, Input, Label, Modal, Spinner, TextField, toast } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Controller } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
+import { z } from "zod";
+import { FormTextArea, FormTextField } from "@/components/form";
+import { useZodForm } from "@/libs/form";
+import { useApiMutation } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { submitCarrierRequest } from "../api/carrierRequestApi";
 import type { CarrierKind } from "../types/carrier";
 import type { SubmitCarrierRequestBody } from "../types/carrierRequest";
 
-const { TextArea } = Input;
-
-type FormValues = Omit<SubmitCarrierRequestBody, "kind" | "insuranceExpiry"> & {
-  insuranceExpiry: dayjs.Dayjs;
+type Props = {
+  kind: CarrierKind;
 };
 
-interface CarrierCreateModalProps {
-  open: boolean;
-  kind: CarrierKind;
-  onCancel: () => void;
-  onSuccess: () => void;
-}
+const schema = z.object({
+  carrierName: z.string().min(2, "Carrier name must be at least 2 characters"),
+  mcDotNumber: z.string().min(1, "MC/DOT number is required"),
+  equipmentType: z.string().min(1, "Equipment type is required"),
+  insuranceExpiry: z.string().optional(),
+  phone: z.string().min(1, "Phone is required"),
+  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  notes: z.string().optional(),
+});
 
-const CarrierCreateModal: React.FC<CarrierCreateModalProps> = ({
-  open,
-  kind,
-  onCancel,
-  onSuccess,
-}) => {
-  const { message } = App.useApp();
-  const [form] = Form.useForm();
+type FormValues = z.infer<typeof schema>;
 
-  const { loading, run: submit } = useRequest(
-    async (values: FormValues) => {
-      await submitCarrierRequest({
-        kind,
-        carrierName: values.carrierName,
-        mcDotNumber: values.mcDotNumber,
-        equipmentType: values.equipmentType,
-        insuranceExpiry: dayjs(values.insuranceExpiry).toISOString(),
-        phone: values.phone,
-        email: values.email,
-        notes: values.notes,
-      });
+const CarrierCreateModal = ({ kind }: Props) => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const close = () => navigate("..");
+
+  const { control, handleSubmit } = useZodForm(schema, {
+    carrierName: "",
+    mcDotNumber: "",
+    equipmentType: "",
+    insuranceExpiry: "",
+    phone: "",
+    email: "",
+    notes: "",
+  });
+
+  const mutation = useApiMutation((data: SubmitCarrierRequestBody) => submitCarrierRequest(data), {
+    onSuccess: async () => {
+      toast.success("Carrier request submitted for review");
+      await queryClient.invalidateQueries({ queryKey: ["carriers"] });
+      close();
     },
-    {
-      manual: true,
-      onSuccess: () => {
-        message.success("Carrier request submitted for review");
-        onSuccess();
-      },
-      onError: (error) => {
-        message.error(getErrorMessage(error));
-      },
-    },
-  );
+    onError: (err: unknown) => toast.danger(getErrorMessage(err)),
+  });
+
+  const onSubmit = handleSubmit((values: FormValues) => {
+    mutation.mutate({
+      kind,
+      carrierName: values.carrierName.trim(),
+      mcDotNumber: values.mcDotNumber.trim(),
+      equipmentType: values.equipmentType.trim(),
+      insuranceExpiry: values.insuranceExpiry?.trim() || undefined,
+      phone: values.phone.trim(),
+      email: values.email.trim(),
+      notes: values.notes?.trim() || undefined,
+    });
+  });
 
   return (
-    <Modal
-      title="Submit carrier request"
-      open={open}
-      onCancel={onCancel}
-      footer={null}
-      width={600}
-      destroyOnHidden
-    >
-      <Form form={form} layout="vertical" onFinish={submit}>
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="carrierName"
-              label="Carrier Name"
-              rules={[
-                { required: true, message: "Please enter carrier name" },
-                { min: 2, message: "Carrier name must be at least 2 characters" },
-              ]}
-            >
-              <Input placeholder="Enter carrier name" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="mcDotNumber"
-              label="MC / DOT Number"
-              rules={[{ required: true, message: "Please enter MC/DOT number" }]}
-            >
-              <Input placeholder="Enter MC/DOT number" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="equipmentType"
-              label="Equipment Type"
-              rules={[{ required: true, message: "Please enter equipment type" }]}
-            >
-              <Input placeholder="e.g. Flatbed, Dry Van, Refrigerated" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="insuranceExpiry"
-              label="Insurance Expiry"
-              rules={[{ required: true, message: "Please select insurance expiry date" }]}
-            >
-              <DatePicker
-                style={{ width: "100%" }}
-                placeholder="Select insurance expiry date"
-                format="YYYY-MM-DD"
-              />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="phone"
-              label="Phone"
-              rules={[{ required: true, message: "Please enter phone number" }]}
-            >
-              <Input placeholder="Enter phone number" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="email"
-              label="Email"
-              rules={[
-                { required: true, message: "Please enter email address" },
-                { type: "email", message: "Please enter a valid email address" },
-              ]}
-            >
-              <Input placeholder="Enter email address" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item name="notes" label="Notes">
-          <TextArea placeholder="Enter notes" rows={2} />
-        </Form.Item>
-
-        <Form.Item>
-          <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={onCancel}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={loading}>
-              Submit request
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
+    <Modal>
+      <Modal.Backdrop
+        isOpen
+        onOpenChange={(open) => {
+          if (!open) close();
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>Submit Carrier Request</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="p-2">
+              <form id="carrier-create-form" onSubmit={onSubmit}>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormTextField
+                    control={control}
+                    name="carrierName"
+                    label="Carrier Name"
+                    placeholder="Enter carrier name"
+                  />
+                  <FormTextField
+                    control={control}
+                    name="mcDotNumber"
+                    label="MC / DOT Number"
+                    placeholder="Enter MC/DOT number"
+                  />
+                  <FormTextField
+                    control={control}
+                    name="equipmentType"
+                    label="Equipment Type"
+                    placeholder="e.g. Flatbed, Dry Van, Refrigerated"
+                  />
+                  <Controller
+                    name="insuranceExpiry"
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <TextField
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        isInvalid={!!fieldState.error}
+                        fullWidth
+                      >
+                        <Label>Insurance Expiry</Label>
+                        <Input type="date" />
+                        {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
+                      </TextField>
+                    )}
+                  />
+                  <FormTextField
+                    control={control}
+                    name="phone"
+                    label="Phone"
+                    placeholder="Enter phone number"
+                  />
+                  <FormTextField
+                    control={control}
+                    name="email"
+                    type="email"
+                    label="Email"
+                    placeholder="Enter email address"
+                  />
+                  <div className="col-span-2">
+                    <FormTextArea
+                      control={control}
+                      name="notes"
+                      label="Notes"
+                      placeholder="Enter notes"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              </form>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="ghost" onPress={close}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                form="carrier-create-form"
+                isDisabled={mutation.isPending}
+              >
+                {mutation.isPending ? <Spinner size="sm" /> : "Submit Request"}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   );
 };

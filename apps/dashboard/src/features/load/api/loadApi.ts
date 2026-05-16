@@ -5,6 +5,7 @@ import type {
   ChangeLoadStatusDto,
   CreateLoadDto,
   GetLoadsParams,
+  Load,
   LoadCommentsResponse,
   PaginatedLoadsResponse,
   UpdateLoadDto,
@@ -26,6 +27,11 @@ interface ChangeStatusResponse extends MessageResponse {
 export const loadApi = {
   getAll: async (params?: GetLoadsParams): Promise<PaginatedLoadsResponse> => {
     const response = await ApiClient.get<ApiResponse<PaginatedLoadsResponse>>("/loads", params);
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<Load> => {
+    const response = await ApiClient.get<ApiResponse<Load>>(`/loads/${id}`);
     return response.data;
   },
 

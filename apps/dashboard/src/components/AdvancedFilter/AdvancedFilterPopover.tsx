@@ -1,78 +1,10 @@
-import { FilterOutlined } from "@ant-design/icons";
-import { Button, Divider, Flex, Input, Popover, Typography, theme } from "antd";
-import dayjs from "dayjs";
-import { useCallback, useEffect, useState } from "react";
+import { Funnel } from "@gravity-ui/icons";
+import { Button, Chip } from "@heroui/react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FilterSection } from "./FilterSection.js";
 import type { FilterValues } from "./filterTransform.js";
 import { splitToFilterValues, valuesToFilter } from "./filterTransform.js";
 import type { AdvancedFilter, FilterField } from "./types.js";
-
-const { Text } = Typography;
-
-// ── Private sub-component ─────────────────────────────────────────────────────
-
-interface FilterContentProps {
-  keyword: string;
-  filterValues: FilterValues;
-  fields: FilterField[];
-  onKeywordChange: (v: string) => void;
-  setValue: (key: string, val: unknown) => void;
-  resetValue: (key: string) => void;
-  onResetAll: () => void;
-  onApply: () => void;
-}
-
-function FilterContent({
-  keyword,
-  filterValues,
-  fields,
-  onKeywordChange,
-  setValue,
-  resetValue,
-  onResetAll,
-  onApply,
-}: FilterContentProps) {
-  const { token } = theme.useToken();
-
-  return (
-    <Flex
-      vertical
-      gap={token.marginMD}
-      style={{ width: "100%", maxHeight: "70vh", overflowY: "auto" }}
-    >
-      <Flex vertical gap={token.marginXS}>
-        <Text strong style={{ fontSize: 13 }}>
-          Keyword search
-        </Text>
-        <Input
-          allowClear
-          placeholder="Search…"
-          value={keyword}
-          onChange={(e) => onKeywordChange(e.target.value)}
-        />
-      </Flex>
-
-      <FilterSection
-        fields={fields}
-        filterValues={filterValues}
-        setValue={setValue}
-        resetValue={resetValue}
-      />
-
-      <Divider style={{ margin: 0 }} />
-      <Flex justify="space-between" align="center">
-        <Button type="text" danger size="small" onClick={onResetAll}>
-          Reset all
-        </Button>
-        <Button type="primary" size="small" onClick={onApply}>
-          Apply
-        </Button>
-      </Flex>
-    </Flex>
-  );
-}
-
-// ── Public component (state orchestrator) ─────────────────────────────────────
 
 interface Props {
   fields?: FilterField[];
@@ -88,6 +20,8 @@ export function AdvancedFilterPopover({
   onApply,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const isActive =
     !!(initialFilter && Object.keys(initialFilter).length > 0) || !!initialQuery?.trim();
@@ -97,18 +31,20 @@ export function AdvancedFilterPopover({
 
   useEffect(() => {
     if (!open) return;
-    const fv = splitToFilterValues(initialFilter, fields);
-
-    for (const field of fields) {
-      if (field.type === "dateRange" && fv[field.key]) {
-        const pair = fv[field.key] as [string | null, string | null];
-        fv[field.key] = [pair[0] ? dayjs(pair[0]) : null, pair[1] ? dayjs(pair[1]) : null];
-      }
-    }
-
     setKeyword(initialQuery ?? "");
-    setFilterValues(fv);
+    setFilterValues(splitToFilterValues(initialFilter, fields));
   }, [open, initialFilter, initialQuery, fields]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open]);
 
   const setValue = useCallback((key: string, val: unknown) => {
     setFilterValues((prev) => ({ ...prev, [key]: val }));
@@ -132,32 +68,60 @@ export function AdvancedFilterPopover({
     setOpen(false);
   }, [filterValues, fields, keyword, onApply]);
 
-  const handleOpenChange = useCallback((v: boolean) => setOpen(v), []);
-
   return (
-    <Popover
-      open={open}
-      onOpenChange={handleOpenChange}
-      content={
-        <FilterContent
-          keyword={keyword}
-          filterValues={filterValues}
-          fields={fields}
-          onKeywordChange={setKeyword}
-          setValue={setValue}
-          resetValue={resetValue}
-          onResetAll={handleResetAll}
-          onApply={handleApply}
-        />
-      }
-      trigger="click"
-      placement="bottomLeft"
-      arrow={false}
-      styles={{ root: { width: 380 } }}
-    >
-      <Button icon={<FilterOutlined />} type={isActive ? "primary" : "default"}>
+    <div ref={containerRef} className="relative">
+      <Button
+        variant={isActive ? "secondary" : "tertiary"}
+        size="md"
+        onPress={() => setOpen((v) => !v)}
+      >
+        <Funnel className="h-4 w-4" />
         Filter
+        {isActive && (
+          <Chip color="accent" size="sm" variant="soft">
+            Active
+          </Chip>
+        )}
       </Button>
-    </Popover>
+
+      {open && (
+        <div
+          ref={panelRef}
+          className="absolute left-0 top-full z-50 mt-1 w-96 rounded-xl border border-default-200 bg-white p-4 shadow-lg"
+          style={{ maxHeight: "70vh", overflowY: "auto" }}
+        >
+          <div className="flex flex-col gap-4">
+            <label className="flex flex-col gap-1 text-sm font-medium text-default-700">
+              Keyword search
+              <input
+                type="text"
+                className="w-full rounded-lg border border-default-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                placeholder="Search…"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+              />
+            </label>
+
+            <FilterSection
+              fields={fields}
+              filterValues={filterValues}
+              setValue={setValue}
+              resetValue={resetValue}
+            />
+
+            <hr className="border-default-100" />
+
+            <div className="flex items-center justify-between">
+              <Button size="sm" variant="danger-soft" onPress={handleResetAll}>
+                Reset all
+              </Button>
+              <Button size="sm" variant="primary" onPress={handleApply}>
+                Apply
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

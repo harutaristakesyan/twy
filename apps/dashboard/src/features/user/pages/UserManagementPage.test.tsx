@@ -1,22 +1,15 @@
 import { render, screen } from "@testing-library/react";
-import type React from "react";
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import UserManagementPage from "./UserManagementPage";
 
 vi.mock("@/hooks/useCurrentUser");
-vi.mock("@/features/user/components/UserManagementTable", () => ({
+vi.mock("./UsersPage", () => ({
   default: () => <div>UserManagementTable</div>,
 }));
-vi.mock("@/features/team/components/TeamManagementTable", () => ({
+vi.mock("@/features/team/pages/TeamsPage", () => ({
   default: () => <div>TeamManagementTable</div>,
-}));
-vi.mock("@/features/user/providers/UserModalProvider", () => ({
-  UserModalProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-vi.mock("@/features/team/providers/TeamModalProvider", () => ({
-  TeamModalProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 const makePermissions = (usersView: boolean, teamsView: boolean) => ({

@@ -1,20 +1,10 @@
-import { useRequest } from "ahooks";
-import {
-  App,
-  Button,
-  DatePicker,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Space,
-  Switch,
-} from "antd";
-import type { Dayjs } from "dayjs";
+import { Button, Modal, Spinner, toast } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { FileUploaderHandle } from "@/features/files";
 import { FileUploader, MAX_FILES_DEFAULT } from "@/features/files";
+import { useApiMutation } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { officeExpenseApi } from "../api/officeExpensePaymentOrderApi";
 import {
@@ -25,171 +15,240 @@ import {
   type OfficeExpenseService,
 } from "../types/officeExpensePaymentOrder";
 
-const { TextArea } = Input;
-
-interface FormValues {
-  serviceName: OfficeExpenseService;
+interface FormState {
+  serviceName: OfficeExpenseService | "";
   paymentPurpose: string;
-  date: Dayjs | null;
-  dateRange: [Dayjs, Dayjs] | null;
+  isRange: boolean;
+  date: string;
+  dateStart: string;
+  dateEnd: string;
   currency: Currency;
-  amount: number;
+  amount: string;
 }
 
-interface Props {
-  open: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-}
+const fieldClass =
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary";
+const labelClass = "block text-sm font-medium text-gray-700 mb-1";
 
-const buildPeriod = (values: FormValues): { periodStart: string; periodEnd: string } | null => {
-  if (values.date) {
-    const d = values.date.format("YYYY-MM-DD");
-    return { periodStart: d, periodEnd: d };
-  }
-  if (values.dateRange?.[0] && values.dateRange[1]) {
-    return {
-      periodStart: values.dateRange[0].format("YYYY-MM-DD"),
-      periodEnd: values.dateRange[1].format("YYYY-MM-DD"),
-    };
-  }
-  return null;
-};
-
-export default function CreateOfficeExpenseModal({ open, onClose, onSuccess }: Props) {
-  const { message } = App.useApp();
-  const [form] = Form.useForm<FormValues>();
-  const [isRange, setIsRange] = useState(false);
+const CreateOfficeExpenseModal = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const close = () => navigate("..");
   const uploaderRef = useRef<FileUploaderHandle>(null);
+  const [form, setForm] = useState<FormState>({
+    serviceName: "",
+    paymentPurpose: "",
+    isRange: false,
+    date: "",
+    dateStart: "",
+    dateEnd: "",
+    currency: "USD",
+    amount: "",
+  });
+  const [errors, setErrors] = useState<string[]>([]);
 
-  const { loading, run: submit } = useRequest(
-    async (values: FormValues) => {
-      const period = buildPeriod(values);
-      if (!period) return;
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const validate = (): string[] => {
+    const errs: string[] = [];
+    if (!form.serviceName) errs.push("Service name is required");
+    if (!form.paymentPurpose.trim()) errs.push("Payment purpose is required");
+    if (form.isRange) {
+      if (!form.dateStart || !form.dateEnd) errs.push("Date range is required");
+    } else {
+      if (!form.date) errs.push("Date is required");
+    }
+    const amt = Number(form.amount);
+    if (!form.amount || Number.isNaN(amt) || amt <= 0) errs.push("Amount must be greater than 0");
+    return errs;
+  };
+
+  const mutation = useApiMutation(
+    async () => {
+      const errs = validate();
+      if (errs.length > 0) {
+        setErrors(errs);
+        throw new Error(errs[0]);
+      }
       const fileIds = uploaderRef.current?.fileIds ?? [];
       const dto: CreateOfficeExpenseDto = {
-        serviceName: values.serviceName,
-        paymentPurpose: values.paymentPurpose,
-        ...period,
-        amount: values.amount,
-        currency: values.currency,
+        serviceName: form.serviceName as OfficeExpenseService,
+        paymentPurpose: form.paymentPurpose,
+        periodStart: form.isRange ? form.dateStart : form.date,
+        periodEnd: form.isRange ? form.dateEnd : form.date,
+        amount: Number(form.amount),
+        currency: form.currency,
         ...(fileIds.length > 0 && { fileIds }),
       };
       await officeExpenseApi.create(dto);
     },
     {
-      manual: true,
-      onSuccess: () => {
+      onSuccess: async () => {
         uploaderRef.current?.commit();
-        message.success("Office expense payment order created");
-        setIsRange(false);
-        onSuccess();
-        onClose();
+        toast.success("Office expense payment order created");
+        await queryClient.invalidateQueries({ queryKey: ["office-expense-orders"] });
+        close();
       },
-      onError: (err) => message.error(getErrorMessage(err)),
+      onError: (err) => {
+        const msg = getErrorMessage(err);
+        if (!errors.length) toast.danger(msg);
+      },
     },
   );
 
-  const handleCancel = () => {
-    setIsRange(false);
-    onClose();
-  };
-
   return (
-    <Modal
-      title="Create Office Expense Payment Order"
-      open={open}
-      onCancel={handleCancel}
-      width={640}
-      destroyOnHidden
-      footer={
-        <Space>
-          <Button onClick={handleCancel}>Cancel</Button>
-          <Button type="primary" loading={loading} onClick={() => void form.submit()}>
-            Create
-          </Button>
-        </Space>
-      }
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={submit}
-        initialValues={{ currency: "USD" }}
-        style={{ marginTop: 16 }}
+    <Modal>
+      <Modal.Backdrop
+        isOpen={true}
+        onOpenChange={(open) => {
+          if (!open) close();
+        }}
       >
-        <Form.Item
-          name="serviceName"
-          label="Service Name"
-          rules={[{ required: true, message: "Service name is required" }]}
-        >
-          <Select options={OFFICE_EXPENSE_SERVICE_OPTIONS} placeholder="Select service" />
-        </Form.Item>
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>Create Office Expense Payment Order</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="p-2">
+              <div className="mt-2 flex flex-col gap-4">
+                {errors.length > 0 && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                    {errors.map((e) => (
+                      <p key={e} className="text-xs text-red-600">
+                        {e}
+                      </p>
+                    ))}
+                  </div>
+                )}
 
-        <Form.Item
-          name="paymentPurpose"
-          label="Payment Purpose"
-          rules={[{ required: true, message: "Payment purpose is required" }]}
-        >
-          <TextArea rows={3} placeholder="What is this expense for?" />
-        </Form.Item>
+                <label className={labelClass}>
+                  Service Name *
+                  <select
+                    value={form.serviceName}
+                    onChange={(e) =>
+                      set("serviceName", e.target.value as OfficeExpenseService | "")
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="">Select service</option>
+                    {OFFICE_EXPENSE_SERVICE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-        <Form.Item label="Date">
-          <Space align="center" style={{ marginBottom: 8 }}>
-            <span style={{ fontSize: 13 }}>Single date</span>
-            <Switch
-              size="small"
-              checked={isRange}
-              onChange={(checked) => {
-                setIsRange(checked);
-                form.setFieldsValue({ date: null, dateRange: null });
-              }}
-            />
-            <span style={{ fontSize: 13 }}>Date range</span>
-          </Space>
-          {isRange ? (
-            <Form.Item
-              name="dateRange"
-              noStyle
-              rules={[{ required: true, message: "Date range is required" }]}
-            >
-              <DatePicker.RangePicker style={{ width: "100%" }} />
-            </Form.Item>
-          ) : (
-            <Form.Item
-              name="date"
-              noStyle
-              rules={[{ required: true, message: "Date is required" }]}
-            >
-              <DatePicker style={{ width: "100%" }} />
-            </Form.Item>
-          )}
-        </Form.Item>
+                <label className={labelClass}>
+                  Payment Purpose *
+                  <textarea
+                    rows={3}
+                    className={fieldClass}
+                    value={form.paymentPurpose}
+                    onChange={(e) => set("paymentPurpose", e.target.value)}
+                    placeholder="What is this expense for?"
+                  />
+                </label>
 
-        <Form.Item name="currency" label="Currency" rules={[{ required: true }]}>
-          <Select options={CURRENCY_OPTIONS} style={{ width: 100 }} />
-        </Form.Item>
+                <div>
+                  <div className="mb-2 flex items-center gap-3">
+                    <span className={`${labelClass} mb-0`}>Date</span>
+                    <label className="flex items-center gap-1.5 text-sm text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={form.isRange}
+                        onChange={(e) => set("isRange", e.target.checked)}
+                      />
+                      Date range
+                    </label>
+                  </div>
+                  {form.isRange ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="date"
+                        className={fieldClass}
+                        value={form.dateStart}
+                        onChange={(e) => set("dateStart", e.target.value)}
+                      />
+                      <input
+                        type="date"
+                        className={fieldClass}
+                        value={form.dateEnd}
+                        onChange={(e) => set("dateEnd", e.target.value)}
+                      />
+                    </div>
+                  ) : (
+                    <input
+                      type="date"
+                      className={fieldClass}
+                      value={form.date}
+                      onChange={(e) => set("date", e.target.value)}
+                    />
+                  )}
+                </div>
 
-        <Form.Item
-          name="amount"
-          label="Amount"
-          rules={[
-            { required: true, message: "Amount is required" },
-            { type: "number", min: 0.01, message: "Amount must be greater than 0" },
-          ]}
-        >
-          <InputNumber style={{ width: "100%" }} min={0.01} precision={2} placeholder="0.00" />
-        </Form.Item>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className={labelClass}>
+                    Currency
+                    <select
+                      value={form.currency}
+                      onChange={(e) => set("currency", e.target.value as Currency)}
+                      className={fieldClass}
+                    >
+                      {CURRENCY_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={labelClass}>
+                    Amount *
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      className={fieldClass}
+                      value={form.amount}
+                      onChange={(e) => set("amount", e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </label>
+                </div>
 
-        <Form.Item label="Attachments">
-          <FileUploader
-            ref={uploaderRef}
-            max={MAX_FILES_DEFAULT}
-            buttonLabel="Upload files"
-            helpText={`Up to ${MAX_FILES_DEFAULT} files. Files are linked when you create the order.`}
-          />
-        </Form.Item>
-      </Form>
+                <div>
+                  <span className={labelClass}>Attachments</span>
+                  <FileUploader
+                    ref={uploaderRef}
+                    max={MAX_FILES_DEFAULT}
+                    buttonLabel="Upload files"
+                    helpText={`Up to ${MAX_FILES_DEFAULT} files. Files are linked when you create the order.`}
+                  />
+                </div>
+              </div>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="ghost" onPress={close}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                isDisabled={mutation.isPending}
+                onPress={() => {
+                  setErrors([]);
+                  mutation.mutate(undefined);
+                }}
+              >
+                {mutation.isPending ? <Spinner size="sm" /> : "Create"}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   );
-}
+};
+
+export default CreateOfficeExpenseModal;

@@ -2,6 +2,10 @@
   "_comment": "Project-scoped MCP servers committed to the repo. Every contributor gets the same toolset on `claude` start (after one-time approval). Add personal/secret-bearing MCPs to ~/.claude.json under `mcpServers` — not here.",
 
   "mcpServers": {
+    "heroui-react": {
+      "command": "npx",
+      "args": ["-y", "@heroui/react-mcp@latest"]
+    },
     "filesystem": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"],
