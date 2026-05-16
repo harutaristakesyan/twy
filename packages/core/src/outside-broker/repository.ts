@@ -243,6 +243,11 @@ export const deleteBroker = async (brokerId: string): Promise<boolean> => {
   return true;
 };
 
+export const getBrokerById = async (brokerId: string): Promise<OutsideBrokerRecord | null> => {
+  const [row] = await db.select().from(outsideBroker).where(eq(outsideBroker.id, brokerId));
+  return row ? mapRow(row) : null;
+};
+
 export const getBrokerByMcNumber = async (mcNumber: string) => {
   const [row] = await db
     .select({ id: outsideBroker.id })

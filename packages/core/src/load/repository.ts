@@ -416,6 +416,33 @@ export const listLoads = async (input: ListLoadsInput) => {
   };
 };
 
+export const getLoadById = async (loadId: string): Promise<LoadRecord | null> => {
+  const [row] = await db
+    .select({
+      load: load,
+      branchName: branch.name,
+    })
+    .from(load)
+    .innerJoin(branch, eq(branch.id, load.branchId))
+    .where(eq(load.id, loadId));
+
+  if (!row) {
+    return null;
+  }
+
+  const [filesMap, stopsMap] = await Promise.all([
+    fetchFilesForLoads(db, [loadId]),
+    fetchStopsForLoads(db, [loadId]),
+  ]);
+
+  return mapLoadRow(
+    row.load,
+    row.branchName,
+    filesMap.get(loadId) ?? [],
+    stopsMap.get(loadId) ?? { pickups: [], dropoffs: [] },
+  );
+};
+
 const replaceLoadFiles = async (
   executor: Executor,
   loadId: string,

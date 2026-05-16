@@ -181,3 +181,12 @@ export const DeleteLoadEventSchema = z.object({
 });
 
 export type DeleteLoadEvent = z.infer<typeof DeleteLoadEventSchema>;
+
+export const GetLoadEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    loadId: uuidField,
+  }),
+});
+
+export type GetLoadEvent = z.infer<typeof GetLoadEventSchema>;

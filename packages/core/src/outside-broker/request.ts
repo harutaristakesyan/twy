@@ -84,3 +84,12 @@ export const DeleteBrokerEventSchema = z.object({
 });
 
 export type DeleteBrokerEvent = z.infer<typeof DeleteBrokerEventSchema>;
+
+export const GetBrokerEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    brokerId: uuidField,
+  }),
+});
+
+export type GetBrokerEvent = z.infer<typeof GetBrokerEventSchema>;

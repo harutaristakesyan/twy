@@ -1,4 +1,5 @@
 export interface UserResponse {
+  id: string;
   email: string;
   firstName: string | null;
   lastName: string | null;
@@ -6,6 +7,7 @@ export interface UserResponse {
   branch: UserBranchResponse | null;
   teamId: string | null;
   teamName: string | null;
+  profilePictureFileId: string | null;
   createdAt: string | null;
 }
 

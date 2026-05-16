@@ -18,6 +18,7 @@ export const createUser = async (input: NewUser): Promise<void> => {
 };
 
 interface UserDetailsRow {
+  id?: string;
   email: string;
   firstName: string | null;
   lastName: string | null;
@@ -74,6 +75,7 @@ export const getUserEmail = async (userId: string): Promise<string> => {
 export const getFullUserInfoById = async (userId: string) => {
   const [row] = await db
     .select({
+      id: users.id,
       email: users.email,
       firstName: users.firstName,
       lastName: users.lastName,
@@ -94,7 +96,7 @@ export const getFullUserInfoById = async (userId: string) => {
     throw new createError.NotFound("User not found");
   }
 
-  return mapUserDetails(row);
+  return { id: row.id, ...mapUserDetails(row) };
 };
 
 export interface ListUsersInput {

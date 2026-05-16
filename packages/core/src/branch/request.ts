@@ -84,3 +84,12 @@ export const DeleteBranchEventSchema = z.object({
 });
 
 export type DeleteBranchEvent = z.infer<typeof DeleteBranchEventSchema>;
+
+export const GetBranchEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    branchId: z.uuid("branchId must be a valid UUID"),
+  }),
+});
+
+export type GetBranchEvent = z.infer<typeof GetBranchEventSchema>;

@@ -80,6 +80,12 @@ export const appRoutes: RouteDef[] = [
     linkKeys: ["cluster", "authContext"],
   },
   {
+    handler: "packages/functions/src/api/user/get.handler",
+    routeKey: "GET /api/users/{userId}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
     handler: "packages/functions/src/api/user/create.handler",
     routeKey: "POST /api/users",
     requiresAuth: true,
@@ -105,6 +111,12 @@ export const appRoutes: RouteDef[] = [
     linkKeys: ["cluster", "authContext"],
   },
   {
+    handler: "packages/functions/src/api/branch/get.handler",
+    routeKey: "GET /api/branches/{branchId}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
     handler: "packages/functions/src/api/branch/create.handler",
     routeKey: "POST /api/branches",
     requiresAuth: true,
@@ -126,6 +138,12 @@ export const appRoutes: RouteDef[] = [
   {
     handler: "packages/functions/src/api/community-license/list.handler",
     routeKey: "GET /api/community-licenses",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/community-license/get.handler",
+    routeKey: "GET /api/community-licenses/{ciId}",
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
@@ -186,6 +204,12 @@ export const appRoutes: RouteDef[] = [
     linkKeys: ["cluster", "authContext"],
   },
   {
+    handler: "packages/functions/src/api/load/get.handler",
+    routeKey: "GET /api/loads/{loadId}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
     handler: "packages/functions/src/api/load/update.handler",
     routeKey: "PUT /api/loads/{loadId}",
     requiresAuth: true,
@@ -237,6 +261,12 @@ export const appRoutes: RouteDef[] = [
     linkKeys: ["cluster", "authContext"],
   },
   {
+    handler: "packages/functions/src/api/team/get.handler",
+    routeKey: "GET /api/teams/{teamId}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
     handler: "packages/functions/src/api/team/create.handler",
     routeKey: "POST /api/teams",
     requiresAuth: true,
@@ -282,6 +312,12 @@ export const appRoutes: RouteDef[] = [
   {
     handler: "packages/functions/src/api/outside-broker/list.handler",
     routeKey: "GET /api/outside-brokers",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/outside-broker/get.handler",
+    routeKey: "GET /api/outside-brokers/{brokerId}",
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
