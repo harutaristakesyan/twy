@@ -218,11 +218,14 @@ const StatusUpdateModal = () => {
                             fullWidth
                           >
                             <Label>New Status</Label>
-                            <Select.Trigger />
+                            <Select.Trigger>
+                              <Select.Value />
+                              <Select.Indicator />
+                            </Select.Trigger>
                             <Select.Popover>
                               <ListBox>
                                 {allowedStatuses.map((s) => (
-                                  <ListBox.Item key={s} id={s}>
+                                  <ListBox.Item key={s} id={s} textValue={s}>
                                     {s}
                                   </ListBox.Item>
                                 ))}
