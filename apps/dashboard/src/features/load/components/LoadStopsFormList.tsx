@@ -3,6 +3,7 @@ import { Button, Input, Label, TextField } from "@heroui/react";
 import type React from "react";
 import { useState } from "react";
 import type { Control, FieldValues, Path } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import { FormNumberInput, FormTextField } from "@/components/form";
 import { AddressAutocomplete, type AddressSuggestion } from "@/features/geocoding";
 import type { Location } from "@/features/load/types/load";
@@ -54,12 +55,17 @@ export function LoadStopsFormList<T extends FieldValues>({
 }: LoadStopsFormListProps<T>): React.ReactElement {
   const [expandedIndex, setExpandedIndex] = useState<number>(0);
 
+  // useWatch gives the live Controller values (originName, pickupNumber) which
+  // useFieldArray.fields does NOT reflect when updated mid-session via Controller.
+  // Without this, calling replace() after typing originName would overwrite it with null.
+  const liveStops = (useWatch({ control, name: namePrefix as Path<T> }) ?? stops) as Location[];
+
   const replaceStop = (index: number, next: Location) => {
-    onChange(stops.map((s, i) => (i === index ? next : s)));
+    onChange(liveStops.map((s, i) => (i === index ? next : s)));
   };
 
   const handleAddressSelect = (index: number, suggestion: AddressSuggestion | null) => {
-    const current = stops[index];
+    const current = liveStops[index];
     if (!suggestion) {
       replaceStop(index, {
         ...current,
@@ -82,18 +88,18 @@ export function LoadStopsFormList<T extends FieldValues>({
   };
 
   const updatePhone = (index: number, value: string | null) => {
-    const current = stops[index];
+    const current = liveStops[index];
     replaceStop(index, { ...current, phone: value });
   };
 
   const addStop = () => {
-    const next = [...stops, emptyStop()];
+    const next = [...liveStops, emptyStop()];
     onChange(next);
     setExpandedIndex(next.length - 1);
   };
 
   const removeStop = (index: number) => {
-    const next = stops.filter((_, i) => i !== index);
+    const next = liveStops.filter((_, i) => i !== index);
     onChange(next);
     if (expandedIndex >= next.length) setExpandedIndex(Math.max(0, next.length - 1));
   };
