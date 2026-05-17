@@ -77,18 +77,18 @@ export interface XResponse {
 
 ## Route wiring (infra/routes.ts)
 
-Add to the `routes` array:
+Append a `RouteDef` to `authRoutes` (public Cognito flows) or `appRoutes` (JWT-protected):
 
 ```typescript
 {
-  functionPath: "src/functions/<domain>/get.ts",
-  routeKey: "GET /<domain>/{id}",
+  handler: "packages/functions/src/api/<domain>/get.handler",
+  routeKey: "GET /api/<domain>/{id}",
   requiresAuth: true,
-  // env: { EXTRA_ENV: "value" } — only if needed
+  linkKeys: ["cluster"],   // every Resource.X the handler reads
 }
 ```
 
-The CDK construct will wire it to the HttpApi with the JWT authorizer.
+`linkKeys` is what grants the handler its IAM permissions and `Resource.X` bindings (see `infra/api.ts` `linkRegistry`). A key not yet in the `LinkKey` union must be added there too.
 
 ## Workflow
 

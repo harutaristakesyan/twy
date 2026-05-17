@@ -1,6 +1,6 @@
 # apps/dashboard — `@twy/dashboard`
 
-React 19 + Vite 8 + Ant Design 6 SPA. Deployed via SST as a `sst.aws.StaticSite` mounted on a `sst.aws.Router` (defined in `infra/web.ts`). The single backend (per env) lives at `packages/functions`; this app talks to it via `apps/dashboard/src/libs/ApiClient.ts` — using a relative `/api` baseURL because the Router proxies same-origin requests to the API Gateway.
+React 19 + Vite 8 + **HeroUI v3** + **Tailwind v4** SPA. Deployed via SST as a `sst.aws.StaticSite` mounted on a `sst.aws.Router` (defined in `infra/web.ts`). The single backend (per env) lives at `packages/functions`; this app talks to it via `apps/dashboard/src/libs/ApiClient.ts` — using a relative `/api` baseURL because the Router proxies same-origin requests to the API Gateway.
 
 > Read root `CLAUDE.md` first. This file is the UI-specific delta.
 
@@ -36,7 +36,7 @@ src/
 ├── layouts/         # Page wrappers (AppLayout, AppHeader, Sidebar)
 ├── libs/            # Shared libraries (ApiClient, api-types, EventBus)
 ├── providers/       # React context providers (AuthProvider, AntdProvider)
-├── routes/          # React Router config + guards (router, ProtectedRoute, RoleBasedRoute)
+├── routes/          # React Router config + guards (router, ProtectedRoute, RequirePermission)
 └── utils/           # Pure helpers (jwt, permissions, email, errorUtils, formatters)
 ```
 
@@ -45,16 +45,16 @@ src/
 | Concern | Where | Notes |
 |---|---|---|
 | Routing | `src/routes/router.tsx` | `react-router-dom@7`, `RouterProvider`. |
-| Layout | `src/layouts/{AppLayout,AppHeader,Sidebar}.tsx` | AntD `<Layout>`. |
-| Auth context | `src/providers/AuthProvider.tsx` | `useAuth()` for `{login, logout}`. |
-| Route guards | `src/routes/{ProtectedRoute,RoleBasedRoute}.tsx` | JWT check + role gate. |
+| Layout | `src/layouts/{AppLayout,AppHeader,Sidebar}.tsx` | HeroUI primitives + Tailwind. |
+| Auth context | `src/providers/AuthProvider.tsx` | `useAuth()` for `{login, logout, authMe, refetchAuthMe, userLoading}`. |
+| Route guards | `src/routes/{ProtectedRoute,RequirePermission}.tsx` | JWT check + per-`(resource, action)` permission gate. |
 | Tokens | `src/utils/jwt.ts` | **Cookies via `js-cookie`**, not `localStorage`. |
 | API | `src/libs/ApiClient.ts` | Axios singleton with relative `/api` baseURL + auth interceptor + token refresh. Never use raw `axios`/`fetch`. |
-| Server state | `ahooks` | `useAntdTable` for paginated tables, `useRequest` for mutations/aux data, `useDebounce` for search. |
-| Modals | Route-based | Modals are child routes of their list page. Open with `navigate("create")` / `navigate(\`${id}/edit\`)`. Close with `navigate("..")`. Refresh via `queryClient.invalidateQueries({ queryKey: [...] })` in mutation `onSuccess`. |
+| Server state | `@tanstack/react-query@5` | `useQuery` for reads, `useMutation` for writes. `queryClient.invalidateQueries({ queryKey: […] })` in `onSuccess`. |
+| Forms | `react-hook-form` + Zod via the in-app `useZodForm` + `FormX` components | See any feature's `*Form.tsx` (e.g. `features/load/components/LoadForm.tsx`) for the pattern. |
+| Modals | URL-based | Modals are child routes of their list page. Open with `navigate("create")` / `navigate(\`${id}/edit\`)`. Close with `navigate("..")`. |
 | Permissions | `src/utils/permissions.ts` | `MenuFeature` enum drives sidebar items + `<RequirePermission resource="..." action="view">`. |
-| Charts | `@ant-design/charts@2.6.7` | Already installed. |
-| Tables | `antd` `<Table>` | Use proper column generic types — don't `any` columns. |
+| Tables | HeroUI `Table` + the in-app `Page` / `Columns` composition | One column definition per feature under `features/<domain>/columns.tsx`. |
 
 ## Per-origin auth (multi-domain)
 
@@ -78,8 +78,8 @@ Files at `apps/dashboard/.env.development` and `apps/dashboard/.env.production` 
 2. Wire the route in `src/routes/router.tsx`, wrapped in `<ProtectedRoute>` and `<RequirePermission resource="..." action="view">`.
 3. Add a `MenuFeature` enum entry in `src/utils/permissions.ts` if it needs a sidebar entry.
 4. Add a sidebar item in `src/layouts/Sidebar.tsx` with the matching `resource` key.
-5. Use `useAntdTable` for paginated tables, `useRequest` (manual) for mutations, `useDebounce` for search inputs.
-6. For create/edit modals or drawers, create a `providers/<Domain>ModalProvider.tsx` and consume via `use<Domain>Modal()`.
+5. Use `useQuery` for reads, `useMutation` for writes. Wrap fetchers in `useCallback` to satisfy `useExhaustiveDependencies`.
+6. For create/edit modals, declare them as child routes of the list page. Open with `navigate("create")` / `navigate(\`${id}/edit\`)`; close with `navigate("..")` and invalidate queries in `onSuccess`.
 
 ## Files & uploads
 
@@ -99,9 +99,9 @@ Notes:
 - `DocumentCategory` is an optional prop on `FileUploader` and is persisted on the `file` row at upload time. No per-file picker UI in v1.
 - Cancel-cleanup only fires on unmount, so the parent modal must use `destroyOnHidden` (all existing callsites do).
 
-## AntD documentation
+## HeroUI documentation
 
-When you need to look up AntD component APIs, props, or usage examples, fetch `https://ant.design/llms-full.txt` — it's the LLM-optimised full reference for the current version.
+Look up HeroUI v3 component APIs through the `heroui-react` MCP server (declared in `.mcp.json`). For deep doc reads, prefer the MCP over web fetches.
 
 ## Common UI footguns
 
@@ -109,8 +109,8 @@ When you need to look up AntD component APIs, props, or usage examples, fetch `h
 - **`!` to silence "possibly undefined"** → biome error in this app. Do an early return or use `?.`.
 - **New API call with raw `fetch`/`axios`** → bypasses the auth interceptor and the error handler. Always go through `ApiClient` from `src/libs/ApiClient.ts`.
 - **`localStorage.getItem("accessToken")`** → wrong; use `getAccessToken()` from `src/utils/jwt.ts`.
-- **AntD v5 patterns (e.g. `Tooltip` `title` typing)** — we're on AntD v6. Some props/types changed.
-- **`<Modal open={x}>` with state in a sibling** — leaks state. Use the domain's `ModalProvider` pattern (see `features/branch/providers/BranchModalProvider.tsx` as a reference).
+- **State-driven modal `<Modal isOpen={x}>` instead of a child route** — leaks state across navigations. Use the route-based modal pattern (see `features/load/pages/LoadCreatePage.tsx`).
+- **Stale `queryKey` after a mutation** — call `queryClient.invalidateQueries({ queryKey: [...] })` in the mutation's `onSuccess` (matches the list page's `queryKey`).
 
 ## Build & test
 

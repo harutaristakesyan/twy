@@ -8,13 +8,13 @@
     },
     "filesystem": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"],
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${CLAUDE_PROJECT_DIR}"],
       "_purpose": "Tree-walks, glob across the monorepo, and read access scoped to the workspace root. Useful when Claude needs to scan apps/* and packages/* in one pass without spawning a subagent."
     },
 
     "git": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-git", "--repository", "${workspaceFolder}"],
+      "args": ["-y", "@modelcontextprotocol/server-git", "--repository", "${CLAUDE_PROJECT_DIR}"],
       "_purpose": "Structured git inspection — log, diff, blame, branch state. Faster and safer than asking the agent to construct git CLI invocations. Read-only by default."
     },
 

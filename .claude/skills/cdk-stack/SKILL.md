@@ -35,13 +35,13 @@ api.route("GET /api/user", "packages/functions/src/api/user/get.handler", {
   },
 });
 
-// In the handler — consumer side
+// In the handler — consumer side (or, more often, inside @twy/db / @twy/core)
 import { Resource } from "sst";
-const hostname = Resource.Cluster.host;
+const { clusterArn, secretArn, database } = Resource.Cluster;  // Aurora Data API
 const userPoolId = Resource.UserPool.id;
 ```
 
-`link[]` does two things at once: it injects the resource's runtime values into the `Resource.X` SDK, and it grants the IAM permissions the resource needs (e.g. `dsql:DbConnectAdmin` on the cluster, `cognito-idp:AdminUpdateUserAttributes` on the user pool). There are no manual `iam.PolicyStatement` constructions in the new infra.
+`link[]` does two things at once: it injects the resource's runtime values into the `Resource.X` SDK, and it grants the IAM permissions the resource needs (`rds-data:ExecuteStatement` + `secretsmanager:GetSecretValue` on the cluster's managed secret for Aurora, `cognito-idp:AdminUpdateUserAttributes` on the user pool, etc.). There are no manual `iam.PolicyStatement` constructions in the new infra.
 
 ## Adding a new HTTP route (cookbook)
 

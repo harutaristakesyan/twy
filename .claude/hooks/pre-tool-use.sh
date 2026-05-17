@@ -73,13 +73,13 @@ case "$TOOL" in
 
     # Block secret files.
     if printf '%s' "$FILE" | grep -qE '\.(env|env\.local|pem|key)$' \
-       && ! printf '%s' "$FILE" | grep -qE 'apps/ui/\.env\.(development|production)$'; then
-      echo "DENY: refusing to write secret/.env file at $FILE. Public Vite envs at apps/ui/.env.{development,production} are the only exception." >&2
+       && ! printf '%s' "$FILE" | grep -qE 'apps/dashboard/\.env\.(development|production)$'; then
+      echo "DENY: refusing to write secret/.env file at $FILE. Public Vite envs at apps/dashboard/.env.{development,production} are the only exception." >&2
       exit 2
     fi
 
-    # Block edits inside dist/ and cdk.out/.
-    if printf '%s' "$FILE" | grep -qE '(^|/)(dist|cdk\.out|out|coverage|node_modules|\.turbo)/'; then
+    # Block edits inside build/output directories.
+    if printf '%s' "$FILE" | grep -qE '(^|/)(dist|out|coverage|node_modules|\.turbo|\.sst)/'; then
       echo "DENY: $FILE is a build artifact directory — edit the source instead." >&2
       exit 2
     fi

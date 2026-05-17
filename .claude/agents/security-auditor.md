@@ -20,12 +20,12 @@ You audit pending changes for security regressions. You are deeply familiar with
 
 ### 3. Authorization
 - Every domain handler must extract `userId` from `event.requestContext.authUser.userId` (populated by `httpJwtExtractor`). Verify the operation actually scopes the query by `userId` (multi-tenant safety) — Postgres has row-level security but it's not configured here, so app-side scoping is the only line of defense.
-- Look at `requiresAuth: false` routes in `infra/routes.ts`: are they actually safe to be public? Login/signup/forgot-password should be the only public handlers under `packages/functions/src/api/auth/`.
-- Role checks: `apps/dashboard/src/auth/RoleBasedRoute.tsx` and `apps/dashboard/src/shared/utils/permissions.ts` enforce UI-side gating. The backend MUST also enforce roles — UI gating is not a security boundary.
+- Look at routes in `infra/routes.ts`: only routes under `authRoutes` (Cognito sign-in flows) should be public; everything else lives in `appRoutes` with `requiresAuth: true`.
+- Permission checks: `apps/dashboard/src/routes/RequirePermission.tsx` and `apps/dashboard/src/utils/permissions.ts` enforce UI-side gating. The backend MUST also enforce the same `(resource, action)` pair — UI gating is not a security boundary.
 
-### 4. IAM in CDK
-- New `Policy`/`PolicyStatement` adds: check the action list for wildcards (`*` or `s3:*`). Justify each wildcard.
-- DB access flows through `link: [db.cluster]` on the route in `infra/api.ts`, which auto-grants `rds-data:ExecuteStatement` + `secretsmanager:GetSecretValue` on the cluster ARN. Hand-attached `rds-data:*` policies on a Lambda execution role outside that pattern are a smell — flag them.
+### 4. IAM via SST link[]
+- New manual `iam.PolicyStatement` adds: check the action list for wildcards (`*` or `s3:*`). Most permissions should come from `link[]` auto-derivation; hand-attached policies that duplicate what `link[]` already grants are a smell.
+- DB access flows through `link: [db.cluster]` on the route in `infra/api.ts`, which auto-grants `rds-data:ExecuteStatement` + `secretsmanager:GetSecretValue` on the cluster's managed secret. Hand-attached `rds-data:*` policies on a Lambda execution role outside that pattern are a smell — flag them.
 - S3 bucket policies should never `Principal: "*"` for write actions.
 - Cognito user pool changes (especially client app config — `EnableTokenRevocation`, `RefreshTokenValidity`, OAuth flows) — flag for the user.
 
@@ -38,8 +38,8 @@ You audit pending changes for security regressions. You are deeply familiar with
 - Flag any `postinstall` script in a new dependency.
 
 ### 7. CORS / CSP / cookie flags
-- `apps/dashboard/src/shared/utils/jwt.ts`: cookies should be `Secure`, `SameSite=Lax` or `Strict`, `HttpOnly` if not read by JS. `HttpOnly` is incompatible with `js-cookie` reads — verify the tradeoff is acknowledged.
-- API Gateway CORS: `AllowOrigin` should be the explicit domain list, not `*`, when credentials are involved.
+- `apps/dashboard/src/utils/jwt.ts`: cookies should be `Secure`, `SameSite=Lax` or `Strict`, `HttpOnly` if not read by JS. `HttpOnly` is incompatible with `js-cookie` reads — verify the tradeoff is acknowledged. Note that `/api/*` is same-origin via the Router, so CORS preflights don't apply in prod.
+- Direct API Gateway CORS (if ever added): `AllowOrigin` should be the explicit domain list, not `*`, when credentials are involved.
 
 ### 8. CI/CD / OIDC
 - GitHub Actions OIDC role (`arn:aws:iam::<ACCOUNT_ID>:role/github-deploy-role`) must trust only this repo's `master`/`main` branch. Check `.github/workflows/ci-cd.yml` doesn't widen the trust policy.

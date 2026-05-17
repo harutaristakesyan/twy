@@ -69,16 +69,18 @@ What this means:
 
 ## Route wiring
 
-In `apps/<app>/bin/functionStack.ts`:
+In `infra/routes.ts` — append a `RouteDef` to `authRoutes` (public Cognito flows) or `appRoutes` (JWT-protected):
 
 ```typescript
 {
-  functionPath: "src/functions/<domain>/<verb>.ts",
-  routeKey: "GET /<domain>/{id}",
+  handler: "packages/functions/src/api/<domain>/<verb>.handler",
+  routeKey: "GET /api/<domain>/{id}",
   requiresAuth: true,
-  // env: { EXTRA: "..." } only if needed
+  linkKeys: ["cluster"],   // list every Resource.X the handler reads
 }
 ```
+
+`linkKeys` is what grants the handler its IAM permissions and `Resource.X` bindings. A new key (not in the `LinkKey` union) must also be added to `linkRegistry` in `infra/api.ts` or it'll fail at deploy time.
 
 ## Common mistakes
 

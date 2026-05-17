@@ -135,7 +135,7 @@ Per-stage scaling: prod stays warm at `min: 0.5 ACU`; dev (and personal stages) 
 
 ### UI
 
-React 19 + Ant Design 6 + TanStack Query + Axios. `apps/dashboard/.env.{development,production}` are committed via a `.gitignore` exception — they hold **public, build-time** values only (mock toggle, etc.); never put secrets there. Stricter Biome rules apply here (see overrides in `biome.json`): `useExhaustiveDependencies: error`, `useHookAtTopLevel: error`, `noNonNullAssertion: error`. When wiring fetchers used inside `useEffect`, wrap them in `useCallback` to satisfy `useExhaustiveDependencies`. The Axios client uses relative `/api` — same-origin proxying through the Router means no CORS preflights.
+React 19 + **HeroUI v3** + **Tailwind v4** + TanStack Query v5 + Axios. `apps/dashboard/.env.{development,production}` are committed via a `.gitignore` exception — they hold **public, build-time** values only (mock toggle, etc.); never put secrets there. Stricter Biome rules apply here (see overrides in `biome.json`): `useExhaustiveDependencies: error`, `useHookAtTopLevel: error`, `noNonNullAssertion: error`. When wiring fetchers used inside `useEffect`, wrap them in `useCallback` to satisfy `useExhaustiveDependencies`. The Axios client uses relative `/api` — same-origin proxying through the Router means no CORS preflights.
 
 ## Tooling conventions
 

@@ -138,7 +138,6 @@
       "Edit(pnpm-lock.yaml)",
       "Write(pnpm-lock.yaml)",
       "Edit(packages/db/drizzle/[0-9]*_*.sql)",
-      "Edit(packages/db/drizzle/[0-9]*_*.sql)",
       "Bash(git push --force)",
       "Bash(git push --force:*)",
       "Bash(git push -f)",

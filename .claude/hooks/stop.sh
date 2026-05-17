@@ -27,16 +27,16 @@ if [ -n "$SECRET_HITS" ]; then
 fi
 
 # 2. Tracked .env files that aren't the public Vite ones.
-BAD_ENV=$(git ls-files | grep -E '(^|/)\.env(\.|$)' | grep -vE '^apps/ui/\.env\.(development|production)$' | head -5)
+BAD_ENV=$(git ls-files | grep -E '(^|/)\.env(\.|$)' | grep -vE '^apps/dashboard/\.env\.(development|production)$' | head -5)
 if [ -n "$BAD_ENV" ]; then
-  WARNINGS+=("Tracked .env file(s) detected — only apps/ui/.env.{development,production} are allowed:")
+  WARNINGS+=("Tracked .env file(s) detected — only apps/dashboard/.env.{development,production} are allowed:")
   WARNINGS+=("$BAD_ENV")
 fi
 
 # 3. Quick biome ci on touched files (don't run full repo — too slow).
 CHANGED=$(git diff --name-only HEAD 2>/dev/null \
   | grep -E '\.(ts|tsx|js|jsx|json)$' \
-  | grep -vE '(^|/)(dist|cdk\.out|coverage|node_modules|\.turbo)/' \
+  | grep -vE '(^|/)(dist|out|coverage|node_modules|\.turbo|\.sst)/' \
   | head -50 \
   | tr '\n' ' ')
 if [ -n "$CHANGED" ]; then

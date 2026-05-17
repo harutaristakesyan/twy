@@ -20,9 +20,9 @@ case "$FILE" in
   *) exit 0 ;;
 esac
 
-# Skip lockfiles, dist, cdk.out, node_modules.
+# Skip lockfiles, build output, node_modules, SST state.
 case "$FILE" in
-  */pnpm-lock.yaml|*/node_modules/*|*/dist/*|*/cdk.out/*|*/coverage/*|*/.turbo/*) exit 0 ;;
+  */pnpm-lock.yaml|*/node_modules/*|*/dist/*|*/out/*|*/coverage/*|*/.turbo/*|*/.sst/*) exit 0 ;;
 esac
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"

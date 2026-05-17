@@ -32,8 +32,7 @@ This directory turns a fresh clone into a working Claude Code agent environment.
 │   ├── user-prompt-submit.sh         # UserPromptSubmit: inject branch + diff state
 │   ├── pre-tool-use.sh               # PreToolUse: protect migrations, secrets, destructive shell
 │   ├── post-tool-use.sh              # PostToolUse: auto-format edited files with biome
-│   ├── stop.sh                       # Stop: secret scan + biome ci on touched files
-│   └── statusline.sh                 # status line renderer
+│   └── stop.sh                       # Stop: secret scan + biome ci on touched files
 └── skills/                           # callable skills with detailed procedures
     ├── lambda-handler/SKILL.md
     ├── drizzle-migration/SKILL.md
@@ -42,7 +41,7 @@ This directory turns a fresh clone into a working Claude Code agent environment.
 ```
 
 Plus, at the repo root:
-- `.mcp.json` — project-scoped MCP servers (filesystem, git, github, postgres-dev).
+- `.mcp.json` — project-scoped MCP servers (heroui-react, filesystem, git, github, postgres-dev).
 - `CLAUDE.md` — root project doc; nested `apps/*/CLAUDE.md` and `packages/*/CLAUDE.md` for module-specific context.
 
 ## Subagents — what each one does
@@ -58,7 +57,7 @@ Subagents are invoked via the `Task` tool (`"subagent_type": "<name>"`). They ru
 | `docs-writer` | When CLAUDE.md/README.md drifts from code. After a feature merges. | sonnet |
 | `migration-writer` | When adding/altering a DB table or column. Edits the Drizzle schema, then `drizzle-kit generate`s the new migration. | sonnet |
 | `lambda-handler-author` | When adding a new HTTP endpoint. Codifies middyfy + Zod + route wiring. | sonnet |
-| `cdk-stack-reviewer` | After any edit to `apps/*/bin/`. Catches CFN/CDK/AWS deploy-time pitfalls. | opus |
+| `cdk-stack-reviewer` | After any edit to `sst.config.ts` or `infra/`. Catches SST/Pulumi/AWS deploy-time pitfalls. | opus |
 | `security-auditor` | Before merging any change to auth, IAM, env vars, SQL, or Lambda permissions. | opus |
 
 ## Slash commands
@@ -101,6 +100,7 @@ Hooks fail-soft: a broken hook never blocks Claude unless it intentionally exits
 
 | Server | Purpose | Required env |
 |---|---|---|
+| `heroui-react` | HeroUI v3 component docs / API lookups | none |
 | `filesystem` | Workspace-scoped file walks | none |
 | `git` | Read-only git inspection | none |
 | `github` | PR/issue ops, /review-pr backing | `GITHUB_PERSONAL_ACCESS_TOKEN` |
@@ -158,18 +158,16 @@ Copy `settings.local.example.json` → `settings.local.json` (gitignored). Use i
 - Editing an existing `packages/db/drizzle/<n>_<auto>.sql` file.
 - Editing `pnpm-lock.yaml` directly (use `pnpm install`).
 - Reading `.env` / `.pem` / `.key` / SSH keys.
-- `rm -rf` against `/`, `~`, `..`, or build/cache directories (`node_modules`, `.turbo`, `cdk.out`).
+- `rm -rf` against `/`, `~`, `..`, or build/cache directories (`node_modules`, `.turbo`).
 - `aws iam:*`, `aws sts assume-role`, `aws s3 rb`, `aws cloudformation delete-stack`.
 - Bypassing `biome ci` with `--no-verify`.
-- Renaming `primaryDomain` in `apps/infra/bin/environments.ts` (forces resource replacement).
-- Adding `cdk.CfnOutput({ exportName: ... })` for cross-stack data (use SSM).
-- Changing `cloudfront-rewrite-function.js` runtime version or entrypoint name.
+- Renaming `primaryDomain` in `infra/domain.ts` (forces CloudFront/cert/Route53 replacement).
 
 ## Escalation rules
 
 Claude **must ask** before:
 - Pushing to any branch.
-- Running any `cdk deploy` or `pnpm migrate`.
+- Running any `sst deploy` or `pnpm --filter @twy/db migrate`.
 - Running any `aws` CLI command other than read-only `list`/`describe`/`get` with a specific resource.
 - Adding a new dependency (the lockfile is on the deny list).
 - Removing or renaming a file outside the current task scope.
@@ -201,54 +199,3 @@ Try this in a fresh clone after `pnpm install`:
 4. Type `Add a GET /loads/{id}/files endpoint that returns the file metadata` — Claude should invoke `lambda-handler-author` via the contract pattern.
 5. After the handler is generated, `code-reviewer` runs and flags any issues.
 6. Type `/ship` — verify + commit + (with confirmation) push.
-
-## Research sources informing this setup
-
-The configurations above are derived from:
-
-1. Anthropic — "Claude Code overview" — https://docs.claude.com/en/docs/claude-code/overview
-2. Anthropic — "Claude Code best practices" — https://www.anthropic.com/engineering/claude-code-best-practices
-3. Anthropic — "Claude Code settings" — https://docs.claude.com/en/docs/claude-code/settings
-4. Anthropic — "Claude Code subagents" — https://docs.claude.com/en/docs/claude-code/sub-agents
-5. Anthropic — "Claude Code hooks" — https://docs.claude.com/en/docs/claude-code/hooks
-6. Anthropic — "Claude Code slash commands" — https://docs.claude.com/en/docs/claude-code/slash-commands
-7. Anthropic — "Claude Code memory (CLAUDE.md)" — https://docs.claude.com/en/docs/claude-code/memory
-8. Anthropic — "Claude Code MCP" — https://docs.claude.com/en/docs/claude-code/mcp
-9. Anthropic — "Claude Code skills" — https://docs.claude.com/en/docs/claude-code/skills
-10. Anthropic — "Building effective agents" — https://www.anthropic.com/research/building-effective-agents
-11. Anthropic — "Effective context engineering" — https://www.anthropic.com/news/context-engineering
-12. Anthropic — "Multi-agent research system" — https://www.anthropic.com/news/multi-agent-research-system
-13. Anthropic — "Agent SDK overview" — https://docs.claude.com/en/api/agent-sdk/overview
-14. ModelContextProtocol — official spec — https://modelcontextprotocol.io
-15. ModelContextProtocol — server-filesystem — https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem
-16. ModelContextProtocol — server-git — https://github.com/modelcontextprotocol/servers/tree/main/src/git
-17. ModelContextProtocol — server-github — https://github.com/modelcontextprotocol/servers/tree/main/src/github
-18. ModelContextProtocol — server-postgres — https://github.com/modelcontextprotocol/servers/tree/main/src/postgres
-19. AWS — "Aurora Serverless v2: scaling" — https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.html
-20. AWS — "RDS Data API" — https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
-21. AWS — "CDK NodejsFunction bundling" — https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_nodejs.NodejsFunction.html
-22. AWS — "CloudFront Functions runtime 2.0 features" — https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/functions-javascript-runtime-2.0.html
-23. AWS — "CloudFormation cross-stack reference best practices" — https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/walkthrough-crossstackref.html
-24. AWS — "ACM cross-region cert for CloudFront" — https://docs.aws.amazon.com/acm/latest/userguide/acm-regions.html
-25. Biome — official docs — https://biomejs.dev/guides/getting-started/
-26. Biome — linter rules index — https://biomejs.dev/linter/rules/
-27. Biome — formatter options — https://biomejs.dev/formatter/
-28. Turborepo — turbo.json reference — https://turbo.build/repo/docs/reference/configuration
-29. Turborepo — pipeline best practices — https://turbo.build/repo/docs/crafting-your-repository
-30. Drizzle — query builder + schema docs — https://orm.drizzle.team/docs/overview
-31. Drizzle — drizzle-kit migrations — https://orm.drizzle.team/docs/migrations
-32. Middy — overview — https://middy.js.org/docs/intro/getting-started/
-33. Middy — middlewares — https://middy.js.org/docs/middlewares/intro/
-34. Zod — v4 release notes — https://zod.dev/v4
-35. React 19 — release notes — https://react.dev/blog/2024/12/05/react-19
-36. React 19 — useCallback/useMemo guidance — https://react.dev/reference/react/useCallback
-37. TanStack Query v5 — overview — https://tanstack.com/query/v5/docs/framework/react/overview
-38. TanStack Query v5 — query key factory — https://tanstack.com/query/v5/docs/framework/react/guides/query-keys
-39. Vite — config — https://vitejs.dev/config/
-40. Vitest 4 — getting started — https://vitest.dev/guide/
-41. Conventional Commits — spec 1.0.0 — https://www.conventionalcommits.org/en/v1.0.0/
-42. commitlint — conventional config — https://commitlint.js.org/reference/configuration.html
-43. OWASP — Cheat Sheet for Authorization — https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
-44. Snyk — JWT security best practices — https://snyk.io/blog/jwt-security-best-practices/
-
-Each citation informed a concrete decision in this environment. Where two sources disagreed (e.g. on whether to use `asyncContext` in CloudFront Functions 2.0), the AWS docs took precedence over third-party blog posts.
