@@ -43,6 +43,7 @@ export interface AuthMe {
     email: string;
     firstName: string | null;
     lastName: string | null;
+    phone: string | null;
     isActive: boolean;
     branch: { id: string; name: string | null } | null;
     profilePictureFileId: string | null;
