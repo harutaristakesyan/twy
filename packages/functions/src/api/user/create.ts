@@ -24,7 +24,7 @@ const createUserHandler = async (event: CreateUserEvent): Promise<MessageRespons
   const ctx = await loadAuthContext(adminId);
   assertPermission(ctx, "users", "add");
 
-  const { email, firstName, lastName, branch, teamId, isActive } = event.body;
+  const { email, firstName, lastName, phone, branch, teamId, isActive } = event.body;
 
   const newUserId = crypto.randomUUID();
 
@@ -60,6 +60,7 @@ const createUserHandler = async (event: CreateUserEvent): Promise<MessageRespons
       email,
       firstName,
       lastName,
+      phone: phone ?? null,
       branch: branch ?? undefined,
       teamId: teamId ?? undefined,
       isActive,

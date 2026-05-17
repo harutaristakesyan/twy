@@ -3,6 +3,7 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string | null;
   isActive: boolean;
   teamId?: string | null;
   teamName?: string | null;
@@ -20,6 +21,7 @@ export interface UserFormData {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string | null;
   isActive: boolean;
   branch?: string | null;
   teamId?: string | null;
@@ -35,6 +37,7 @@ export interface UpdateUserRequest {
 export interface SelfUpdateRequest {
   firstName?: string;
   lastName?: string;
+  phone?: string | null;
   profilePictureFileId?: string | null;
 }
 

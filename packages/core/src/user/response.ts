@@ -3,6 +3,7 @@ export interface UserResponse {
   email: string;
   firstName: string | null;
   lastName: string | null;
+  phone: string | null;
   isActive: boolean;
   branch: UserBranchResponse | null;
   teamId: string | null;
@@ -21,6 +22,7 @@ export interface UserListItemResponse {
   email: string;
   firstName: string | null;
   lastName: string | null;
+  phone: string | null;
   isActive: boolean;
   branch: UserBranchResponse | null;
   teamId: string | null;

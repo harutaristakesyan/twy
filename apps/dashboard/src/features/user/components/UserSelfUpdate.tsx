@@ -25,6 +25,13 @@ const schema = z.object({
     .string()
     .min(2, "Last name must be at least 2 characters")
     .max(100, "Last name is too long"),
+  phone: z
+    .string()
+    .trim()
+    .max(32, "Phone number is too long")
+    .nullable()
+    .optional()
+    .transform((v) => v?.trim() || null),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -39,6 +46,7 @@ const UserSelfUpdate: React.FC = () => {
   const { control, handleSubmit, reset } = useZodForm(schema, {
     firstName: user?.firstName ?? "",
     lastName: user?.lastName ?? "",
+    phone: user?.phone ?? null,
   });
 
   const updateMutation = useApiMutation((values: SelfUpdateRequest) => selfUpdateUser(values), {
@@ -54,6 +62,7 @@ const UserSelfUpdate: React.FC = () => {
     updateMutation.mutate({
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
+      phone: values.phone ?? null,
     });
   });
 
@@ -61,6 +70,7 @@ const UserSelfUpdate: React.FC = () => {
     reset({
       firstName: user?.firstName ?? "",
       lastName: user?.lastName ?? "",
+      phone: user?.phone ?? null,
     });
     setIsEditing(false);
   };
@@ -194,6 +204,13 @@ const UserSelfUpdate: React.FC = () => {
           disabled={!isEditing}
         />
         <FormTextField control={control} name="lastName" label="Last Name" disabled={!isEditing} />
+        <FormTextField
+          control={control}
+          name="phone"
+          label="Phone"
+          placeholder=""
+          disabled={!isEditing}
+        />
         <TextField value={user.email} isDisabled fullWidth>
           <Label>Email</Label>
           <Input />
@@ -210,8 +227,8 @@ const UserSelfUpdate: React.FC = () => {
 
       {isEditing && (
         <div className="rounded-lg border border-accent-200 bg-accent-50 p-3 text-sm text-accent-700">
-          You can only update your first name and last name. For email, role, or branch changes,
-          contact your administrator.
+          You can only update your first name, last name, and phone number. For email, role, or
+          branch changes, contact your administrator.
         </div>
       )}
     </div>

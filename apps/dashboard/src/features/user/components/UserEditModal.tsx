@@ -108,6 +108,11 @@ const UserEditModal = () => {
                     <Input placeholder="name@example.com" value={user.email ?? ""} />
                   </TextField>
 
+                  <TextField isDisabled>
+                    <Label>Phone</Label>
+                    <Input placeholder="—" value={user.phone ?? ""} />
+                  </TextField>
+
                   <hr className="my-1" />
 
                   <Controller

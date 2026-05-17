@@ -9,6 +9,7 @@ export const users = pgTable("users", {
   email: varchar({ length: 255 }).notNull().unique(),
   firstName: varchar({ length: 100 }),
   lastName: varchar({ length: 100 }),
+  phone: varchar({ length: 32 }),
   isActive: boolean().notNull().default(true),
   branch: uuid().references(() => branch.id, { onDelete: "set null" }),
   teamId: uuid().references(() => team.id, { onDelete: "set null" }),
