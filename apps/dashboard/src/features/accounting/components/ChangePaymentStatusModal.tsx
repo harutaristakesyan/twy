@@ -1,14 +1,13 @@
 import { Button, Modal, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { FormSelect, type SelectItem } from "@/components/form";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { paymentOrderApi } from "../api/paymentOrderApi";
-import type { PaymentOrder, PaymentStatus } from "../types/paymentOrder";
+import type { PaymentStatus } from "../types/paymentOrder";
 import { STATUS_LABEL } from "./PaymentStatusTag";
 
 const ALL_STATUSES = Object.keys(STATUS_LABEL) as PaymentStatus[];
@@ -20,19 +19,16 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function ChangePaymentStatusModal() {
-  const { paymentOrderId } = useParams<{ paymentOrderId: string }>();
+  const { paymentOrderId } = useParams() as { paymentOrderId: string };
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const { permissions } = useCurrentUser();
 
   const close = () => navigate("..");
 
-  const cached = queryClient.getQueriesData<{ items: PaymentOrder[]; total: number }>({
-    queryKey: ["payment-orders"],
-  });
-  const paymentOrder: PaymentOrder | undefined = cached
-    .flatMap(([, data]) => data?.items ?? [])
-    .find((r) => r.id === paymentOrderId);
+  const { data: paymentOrder } = useApiQuery(queryKeys.paymentOrders.detail(paymentOrderId), () =>
+    paymentOrderApi.getById(paymentOrderId),
+  );
 
   const allowedStatuses: PaymentStatus[] = ALL_STATUSES.filter(
     (s) =>
@@ -60,7 +56,7 @@ export default function ChangePaymentStatusModal() {
     {
       onSuccess: async () => {
         toast.success("Payment status updated");
-        await queryClient.invalidateQueries({ queryKey: ["payment-orders"] });
+        await invalidate(queryKeys.paymentOrders.all);
         close();
       },
       onError: (err) => toast.danger(getErrorMessage(err)),

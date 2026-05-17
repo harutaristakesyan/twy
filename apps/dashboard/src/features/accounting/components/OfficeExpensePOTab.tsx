@@ -6,7 +6,7 @@ import { DataTable } from "@/components/DataTable";
 import { Search } from "@/components/Search";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePermission } from "@/hooks/usePermission";
-import { useServerTable } from "@/hooks/useServerTable";
+import { queryKeys, useServerTable } from "@/libs/query";
 import { officeExpenseApi } from "../api/officeExpensePaymentOrderApi";
 import type { OfficeExpensePaymentOrder } from "../types/officeExpensePaymentOrder";
 import { useOfficeExpenseColumns } from "./useOfficeExpenseColumns";
@@ -18,7 +18,7 @@ export default function OfficeExpensePOTab() {
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const table = useServerTable<OfficeExpensePaymentOrder>({
-    queryKey: ["office-expense-orders", debouncedSearch],
+    queryKey: queryKeys.officeExpenseOrders.list(debouncedSearch),
     fetcher: async ({ page, pageSize }) => {
       const res = await officeExpenseApi.list({
         page: page - 1,

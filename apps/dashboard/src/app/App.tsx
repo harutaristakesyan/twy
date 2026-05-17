@@ -1,9 +1,8 @@
 import { Spinner, Toast } from "@heroui/react";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Suspense } from "react";
 import { RouterProvider } from "react-router-dom";
-import { queryClient } from "@/libs/queryClient";
+import { QueryClientProvider, queryClient } from "@/libs/query";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { router } from "@/routes/router";
 

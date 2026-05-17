@@ -67,6 +67,9 @@ export interface LoadLocationRecord {
   cityZipCode: string | null;
   phone: string | null;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
+  placeId: string | null;
 }
 
 export interface LoadBrokerRecord {
@@ -90,7 +93,7 @@ export interface LoadCarrierRecord {
 export interface LoadRecord {
   id: string;
   referenceNumber: string;
-  customerRate: number | null;
+  brokerRate: number | null;
   broker: LoadBrokerRecord;
   carrier: LoadCarrierRecord | null;
   carrierRate: number;
@@ -120,7 +123,7 @@ export interface LoadRecord {
 
 export type CreateLoadInput = {
   brokerId: string;
-  customerRate?: number | null;
+  brokerRate?: number | null;
   carrierId?: string | null;
   carrierRate: number;
   chargeServiceFeeToOffice?: boolean;
@@ -253,12 +256,18 @@ type LoadStopSelectRow = {
   cityZipCode: string | null;
   phone: string | null;
   address: string;
+  latitude: string | null;
+  longitude: string | null;
+  placeId: string | null;
 };
 
 const mapStopRowToLocation = (row: LoadStopSelectRow): LoadLocationRecord => ({
   cityZipCode: row.cityZipCode ?? null,
   phone: row.phone ?? null,
   address: row.address,
+  latitude: row.latitude !== null ? Number(row.latitude) : null,
+  longitude: row.longitude !== null ? Number(row.longitude) : null,
+  placeId: row.placeId ?? null,
 });
 
 const fetchStopsForLoads = async (
@@ -282,6 +291,9 @@ const fetchStopsForLoads = async (
       cityZipCode: row.cityZipCode ?? null,
       phone: row.phone ?? null,
       address: row.address,
+      latitude: row.latitude ?? null,
+      longitude: row.longitude ?? null,
+      placeId: row.placeId ?? null,
     };
     const g = grouped.get(row.loadId) ?? { pickupRows: [], dropoffRows: [] };
     if (row.kind === "pickup") {
@@ -338,7 +350,7 @@ const mapLoadRow = (
   return {
     id: row.id,
     referenceNumber: row.referenceNumber,
-    customerRate: numericToNumber(row.customerRate),
+    brokerRate: numericToNumber(row.brokerRate),
     broker: joined.broker,
     carrier: joined.carrier,
     carrierRate: Number(row.carrierRate),
@@ -549,6 +561,10 @@ const replaceLoadStopsForKind = async (
       cityZipCode: loc.cityZipCode ?? null,
       phone: loc.phone ?? null,
       address: loc.address,
+      latitude: loc.latitude !== null && loc.latitude !== undefined ? String(loc.latitude) : null,
+      longitude:
+        loc.longitude !== null && loc.longitude !== undefined ? String(loc.longitude) : null,
+      placeId: loc.placeId ?? null,
     })),
   );
 };
@@ -567,7 +583,7 @@ export const createLoad = async (
     await tx.insert(load).values({
       id: loadId,
       referenceNumber,
-      customerRate: input.customerRate == null ? null : input.customerRate.toString(),
+      brokerRate: input.brokerRate == null ? null : input.brokerRate.toString(),
       brokerId: input.brokerId,
       carrierId: input.carrierId ?? null,
       carrierRate: input.carrierRate.toString(),
@@ -596,7 +612,7 @@ export const createLoad = async (
     return { loadId, referenceNumber };
   });
 
-const FINANCIAL_FIELDS = ["customerRate", "carrierRate"] as const;
+const FINANCIAL_FIELDS = ["brokerRate", "carrierRate"] as const;
 
 export const updateLoad = async (loadId: string, input: UpdateLoad): Promise<boolean> =>
   db.transaction(async (tx) => {
@@ -630,9 +646,8 @@ export const updateLoad = async (loadId: string, input: UpdateLoad): Promise<boo
     const updatePayload: Partial<typeof load.$inferInsert> = {};
 
     if (typeof input.brokerId !== "undefined") updatePayload.brokerId = input.brokerId;
-    if (typeof input.customerRate !== "undefined")
-      updatePayload.customerRate =
-        input.customerRate == null ? null : input.customerRate.toString();
+    if (typeof input.brokerRate !== "undefined")
+      updatePayload.brokerRate = input.brokerRate == null ? null : input.brokerRate.toString();
     if (typeof input.carrierId !== "undefined") updatePayload.carrierId = input.carrierId ?? null;
     if (typeof input.carrierRate !== "undefined")
       updatePayload.carrierRate = input.carrierRate.toString();
@@ -696,7 +711,7 @@ export const changeLoadStatus = async (
         status: load.status,
         branchId: load.branchId,
         createdBy: load.createdBy,
-        customerRate: load.customerRate,
+        brokerRate: load.brokerRate,
         carrierRate: load.carrierRate,
         serviceFee: load.serviceFee,
       })
@@ -741,7 +756,7 @@ export const changeLoadStatus = async (
     }
 
     await syncPaymentOrderFromLoad(tx, loadId, status, {
-      customerRate: existing.customerRate,
+      brokerRate: existing.brokerRate,
       carrierRate: existing.carrierRate,
       serviceFee: existing.serviceFee,
     });

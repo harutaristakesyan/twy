@@ -8,11 +8,10 @@ import { DataTable } from "@/components/DataTable";
 import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { useServerTable } from "@/hooks/useServerTable";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useServerTable } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { deleteOutsideBroker, getOutsideBrokers } from "../api/brokerApi";
-import { useOutsideBrokerColumns } from "../components/useOutsideBrokerColumns";
+import { getOutsideBrokerColumns } from "../components/OutsideBrokerColumns";
 import type { OutsideBroker } from "../types/broker";
 
 const OutsideBrokersPage: React.FC = () => {
@@ -26,7 +25,7 @@ const OutsideBrokersPage: React.FC = () => {
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const table = useServerTable<OutsideBroker>({
-    queryKey: ["outside-brokers", debouncedSearch],
+    queryKey: queryKeys.outsideBrokers.list(debouncedSearch),
     fetcher: async ({ page, pageSize }) => {
       const result = await getOutsideBrokers({
         page: page - 1,
@@ -60,7 +59,7 @@ const OutsideBrokersPage: React.FC = () => {
       onConfirm: () => deleteMutation.mutate(id),
     });
 
-  const { columns, renderCell } = useOutsideBrokerColumns({
+  const { columns, renderCell } = getOutsideBrokerColumns({
     canEdit,
     canDelete,
     isDeleting: deleteMutation.isPending,

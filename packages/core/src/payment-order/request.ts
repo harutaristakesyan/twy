@@ -8,6 +8,15 @@ export const paymentStatusSchema = z.enum([...paymentStatusValues] as [
   ...(typeof paymentStatusValues)[number][],
 ]);
 
+export const GetPaymentOrderEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    paymentOrderId: z.uuid("Value must be a valid UUID"),
+  }),
+});
+
+export type GetPaymentOrderEvent = z.infer<typeof GetPaymentOrderEventSchema>;
+
 export const ListPaymentOrdersEventSchema = z.object({
   requestContext: AuthContext,
   queryStringParameters: z.object({

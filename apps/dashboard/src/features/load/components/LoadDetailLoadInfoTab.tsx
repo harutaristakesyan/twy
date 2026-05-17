@@ -28,7 +28,7 @@ export const LoadDetailLoadInfoTab: React.FC<{ load: Load }> = ({ load }) => {
         <Row label="Reference" value={`#${load.referenceNumber}`} />
         <Row label="Broker" value={load.broker.brokerName} />
         <Row label="Carrier" value={load.carrier?.carrierName ?? null} />
-        <Row label="Customer rate" value={formatMoney(load.customerRate ?? null)} />
+        <Row label="Broker rate" value={formatMoney(load.brokerRate ?? null)} />
         <Row label="Carrier rate" value={formatMoney(load.carrierRate ?? null)} />
         <Row label="Branch" value={load.branchName} />
         <Row label="Commodity" value={load.commodity} />

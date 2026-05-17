@@ -14,6 +14,9 @@ const locationSchema = z.object({
   cityZipCode: z.string().trim().nullable().optional(),
   phone: z.string().trim().nullable().optional(),
   address: z.string().trim().min(1, "Address is required"),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
+  placeId: z.string().trim().nullable().optional(),
 });
 
 const MAX_STOPS_PER_LEG = 10;
@@ -25,7 +28,7 @@ const stopsArraySchema = z
 
 const LoadBaseSchema = z.object({
   brokerId: uuidField,
-  customerRate: z.number().positive("Customer Rate must be greater than 0"),
+  brokerRate: z.number().positive("Broker Rate must be greater than 0"),
   carrierId: uuidField.nullable().optional(),
   carrierRate: z.number().positive("Carrier Rate must be greater than 0"),
   chargeServiceFeeToOffice: z.boolean().optional().default(false),

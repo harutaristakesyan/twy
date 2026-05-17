@@ -1,10 +1,9 @@
 import { Button, Modal, Spinner, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { FormDateInput, FormTextArea, FormTextField } from "@/components/form";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useQueryActions } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { submitCarrierRequest } from "../api/carrierRequestApi";
 import type { CarrierKind } from "../types/carrier";
@@ -28,7 +27,7 @@ type FormValues = z.infer<typeof schema>;
 
 const CarrierCreateModal = ({ kind }: Props) => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("..");
 
   const { control, handleSubmit } = useZodForm(schema, {
@@ -44,7 +43,7 @@ const CarrierCreateModal = ({ kind }: Props) => {
   const mutation = useApiMutation((data: SubmitCarrierRequestBody) => submitCarrierRequest(data), {
     onSuccess: async () => {
       toast.success("Carrier request submitted for review");
-      await queryClient.invalidateQueries({ queryKey: ["carriers"] });
+      await invalidate(queryKeys.carriers.all);
       close();
     },
     onError: (err: unknown) => toast.danger(getErrorMessage(err)),

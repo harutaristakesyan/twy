@@ -1,12 +1,11 @@
 import { ArrowLeft, Persons } from "@gravity-ui/icons";
 import { Button, Chip, Spinner, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation, useApiQuery } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import {
   emptyPermissionsMap,
   normalizePermissionsMap,
@@ -50,14 +49,16 @@ function scopeLabel(branchRestricted: boolean, onlyOwnData: boolean): string {
 const EditTeamPage = () => {
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const [permissions, setPermissions] = useState<PermissionsMap>(() => emptyPermissionsMap());
 
   const close = () => navigate("/user-management/teams");
 
-  const { data: team, isLoading } = useApiQuery(["team", teamId], () => getTeamById(teamId), {
-    enabled: !!teamId,
-  });
+  const { data: team, isLoading } = useApiQuery(
+    queryKeys.teams.detail(teamId),
+    () => getTeamById(teamId),
+    { enabled: !!teamId },
+  );
 
   const { control, handleSubmit, reset } = useZodForm(schema, {
     name: "",
@@ -89,8 +90,7 @@ const EditTeamPage = () => {
     {
       onSuccess: async () => {
         toast.success("Team updated successfully");
-        await queryClient.invalidateQueries({ queryKey: ["teams"] });
-        await queryClient.invalidateQueries({ queryKey: ["team", teamId] });
+        await invalidate(queryKeys.teams.all, queryKeys.teams.detail(teamId));
         close();
       },
     },

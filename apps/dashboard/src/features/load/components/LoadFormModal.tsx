@@ -1,5 +1,4 @@
 import { Button, Modal, Spinner, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Controller, useFieldArray } from "react-hook-form";
@@ -14,7 +13,7 @@ import { LoadStopsFormList } from "@/features/load/components/LoadStopsFormList"
 import type { CreateLoadDto, Load, Location, UpdateLoadDto } from "@/features/load/types/load";
 import BrokerAutocomplete from "@/features/outside-broker/components/BrokerAutocomplete";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation, useApiQuery } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 
 const STEPS = [
@@ -34,11 +33,11 @@ const locationSchema = z.object({
 
 const schema = z.object({
   brokerId: z.string().uuid("Broker is required"),
-  customerRate: z
-    .number({ invalid_type_error: "Customer rate is required" })
-    .positive("Customer rate must be greater than 0")
+  brokerRate: z
+    .number({ invalid_type_error: "Broker rate is required" })
+    .positive("Broker rate must be greater than 0")
     .nullable()
-    .refine((v): v is number => v !== null, "Customer rate is required"),
+    .refine((v): v is number => v !== null, "Broker rate is required"),
   carrierId: z.string().uuid().nullable().optional(),
   carrierRate: z
     .number({ invalid_type_error: "Carrier rate is required" })
@@ -61,7 +60,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const STEP_FIELDS: Record<number, (keyof FormValues)[]> = {
-  0: ["brokerId", "customerRate", "carrierId", "carrierRate"],
+  0: ["brokerId", "brokerRate", "carrierId", "carrierRate"],
   1: [
     "chargeServiceFeeToOffice",
     "loadType",
@@ -91,7 +90,7 @@ const toNull = (v: string | null | undefined): string | null | undefined => {
 
 const toFormValues = (load: Load): FormValues => ({
   brokerId: load.broker.id,
-  customerRate: load.customerRate ?? null,
+  brokerRate: load.brokerRate ?? null,
   carrierId: load.carrier?.id ?? null,
   carrierRate: load.carrierRate ?? null,
   chargeServiceFeeToOffice: load.chargeServiceFeeToOffice,
@@ -111,7 +110,7 @@ export type LoadFormModalProps = { mode: "create" | "edit"; loadId?: string };
 
 export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStepVisited, setMaxStepVisited] = useState(0);
@@ -121,7 +120,7 @@ export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) =>
   const isBusy = uploaderItems.some((i) => i.status === "uploading");
 
   const { data: existing } = useApiQuery(
-    ["load", loadId],
+    queryKeys.loads.detail(loadId),
     () => {
       if (!loadId) return Promise.reject(new Error("No loadId"));
       return loadApi.getById(loadId);
@@ -131,7 +130,7 @@ export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) =>
 
   const { control, handleSubmit, reset, trigger } = useZodForm<FormValues>(schema, {
     brokerId: "",
-    customerRate: null,
+    brokerRate: null,
     carrierId: null,
     carrierRate: null,
     chargeServiceFeeToOffice: false,
@@ -175,7 +174,7 @@ export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) =>
     onSuccess: async (result) => {
       uploaderRef.current?.commit();
       toast.success(`Load ${result.referenceNumber} created`);
-      await queryClient.invalidateQueries({ queryKey: ["loads"] });
+      await invalidate(queryKeys.loads.all);
       handleClose();
     },
     onError: (err: unknown) => toast.danger(getErrorMessage(err)),
@@ -190,10 +189,7 @@ export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) =>
       onSuccess: async () => {
         uploaderRef.current?.commit();
         toast.success("Load updated successfully");
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["loads"] }),
-          queryClient.invalidateQueries({ queryKey: ["load", loadId] }),
-        ]);
+        await invalidate(queryKeys.loads.all, queryKeys.loads.detail(loadId));
         handleClose();
       },
       onError: (err: unknown) => {
@@ -224,7 +220,7 @@ export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) =>
       }));
     const payload: CreateLoadDto = {
       brokerId: values.brokerId,
-      customerRate: values.customerRate,
+      brokerRate: values.brokerRate,
       carrierId: values.carrierId ?? null,
       carrierRate: values.carrierRate,
       chargeServiceFeeToOffice: values.chargeServiceFeeToOffice,
@@ -278,8 +274,8 @@ export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) =>
               </div>
               <FormNumberInput
                 control={control}
-                name="customerRate"
-                label="Customer Rate *"
+                name="brokerRate"
+                label="Broker Rate *"
                 min="0"
                 step="0.01"
               />

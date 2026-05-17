@@ -2,6 +2,7 @@ import ApiClient from "@/libs/ApiClient.ts";
 import type { ApiResponse } from "@/libs/api-types.ts";
 import { shareInFlightPromise } from "@/utils/shareInFlightPromise.ts";
 import type {
+  BrokerRequest,
   BrokerRequestListResponse,
   ListBrokerRequestsParams,
   SubmitBrokerRequestBody,
@@ -44,6 +45,11 @@ export const listBrokerRequests = async (
       return response.data;
     },
   );
+};
+
+export const getBrokerRequestById = async (requestId: string): Promise<BrokerRequest> => {
+  const response = await ApiClient.get<ApiResponse<BrokerRequest>>(`/broker-requests/${requestId}`);
+  return response.data;
 };
 
 export const submitBrokerRequest = async (data: SubmitBrokerRequestBody): Promise<void> => {

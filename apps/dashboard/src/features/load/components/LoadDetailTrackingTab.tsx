@@ -1,42 +1,49 @@
 import type React from "react";
+import { Stepper, type StepperStep } from "@/components/Stepper";
 import type { Load, LoadStatus, Location } from "@/features/load/types/load";
 
-type Step = {
-  key: string;
-  label: string;
-  address: string;
-  filled: boolean;
+const activeStepIndex = (
+  status: LoadStatus,
+  pickupsCount: number,
+  dropoffsCount: number,
+): number => {
+  switch (status) {
+    case "Pending":
+    case "Hold":
+    case "Declined":
+      return 0;
+    case "Approved":
+      return pickupsCount;
+    case "Delivered":
+      return pickupsCount + 1 + dropoffsCount;
+  }
 };
 
-const isTransitDone = (status: LoadStatus): boolean =>
-  status === "Approved" || status === "Delivered";
-
-const buildSteps = (load: Load): Step[] => {
-  const filledPickup = load.status !== "Pending" && load.status !== "Hold";
-  const filledDelivered = load.status === "Delivered";
-
-  const pickupSteps: Step[] = load.pickups.map((p: Location, idx) => ({
+const buildSteps = (load: Load): StepperStep[] => {
+  const pickupSteps: StepperStep[] = load.pickups.map((p: Location, idx) => ({
     key: `pu-${idx}`,
     label: idx === 0 ? "Pick up" : `Pick up ${idx + 1}`,
-    address: p.address,
-    filled: filledPickup,
+    description: p.address,
+    meta: p.cityZipCode ?? undefined,
   }));
 
-  const transitStep: Step = {
+  const lastPickup = load.pickups[load.pickups.length - 1];
+  const firstDropoff = load.dropoffs[0];
+
+  const transitStep: StepperStep = {
     key: "transit",
     label: "On the way",
-    address:
-      load.pickups[load.pickups.length - 1]?.address && load.dropoffs[0]?.address
-        ? `${load.pickups[load.pickups.length - 1].address} → ${load.dropoffs[0].address}`
-        : "",
-    filled: isTransitDone(load.status),
+    description:
+      lastPickup?.address && firstDropoff?.address
+        ? `${lastPickup.address} → ${firstDropoff.address}`
+        : undefined,
   };
 
-  const dropoffSteps: Step[] = load.dropoffs.map((d: Location, idx) => ({
+  const dropoffSteps: StepperStep[] = load.dropoffs.map((d: Location, idx) => ({
     key: `do-${idx}`,
     label: idx === load.dropoffs.length - 1 ? "Delivered" : `Drop-off ${idx + 1}`,
-    address: d.address,
-    filled: filledDelivered && idx === load.dropoffs.length - 1,
+    description: d.address,
+    meta: d.cityZipCode ?? undefined,
   }));
 
   return [...pickupSteps, transitStep, ...dropoffSteps];
@@ -44,33 +51,16 @@ const buildSteps = (load: Load): Step[] => {
 
 export const LoadDetailTrackingTab: React.FC<{ load: Load }> = ({ load }) => {
   const steps = buildSteps(load);
+  const activeIndex = activeStepIndex(load.status, load.pickups.length, load.dropoffs.length);
+
   return (
-    <ol className="flex flex-col">
-      {steps.map((step, idx) => {
-        const isLast = idx === steps.length - 1;
-        return (
-          <li key={step.key} className="flex gap-3">
-            <div className="flex flex-col items-center">
-              <span
-                className={`mt-1.5 h-3 w-3 rounded-full ${
-                  step.filled ? "bg-default-900" : "border border-default-400 bg-white"
-                }`}
-              />
-              {!isLast && (
-                <span
-                  className={`flex-1 w-0.5 ${
-                    step.filled ? "bg-default-900" : "border-l border-dashed border-default-400"
-                  }`}
-                />
-              )}
-            </div>
-            <div className="flex-1 pb-5">
-              <p className="text-sm font-semibold">{step.label}</p>
-              {step.address && <p className="mt-0.5 text-xs text-default-500">{step.address}</p>}
-            </div>
-          </li>
-        );
-      })}
-    </ol>
+    <Stepper
+      steps={steps}
+      activeIndex={activeIndex}
+      orientation="vertical"
+      color="primary"
+      pendingStyle="solid"
+      size="md"
+    />
   );
 };

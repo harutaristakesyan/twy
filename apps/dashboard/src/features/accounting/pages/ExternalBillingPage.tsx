@@ -1,10 +1,10 @@
 import type { Selection } from "@heroui/react";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import type { ColumnDef } from "@/components/DataTable";
 import { ExpandableDataTable } from "@/components/DataTable";
 import type { Filter } from "@/components/Search";
 import { ActiveFilters, Search } from "@/components/Search";
+import { queryKeys, useApiQuery } from "@/libs/query";
 import { formatCurrency, renderCurrency } from "@/utils/formatters";
 import { billingApi } from "../api/billingApi";
 import PaymentStatusTag from "../components/PaymentStatusTag";
@@ -183,10 +183,9 @@ export default function ExternalBillingPage() {
     }
   };
 
-  const { data: branches, isLoading } = useQuery({
-    queryKey: ["billing-external", apiParams],
-    queryFn: () => billingApi.listExternalByBranch(apiParams),
-  });
+  const { data: branches, isLoading } = useApiQuery(queryKeys.billing.external(apiParams), () =>
+    billingApi.listExternalByBranch(apiParams),
+  );
 
   const tree: ExternalRow[] = (branches ?? []).map((branch): BranchRow => {
     const cached = loadsByBranch.get(branch.branchId);

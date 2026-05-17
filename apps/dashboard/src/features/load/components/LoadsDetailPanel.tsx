@@ -1,19 +1,18 @@
 import { Spinner } from "@heroui/react";
-import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { useCallback } from "react";
 import { loadApi } from "@/features/load/api/loadApi";
 import { LoadDetailOverlayCard } from "@/features/load/components/LoadDetailOverlayCard";
 import { LoadMap } from "@/features/load/components/LoadMap";
 import { useSelectedLoadId } from "@/features/load/hooks/useSelectedLoadId";
-import { useApiQuery } from "@/libs/query";
+import { keepPreviousData, queryKeys, useApiQuery, useQueryActions } from "@/libs/query";
 
 export const LoadsDetailPanel: React.FC = () => {
   const loadId = useSelectedLoadId();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
 
   const { data: load, isFetching } = useApiQuery(
-    ["load", loadId],
+    queryKeys.loads.detail(loadId),
     () => {
       if (!loadId) return Promise.reject(new Error("No loadId"));
       return loadApi.getById(loadId);
@@ -22,9 +21,9 @@ export const LoadsDetailPanel: React.FC = () => {
   );
 
   const handleInvalidate = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["loads"] });
-    if (loadId) void queryClient.invalidateQueries({ queryKey: ["load", loadId] });
-  }, [queryClient, loadId]);
+    void invalidate(queryKeys.loads.all);
+    if (loadId) void invalidate(queryKeys.loads.detail(loadId));
+  }, [invalidate, loadId]);
 
   const showCard = !!loadId && !!load;
 

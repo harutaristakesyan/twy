@@ -1,11 +1,10 @@
 import { Button, Checkbox, Label, Modal, Spinner, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Controller } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { FormNumberInput, FormTextArea, FormTextField } from "@/components/form";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useQueryActions } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { submitBrokerRequest } from "../api/brokerRequestApi";
 import type { SubmitBrokerRequestBody } from "../types/brokerRequest";
@@ -37,7 +36,7 @@ type FormValues = z.infer<typeof schema>;
 
 const OutsideBrokerCreateModal = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("..");
 
   const { control, handleSubmit, watch } = useZodForm(schema, {
@@ -57,7 +56,7 @@ const OutsideBrokerCreateModal = () => {
   const mutation = useApiMutation((data: SubmitBrokerRequestBody) => submitBrokerRequest(data), {
     onSuccess: async () => {
       toast.success("Broker request submitted for review");
-      await queryClient.invalidateQueries({ queryKey: ["outside-brokers"] });
+      await invalidate(queryKeys.outsideBrokers.all);
       close();
     },
     onError: (err: unknown) => toast.danger(getErrorMessage(err)),

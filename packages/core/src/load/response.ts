@@ -5,6 +5,9 @@ export interface LoadLocationResponse {
   cityZipCode: string | null;
   phone: string | null;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
+  placeId: string | null;
 }
 
 export interface LoadBrokerSummary {
@@ -28,7 +31,7 @@ export interface LoadCarrierSummary {
 export interface LoadResponse {
   id: string;
   referenceNumber: string;
-  customerRate: number | null;
+  brokerRate: number | null;
   broker: LoadBrokerSummary;
   carrier: LoadCarrierSummary | null;
   carrierRate: number;

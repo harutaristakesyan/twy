@@ -1,4 +1,4 @@
-import { integer, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { integer, numeric, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
 import { load } from "./load.js";
 
 export const loadStopKindValues = ["pickup", "dropoff"] as const;
@@ -16,6 +16,9 @@ export const loadStop = pgTable(
     cityZipCode: text(),
     phone: text(),
     address: text().notNull(),
+    latitude: numeric({ precision: 10, scale: 7 }),
+    longitude: numeric({ precision: 10, scale: 7 }),
+    placeId: text(),
   },
   (t) => [unique("load_stop_load_id_kind_sort_order_uq").on(t.loadId, t.kind, t.sortOrder)],
 );

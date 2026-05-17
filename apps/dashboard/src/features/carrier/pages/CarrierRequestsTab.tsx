@@ -5,9 +5,9 @@ import { DataTable } from "@/components/DataTable";
 import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { useServerTable } from "@/hooks/useServerTable";
+import { queryKeys, useServerTable } from "@/libs/query";
 import { listCarrierRequests } from "../api/carrierRequestApi";
-import { useCarrierRequestColumns } from "../components/useCarrierRequestColumns";
+import { getCarrierRequestColumns } from "../components/CarrierRequestColumns";
 import type { CarrierRequest } from "../types/carrierRequest";
 
 const CarrierRequestsTab: React.FC = () => {
@@ -19,7 +19,7 @@ const CarrierRequestsTab: React.FC = () => {
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const table = useServerTable<CarrierRequest>({
-    queryKey: ["carrier-requests", debouncedSearch],
+    queryKey: queryKeys.carrierRequests.list(debouncedSearch),
     fetcher: async ({ page, pageSize }) => {
       const result = await listCarrierRequests({
         page: page - 1,
@@ -33,7 +33,7 @@ const CarrierRequestsTab: React.FC = () => {
 
   const openRequest = (record: CarrierRequest) => navigate(record.id);
 
-  const { columns, renderCell } = useCarrierRequestColumns({ canView, onView: openRequest });
+  const { columns, renderCell } = getCarrierRequestColumns({ canView, onView: openRequest });
 
   return (
     <div className="p-6">

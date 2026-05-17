@@ -1,13 +1,15 @@
 import { Check, Xmark } from "@gravity-ui/icons";
 import { Button, Chip, Label, Modal, Spinner, TextArea, TextField, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { usePermission } from "@/hooks/usePermission";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
-import { approveBrokerRequest, rejectBrokerRequest } from "../api/brokerRequestApi";
-import type { BrokerRequest } from "../types/brokerRequest";
+import {
+  approveBrokerRequest,
+  getBrokerRequestById,
+  rejectBrokerRequest,
+} from "../api/brokerRequestApi";
 
 const statusColor: Record<string, "success" | "warning" | "danger"> = {
   approved: "success",
@@ -16,28 +18,21 @@ const statusColor: Record<string, "success" | "warning" | "danger"> = {
 };
 
 const BrokerRequestModal = () => {
-  const { requestId } = useParams<{ requestId: string }>();
+  const { requestId } = useParams() as { requestId: string };
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("..");
 
   const canReview = usePermission("brokers_requests", "edit");
 
-  // Find the request in any cached broker-requests list (useServerTable stores { items, total }).
-  const cached = queryClient.getQueriesData<{ items: BrokerRequest[]; total: number }>({
-    queryKey: ["broker-requests"],
-  });
-  const rec: BrokerRequest | undefined = cached
-    .flatMap(([, data]) => data?.items ?? [])
-    .find((r) => r.id === requestId);
+  const { data: rec } = useApiQuery(queryKeys.brokerRequests.detail(requestId), () =>
+    getBrokerRequestById(requestId),
+  );
 
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
-  const refreshLists = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["broker-requests"] });
-    await queryClient.invalidateQueries({ queryKey: ["outside-brokers"] });
-  };
+  const refreshLists = () => invalidate(queryKeys.brokerRequests.all, queryKeys.outsideBrokers.all);
 
   const approveMutation = useApiMutation((id: string) => approveBrokerRequest(id), {
     onSuccess: async () => {

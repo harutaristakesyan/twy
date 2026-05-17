@@ -1,6 +1,5 @@
 import { Check, Power } from "@gravity-ui/icons";
 import { Button, Input, Label, Modal, Spinner, Switch, TextField, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Controller } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
@@ -8,7 +7,7 @@ import { z } from "zod";
 import BranchSelect from "@/features/branch/components/BranchSelect";
 import TeamSelect from "@/features/team/components/TeamSelect";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation, useApiQuery } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getUserById, updateUser } from "../api/userApi";
 
 const schema = z.object({
@@ -22,11 +21,11 @@ type FormValues = z.infer<typeof schema>;
 const UserEditModal = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("..");
 
   const { data: user, isLoading: userLoading } = useApiQuery(
-    ["user", userId],
+    queryKeys.users.detail(userId),
     () => getUserById(userId),
     { enabled: !!userId },
   );
@@ -50,8 +49,7 @@ const UserEditModal = () => {
   const mutation = useApiMutation(updateUser, {
     onSuccess: async () => {
       toast.success("User updated successfully");
-      await queryClient.invalidateQueries({ queryKey: ["users"] });
-      await queryClient.invalidateQueries({ queryKey: ["user", userId] });
+      await invalidate(queryKeys.users.all, queryKeys.users.detail(userId));
       close();
     },
   });

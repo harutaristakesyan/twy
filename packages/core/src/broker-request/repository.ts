@@ -192,6 +192,44 @@ export const listBrokerRequests = async (input: ListBrokerRequestsInput) => {
   };
 };
 
+export const getBrokerRequestById = async (
+  requestId: string,
+): Promise<BrokerRequestResponse | null> => {
+  const [row] = await db
+    .select({
+      id: brokerRequest.id,
+      brokerName: brokerRequest.brokerName,
+      mcNumber: brokerRequest.mcNumber,
+      contactName: brokerRequest.contactName,
+      phone: brokerRequest.phone,
+      email: brokerRequest.email,
+      address: brokerRequest.address,
+      notes: brokerRequest.notes,
+      creditLimitUnlimited: brokerRequest.creditLimitUnlimited,
+      creditLimit: brokerRequest.creditLimit,
+      status: brokerRequest.status,
+      submittedBy: brokerRequest.submittedBy,
+      submitterFirstName: submitter.firstName,
+      submitterLastName: submitter.lastName,
+      submitterEmail: submitter.email,
+      reviewedBy: brokerRequest.reviewedBy,
+      reviewerFirstName: reviewer.firstName,
+      reviewerLastName: reviewer.lastName,
+      reviewerEmail: reviewer.email,
+      reviewedAt: brokerRequest.reviewedAt,
+      rejectionReason: brokerRequest.rejectionReason,
+      resultBrokerId: brokerRequest.resultBrokerId,
+      createdAt: brokerRequest.createdAt,
+      updatedAt: brokerRequest.updatedAt,
+    })
+    .from(brokerRequest)
+    .leftJoin(submitter, eq(brokerRequest.submittedBy, submitter.id))
+    .leftJoin(reviewer, eq(brokerRequest.reviewedBy, reviewer.id))
+    .where(eq(brokerRequest.id, requestId));
+
+  return row ? mapRow(row) : null;
+};
+
 export const createBrokerRequest = async (input: SubmitBrokerRequestInput): Promise<string> => {
   const id = randomUUID();
   await db.insert(brokerRequest).values({

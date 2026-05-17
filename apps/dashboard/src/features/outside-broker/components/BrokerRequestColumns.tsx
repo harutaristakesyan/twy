@@ -1,19 +1,19 @@
 import { Chip } from "@heroui/react";
 import { ActionsMenu } from "@/components/ActionsMenu";
-import type { CarrierRequest } from "../types/carrierRequest";
+import type { BrokerRequest } from "../types/brokerRequest";
 
-export type CarrierRequestColumnDef = {
+export type BrokerRequestColumnDef = {
   id: string;
   label: string;
   isRowHeader?: boolean;
 };
 
-export const CARRIER_REQUEST_COLUMNS: CarrierRequestColumnDef[] = [
-  { id: "carrierName", label: "Carrier Name", isRowHeader: true },
-  { id: "mcDotNumber", label: "MC / DOT" },
-  { id: "kind", label: "Kind" },
+export const BROKER_REQUEST_COLUMNS: BrokerRequestColumnDef[] = [
+  { id: "brokerName", label: "Broker Name", isRowHeader: true },
+  { id: "mcNumber", label: "MC Number" },
   { id: "status", label: "Status" },
   { id: "submittedBy", label: "Submitted By" },
+  { id: "creditLimit", label: "Credit Limit" },
   { id: "createdAt", label: "Submitted" },
   { id: "actions", label: "Actions" },
 ];
@@ -24,24 +24,22 @@ const statusColor: Record<string, "success" | "warning" | "danger"> = {
   rejected: "danger",
 };
 
-type UseCarrierRequestColumnsParams = {
+type BrokerRequestColumnsParams = {
   canView: boolean;
-  onView: (request: CarrierRequest) => void;
+  onView: (request: BrokerRequest) => void;
 };
 
-export function useCarrierRequestColumns({ canView, onView }: UseCarrierRequestColumnsParams) {
-  const renderCell = (req: CarrierRequest, colId: string) => {
+export function getBrokerRequestColumns({ canView, onView }: BrokerRequestColumnsParams) {
+  const renderCell = (req: BrokerRequest, colId: string) => {
     switch (colId) {
-      case "carrierName":
-        return <span className="font-medium">{req.carrierName}</span>;
-      case "mcDotNumber":
+      case "brokerName":
+        return <span className="font-medium">{req.brokerName}</span>;
+      case "mcNumber":
         return (
           <Chip size="sm" variant="soft">
-            {req.mcDotNumber}
+            {req.mcNumber}
           </Chip>
         );
-      case "kind":
-        return <span className="text-xs capitalize">{req.kind}</span>;
       case "status":
         return (
           <Chip color={statusColor[req.status] ?? "default"} size="sm" variant="soft">
@@ -49,7 +47,13 @@ export function useCarrierRequestColumns({ canView, onView }: UseCarrierRequestC
           </Chip>
         );
       case "submittedBy":
-        return <span className="text-sm">{req.submittedByName ?? "—"}</span>;
+        return req.submittedByName ?? "—";
+      case "creditLimit":
+        return req.creditLimitUnlimited
+          ? "Unlimited"
+          : req.creditLimit != null
+            ? `€${req.creditLimit.toFixed(2)}`
+            : "—";
       case "createdAt":
         return new Date(req.createdAt).toLocaleDateString();
       case "actions":
@@ -63,5 +67,5 @@ export function useCarrierRequestColumns({ canView, onView }: UseCarrierRequestC
     }
   };
 
-  return { columns: CARRIER_REQUEST_COLUMNS, renderCell };
+  return { columns: BROKER_REQUEST_COLUMNS, renderCell };
 }

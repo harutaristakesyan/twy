@@ -112,9 +112,9 @@ describe("syncPaymentOrderFromLoad — overwrites any existing PO status", () =>
 // ---------------------------------------------------------------------------
 
 describe("computePaymentOrderFinancials", () => {
-  it("computes all fields when customerRate is set", () => {
+  it("computes all fields when brokerRate is set", () => {
     const result = computePaymentOrderFinancials({
-      customerRate: "1000",
+      brokerRate: "1000",
       carrierRate: "800",
       serviceFee: "30",
     });
@@ -126,9 +126,9 @@ describe("computePaymentOrderFinancials", () => {
     });
   });
 
-  it("returns null brokerReceivable and derived fields when customerRate is null", () => {
+  it("returns null brokerReceivable and derived fields when brokerRate is null", () => {
     const result = computePaymentOrderFinancials({
-      customerRate: null,
+      brokerRate: null,
       carrierRate: "800",
       serviceFee: "30",
     });
@@ -142,16 +142,16 @@ describe("computePaymentOrderFinancials", () => {
 
   it("defaults serviceFee to 30 when null", () => {
     const result = computePaymentOrderFinancials({
-      customerRate: "1000",
+      brokerRate: "1000",
       carrierRate: "800",
       serviceFee: null,
     });
     expect(result.profit).toBe("230");
   });
 
-  it("returns null incomePercentage when customerRate is 0", () => {
+  it("returns null incomePercentage when brokerRate is 0", () => {
     const result = computePaymentOrderFinancials({
-      customerRate: "0",
+      brokerRate: "0",
       carrierRate: "800",
       serviceFee: "30",
     });
@@ -163,7 +163,7 @@ describe("computePaymentOrderFinancials", () => {
 // syncPaymentOrderFromLoad — financials sync on Approved / Delivered
 // ---------------------------------------------------------------------------
 
-const sampleFinancials = { customerRate: "1000", carrierRate: "800", serviceFee: "30" };
+const sampleFinancials = { brokerRate: "1000", carrierRate: "800", serviceFee: "30" };
 
 describe("syncPaymentOrderFromLoad — financials synced for Approved and Delivered", () => {
   it.each([
@@ -197,10 +197,10 @@ describe("syncPaymentOrderFromLoad — financials synced for Approved and Delive
     expect(setArg).not.toHaveProperty("carrierPayable");
   });
 
-  it("syncs null brokerReceivable when customerRate is null", async () => {
+  it("syncs null brokerReceivable when brokerRate is null", async () => {
     const { tx, mocks } = makeTx("po-1");
     await syncPaymentOrderFromLoad(tx, "load-1", "Approved", {
-      customerRate: null,
+      brokerRate: null,
       carrierRate: "800",
       serviceFee: "30",
     });

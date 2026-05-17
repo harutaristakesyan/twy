@@ -190,6 +190,44 @@ export const listCarrierRequests = async (input: ListCarrierRequestsInput) => {
   };
 };
 
+export const getCarrierRequestById = async (
+  requestId: string,
+): Promise<CarrierRequestResponse | null> => {
+  const [row] = await db
+    .select({
+      id: carrierRequest.id,
+      kind: carrierRequest.kind,
+      carrierName: carrierRequest.carrierName,
+      mcDotNumber: carrierRequest.mcDotNumber,
+      equipmentType: carrierRequest.equipmentType,
+      insuranceStatus: carrierRequest.insuranceStatus,
+      insuranceExpiry: carrierRequest.insuranceExpiry,
+      phone: carrierRequest.phone,
+      email: carrierRequest.email,
+      notes: carrierRequest.notes,
+      status: carrierRequest.status,
+      submittedBy: carrierRequest.submittedBy,
+      submitterFirstName: submitter.firstName,
+      submitterLastName: submitter.lastName,
+      submitterEmail: submitter.email,
+      reviewedBy: carrierRequest.reviewedBy,
+      reviewerFirstName: reviewer.firstName,
+      reviewerLastName: reviewer.lastName,
+      reviewerEmail: reviewer.email,
+      reviewedAt: carrierRequest.reviewedAt,
+      rejectionReason: carrierRequest.rejectionReason,
+      resultCarrierId: carrierRequest.resultCarrierId,
+      createdAt: carrierRequest.createdAt,
+      updatedAt: carrierRequest.updatedAt,
+    })
+    .from(carrierRequest)
+    .leftJoin(submitter, eq(carrierRequest.submittedBy, submitter.id))
+    .leftJoin(reviewer, eq(carrierRequest.reviewedBy, reviewer.id))
+    .where(eq(carrierRequest.id, requestId));
+
+  return row ? mapRow(row) : null;
+};
+
 export const createCarrierRequest = async (input: SubmitCarrierRequestInput): Promise<string> => {
   const id = randomUUID();
   await db.insert(carrierRequest).values({

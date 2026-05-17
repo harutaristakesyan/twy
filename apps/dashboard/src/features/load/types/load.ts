@@ -10,6 +10,9 @@ export interface Location {
   cityZipCode?: string | null;
   phone?: string | null;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  placeId?: string | null;
 }
 
 export interface LoadBrokerSummary {
@@ -33,7 +36,7 @@ export interface LoadCarrierSummary {
 export interface Load {
   id: string;
   referenceNumber: string;
-  customerRate?: number | null;
+  brokerRate?: number | null;
   broker: LoadBrokerSummary;
   carrier: LoadCarrierSummary | null;
   carrierRate?: number | null;
@@ -63,7 +66,7 @@ export interface Load {
 
 export interface CreateLoadDto {
   brokerId: string;
-  customerRate?: number | null;
+  brokerRate?: number | null;
   carrierId?: string | null;
   carrierRate?: number | null;
   chargeServiceFeeToOffice: boolean;

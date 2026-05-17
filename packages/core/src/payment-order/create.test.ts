@@ -9,7 +9,7 @@ import {
 type LoadRow = {
   branchId: string;
   carrierId: string | null;
-  customerRate: string | null;
+  brokerRate: string | null;
   carrierRate: string | null;
   serviceFee: string | null;
   chargeAmount: string | null;
@@ -18,7 +18,7 @@ type LoadRow = {
 const LOAD_ROW: LoadRow = {
   branchId: "branch-1",
   carrierId: "carrier-1",
-  customerRate: "1000",
+  brokerRate: "1000",
   carrierRate: "800",
   serviceFee: "30",
   chargeAmount: null,

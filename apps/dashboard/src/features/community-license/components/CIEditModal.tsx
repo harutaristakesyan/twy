@@ -1,11 +1,10 @@
 import { Button, Modal, Spinner, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { FormDateInput, FormTextField } from "@/components/form";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation, useApiQuery } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getCommunityLicenseById, updateCommunityLicense } from "../api/ciApi";
 
 const schema = z.object({
@@ -21,12 +20,12 @@ type FormValues = z.infer<typeof schema>;
 
 const CIEditModal = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("/settings");
   const { ciId } = useParams<{ ciId: string }>();
 
   const { data: communityLicense, isLoading } = useApiQuery(
-    ["community-license", ciId],
+    queryKeys.communityLicenses.detail(ciId),
     () => getCommunityLicenseById(ciId),
     { enabled: !!ciId },
   );
@@ -50,8 +49,7 @@ const CIEditModal = () => {
   const mutation = useApiMutation(updateCommunityLicense, {
     onSuccess: async () => {
       toast.success("Community license updated successfully");
-      await queryClient.invalidateQueries({ queryKey: ["community-licenses"] });
-      await queryClient.invalidateQueries({ queryKey: ["community-license", ciId] });
+      await invalidate(queryKeys.communityLicenses.all, queryKeys.communityLicenses.detail(ciId));
       close();
     },
   });

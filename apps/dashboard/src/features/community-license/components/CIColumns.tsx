@@ -16,7 +16,7 @@ export const CI_COLUMNS: CIColumnDef[] = [
   { id: "actions", label: "Actions" },
 ];
 
-type UseCIColumnsParams = {
+type CIColumnsParams = {
   canEdit: boolean;
   canDelete: boolean;
   isDeleting: boolean;
@@ -24,13 +24,13 @@ type UseCIColumnsParams = {
   onDelete: (id: string) => void;
 };
 
-export function useCIColumns({
+export function getCIColumns({
   canEdit,
   canDelete,
   isDeleting,
   onEdit,
   onDelete,
-}: UseCIColumnsParams) {
+}: CIColumnsParams) {
   const renderCell = (record: CommunityLicense, colId: string) => {
     switch (colId) {
       case "ciNumber":

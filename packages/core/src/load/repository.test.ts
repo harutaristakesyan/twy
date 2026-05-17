@@ -86,10 +86,10 @@ describe("updateLoad — allowed statuses (Pending / Approved / Hold)", () => {
 });
 
 describe("updateLoad — financials gate preserved on Approved", () => {
-  it("throws FinancialsLockedError when touching customerRate on a locked Approved load", async () => {
+  it("throws FinancialsLockedError when touching brokerRate on a locked Approved load", async () => {
     const tx = makeSelectTx([{ id: "load-1", status: "Approved", financialsLockedAt: new Date() }]);
     mockTransaction.mockImplementation((cb: (arg: typeof tx) => unknown) => cb(tx));
-    await expect(updateLoad("load-1", { customerRate: 1000 })).rejects.toBeInstanceOf(
+    await expect(updateLoad("load-1", { brokerRate: 1000 })).rejects.toBeInstanceOf(
       FinancialsLockedError,
     );
   });

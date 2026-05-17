@@ -1,12 +1,11 @@
 import { Button, Modal, Spinner, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { FormDateInput, FormNumberInput, FormSelect } from "@/components/form";
 import { AttachedFilesField } from "@/features/files";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { getDirtyFields } from "@/utils/getDirtyFields";
 import { paymentOrderApi } from "../api/paymentOrderApi";
@@ -55,23 +54,19 @@ const toPayloadFromValues = (values: FormValues): NormalizedPayload => ({
 });
 
 export default function UpdatePaymentStatusModal() {
-  const { paymentOrderId } = useParams<{ paymentOrderId: string }>();
+  const { paymentOrderId } = useParams() as { paymentOrderId: string };
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
 
   const mode = (searchParams.get("mode") ?? "view") as "edit" | "view";
   const readOnly = mode === "view";
 
   const close = () => navigate("..");
 
-  // Look up the payment order from the React Query cache (populated by useServerTable).
-  const cached = queryClient.getQueriesData<{ items: PaymentOrder[]; total: number }>({
-    queryKey: ["payment-orders"],
-  });
-  const paymentOrder: PaymentOrder | undefined = cached
-    .flatMap(([, data]) => data?.items ?? [])
-    .find((r) => r.id === paymentOrderId);
+  const { data: paymentOrder } = useApiQuery(queryKeys.paymentOrders.detail(paymentOrderId), () =>
+    paymentOrderApi.getById(paymentOrderId),
+  );
 
   const { control, handleSubmit, reset, watch } = useZodForm<FormValues>(schema, {
     paymentStatus: "Pending",
@@ -110,7 +105,7 @@ export default function UpdatePaymentStatusModal() {
     {
       onSuccess: async () => {
         toast.success("Payment order updated");
-        await queryClient.invalidateQueries({ queryKey: ["payment-orders"] });
+        await invalidate(queryKeys.paymentOrders.all);
         close();
       },
       onError: (err) => toast.danger(getErrorMessage(err)),
@@ -120,7 +115,7 @@ export default function UpdatePaymentStatusModal() {
   const onSubmit = handleSubmit((values) => mutation.mutate(values));
 
   const handleFilesChanged = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["payment-orders"] });
+    await invalidate(queryKeys.paymentOrders.all);
   };
 
   return (

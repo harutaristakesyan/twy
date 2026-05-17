@@ -2,6 +2,7 @@ import ApiClient from "@/libs/ApiClient.ts";
 import type { ApiResponse } from "@/libs/api-types.ts";
 import { shareInFlightPromise } from "@/utils/shareInFlightPromise.ts";
 import type {
+  CarrierRequest,
   CarrierRequestListResponse,
   ListCarrierRequestsParams,
   SubmitCarrierRequestBody,
@@ -44,6 +45,13 @@ export const listCarrierRequests = async (
       return response.data;
     },
   );
+};
+
+export const getCarrierRequestById = async (requestId: string): Promise<CarrierRequest> => {
+  const response = await ApiClient.get<ApiResponse<CarrierRequest>>(
+    `/carrier-requests/${requestId}`,
+  );
+  return response.data;
 };
 
 export const submitCarrierRequest = async (data: SubmitCarrierRequestBody): Promise<void> => {

@@ -1,11 +1,11 @@
 import type { Selection } from "@heroui/react";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import type { ColumnDef } from "@/components/DataTable";
 import { ExpandableDataTable } from "@/components/DataTable";
 import type { Filter } from "@/components/Search";
 import { ActiveFilters, Search } from "@/components/Search";
 import { FileDownloadButton } from "@/features/files";
+import { queryKeys, useApiQuery } from "@/libs/query";
 import { formatCurrency, formatPercent, renderCurrency } from "@/utils/formatters";
 import { billingApi } from "../api/billingApi";
 import PaymentStatusTag from "../components/PaymentStatusTag";
@@ -145,10 +145,9 @@ export default function InternalBillingPage() {
     setExpandedKeys(new Set());
   };
 
-  const { data: branchesData, isLoading } = useQuery({
-    queryKey: ["billing-internal", apiParams],
-    queryFn: () => billingApi.listInternalByBranch(apiParams),
-  });
+  const { data: branchesData, isLoading } = useApiQuery(queryKeys.billing.internal(apiParams), () =>
+    billingApi.listInternalByBranch(apiParams),
+  );
 
   const handleExpandedChange = (keys: Selection) => {
     setExpandedKeys(keys);

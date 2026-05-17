@@ -32,7 +32,7 @@ const insuranceColor: Record<string, "success" | "danger" | "warning"> = {
   Pending: "warning",
 };
 
-type UseCarrierColumnsParams = {
+type CarrierColumnsParams = {
   canEdit: boolean;
   canDelete: boolean;
   isDeleting: boolean;
@@ -40,13 +40,13 @@ type UseCarrierColumnsParams = {
   onDelete: (id: string) => void;
 };
 
-export function useCarrierColumns({
+export function getCarrierColumns({
   canEdit,
   canDelete,
   isDeleting,
   onEdit,
   onDelete,
-}: UseCarrierColumnsParams) {
+}: CarrierColumnsParams) {
   const renderCell = (carrier: Carrier, colId: string) => {
     switch (colId) {
       case "carrierName":

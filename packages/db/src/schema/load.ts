@@ -24,7 +24,7 @@ export const load = pgTable("load", {
   id: uuid().primaryKey(),
 
   referenceNumber: text().notNull().unique(),
-  customerRate: numeric({ precision: 10, scale: 2 }),
+  brokerRate: numeric({ precision: 10, scale: 2 }),
 
   brokerId: uuid()
     .notNull()

@@ -1,5 +1,4 @@
 import { Button, Modal, Spinner, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Controller } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
@@ -8,7 +7,7 @@ import { FormTextArea, FormTextField } from "@/components/form";
 import CIAutocomplete from "@/features/community-license/components/CIAutocomplete";
 import UserSelect from "@/features/user/components/UserSelect";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation, useApiQuery } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getBranchById, updateBranch } from "../api/branchApi";
 
 const schema = z.object({
@@ -23,11 +22,11 @@ type FormValues = z.infer<typeof schema>;
 const BranchEditModal = () => {
   const { branchId } = useParams<{ branchId: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("..");
 
   const { data: branch, isLoading: branchLoading } = useApiQuery(
-    ["branch", branchId],
+    queryKeys.branches.detail(branchId),
     () => getBranchById(branchId),
     { enabled: !!branchId },
   );
@@ -53,8 +52,7 @@ const BranchEditModal = () => {
   const mutation = useApiMutation(updateBranch, {
     onSuccess: async () => {
       toast.success("Branch updated successfully");
-      await queryClient.invalidateQueries({ queryKey: ["branches"] });
-      await queryClient.invalidateQueries({ queryKey: ["branch", branchId] });
+      await invalidate(queryKeys.branches.all, queryKeys.branches.detail(branchId));
       close();
     },
   });

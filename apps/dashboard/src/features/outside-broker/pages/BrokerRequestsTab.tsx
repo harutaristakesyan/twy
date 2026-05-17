@@ -5,9 +5,9 @@ import { DataTable } from "@/components/DataTable";
 import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { useServerTable } from "@/hooks/useServerTable";
+import { queryKeys, useServerTable } from "@/libs/query";
 import { listBrokerRequests } from "../api/brokerRequestApi";
-import { useBrokerRequestColumns } from "../components/useBrokerRequestColumns";
+import { getBrokerRequestColumns } from "../components/BrokerRequestColumns";
 import type { BrokerRequest } from "../types/brokerRequest";
 
 const BrokerRequestsTab: React.FC = () => {
@@ -19,7 +19,7 @@ const BrokerRequestsTab: React.FC = () => {
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const table = useServerTable<BrokerRequest>({
-    queryKey: ["broker-requests", debouncedSearch],
+    queryKey: queryKeys.brokerRequests.list(debouncedSearch),
     fetcher: async ({ page, pageSize }) => {
       const result = await listBrokerRequests({
         page: page - 1,
@@ -33,7 +33,7 @@ const BrokerRequestsTab: React.FC = () => {
 
   const openRequest = (record: BrokerRequest) => navigate(record.id);
 
-  const { columns, renderCell } = useBrokerRequestColumns({ canView, onView: openRequest });
+  const { columns, renderCell } = getBrokerRequestColumns({ canView, onView: openRequest });
 
   return (
     <div className="p-6">

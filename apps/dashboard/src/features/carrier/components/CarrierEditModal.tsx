@@ -1,12 +1,11 @@
 import { Button, Label, ListBox, Modal, Select, Spinner, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Controller } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { FormDateInput, FormTextArea, FormTextField } from "@/components/form";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation, useApiQuery } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getCarrierById, updateCarrier } from "../api/carrierApi";
 import { CarrierStatus } from "../types/carrier";
 
@@ -35,12 +34,12 @@ const STATUS_OPTIONS = [
 
 const CarrierEditModal = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("..");
   const { carrierId } = useParams<{ carrierId: string }>();
 
   const { data: carrier, isLoading } = useApiQuery(
-    ["carrier", carrierId],
+    queryKeys.carriers.detail(carrierId),
     () => getCarrierById(carrierId),
     { enabled: !!carrierId },
   );
@@ -78,8 +77,7 @@ const CarrierEditModal = () => {
   const mutation = useApiMutation(updateCarrier, {
     onSuccess: async () => {
       toast.success("Carrier updated successfully");
-      await queryClient.invalidateQueries({ queryKey: ["carriers"] });
-      await queryClient.invalidateQueries({ queryKey: ["carrier", carrierId] });
+      await invalidate(queryKeys.carriers.all, queryKeys.carriers.detail(carrierId));
       close();
     },
   });

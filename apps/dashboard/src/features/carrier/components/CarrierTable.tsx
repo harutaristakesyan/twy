@@ -8,12 +8,11 @@ import { DataTable } from "@/components/DataTable";
 import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { useServerTable } from "@/hooks/useServerTable";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useServerTable } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { deleteCarrier, getCarriers } from "../api/carrierApi";
 import type { Carrier, CarrierKind } from "../types/carrier";
-import { useCarrierColumns } from "./useCarrierColumns";
+import { getCarrierColumns } from "./CarrierColumns";
 
 interface CarrierTableProps {
   kind: CarrierKind;
@@ -31,7 +30,7 @@ const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const table = useServerTable<Carrier>({
-    queryKey: ["carriers", kind, debouncedSearch],
+    queryKey: queryKeys.carriers.list(kind, debouncedSearch),
     fetcher: async ({ page, pageSize }) => {
       const result = await getCarriers({
         kind,
@@ -66,7 +65,7 @@ const CarrierTable: React.FC<CarrierTableProps> = ({ kind }) => {
       onConfirm: () => deleteMutation.mutate(id),
     });
 
-  const { columns, renderCell } = useCarrierColumns({
+  const { columns, renderCell } = getCarrierColumns({
     canEdit,
     canDelete,
     isDeleting: deleteMutation.isPending,

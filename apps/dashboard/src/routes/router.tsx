@@ -24,6 +24,7 @@ import OutsideCarriersTab from "@/features/carrier/pages/OutsideCarriersTab";
 import TwyCarriersTab from "@/features/carrier/pages/TwyCarriersTab";
 import CICreateModal from "@/features/community-license/components/CICreateModal";
 import CIEditModal from "@/features/community-license/components/CIEditModal";
+import { LoadCommentsModal } from "@/features/load/components/LoadCommentsModal";
 import { LoadFormModal } from "@/features/load/components/LoadFormModal";
 import StatusUpdateModal from "@/features/load/components/StatusUpdateModal";
 import LoadsPage from "@/features/load/pages/LoadsPage";
@@ -136,6 +137,7 @@ export const router = createBrowserRouter([
               { path: ":loadId", element: null },
               { path: ":loadId/edit", element: <LoadEditModalRoute /> },
               { path: ":loadId/status", element: <StatusUpdateModal /> },
+              { path: ":loadId/comments", element: <LoadCommentsModal /> },
             ],
           },
           {

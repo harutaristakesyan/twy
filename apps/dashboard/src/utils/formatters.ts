@@ -59,3 +59,18 @@ export const formatCompact = (n: number): string =>
     notation: "compact",
     maximumFractionDigits: 2,
   }).format(n);
+
+export const formatDistanceKm = (meters: number): string => {
+  const km = meters / 1000;
+  if (km >= 100) return `${Math.round(km)} km`;
+  return `${km.toFixed(1)} km`;
+};
+
+export const formatDurationHm = (seconds: number): string => {
+  const totalMinutes = Math.round(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+};

@@ -65,6 +65,15 @@ export const SubmitBrokerRequestEventSchema = z.object({
 
 export type SubmitBrokerRequestEvent = z.infer<typeof SubmitBrokerRequestEventSchema>;
 
+export const GetBrokerRequestEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    requestId: uuidField,
+  }),
+});
+
+export type GetBrokerRequestEvent = z.infer<typeof GetBrokerRequestEventSchema>;
+
 export const ApproveBrokerRequestEventSchema = z.object({
   requestContext: AuthContext,
   pathParameters: z.object({

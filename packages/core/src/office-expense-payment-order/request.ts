@@ -23,6 +23,14 @@ export const currencySchema = z.enum([...currencyValues] as [
   ...(typeof currencyValues)[number][],
 ]);
 
+export const GetOfficeExpenseEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    id: z.uuid("Value must be a valid UUID"),
+  }),
+});
+export type GetOfficeExpenseEvent = z.infer<typeof GetOfficeExpenseEventSchema>;
+
 export const CreateOfficeExpenseEventSchema = z.object({
   requestContext: AuthContext,
   body: z.object({

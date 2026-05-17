@@ -1,5 +1,4 @@
 import { Button, Modal, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Controller } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -7,7 +6,7 @@ import { FormTextArea, FormTextField } from "@/components/form";
 import CIAutocomplete from "@/features/community-license/components/CIAutocomplete";
 import UserSelect from "@/features/user/components/UserSelect";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useQueryActions } from "@/libs/query";
 import { createBranch } from "../api/branchApi";
 
 const schema = z.object({
@@ -21,7 +20,7 @@ type FormValues = z.infer<typeof schema>;
 
 const BranchCreateModal = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("..");
 
   const { control, handleSubmit } = useZodForm(schema, {
@@ -34,7 +33,7 @@ const BranchCreateModal = () => {
   const mutation = useApiMutation(createBranch, {
     onSuccess: async () => {
       toast.success("Branch created successfully");
-      await queryClient.invalidateQueries({ queryKey: ["branches"] });
+      await invalidate(queryKeys.branches.all);
       close();
     },
   });

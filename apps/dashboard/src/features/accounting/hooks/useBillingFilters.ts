@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import type { Filter, FilterField } from "@/components/Search";
 import { getBranches } from "@/features/branch/api/branchApi";
 import { getCarriers } from "@/features/carrier/api/carrierApi";
 import { getOutsideBrokers } from "@/features/outside-broker/api/brokerApi";
+import { queryKeys, useApiQuery } from "@/libs/query";
 import { STATUS_LABEL } from "../components/PaymentStatusTag";
 import type { PaymentStatus } from "../types/paymentOrder";
 
@@ -16,23 +16,23 @@ export function useBillingFilters() {
   const [activeFilter, setActiveFilter] = useState<Filter | undefined>();
   const [activeQuery, setActiveQuery] = useState("");
 
-  const { data: branchesData } = useQuery({
-    queryKey: ["branches-filter"],
-    queryFn: () => getBranches({ limit: 200 }),
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: branchesData } = useApiQuery(
+    queryKeys.branches.filterOptions(),
+    () => getBranches({ limit: 200 }),
+    { staleTime: 5 * 60 * 1000 },
+  );
 
-  const { data: carriersData } = useQuery({
-    queryKey: ["carriers-outside-filter"],
-    queryFn: () => getCarriers({ kind: "outside", limit: 200 }),
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: carriersData } = useApiQuery(
+    queryKeys.carriers.outsideFilterOptions(),
+    () => getCarriers({ kind: "outside", limit: 200 }),
+    { staleTime: 5 * 60 * 1000 },
+  );
 
-  const { data: brokersData } = useQuery({
-    queryKey: ["brokers-filter"],
-    queryFn: () => getOutsideBrokers({ limit: 200 }),
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: brokersData } = useApiQuery(
+    queryKeys.outsideBrokers.filterOptions(),
+    () => getOutsideBrokers({ limit: 200 }),
+    { staleTime: 5 * 60 * 1000 },
+  );
 
   const fields: FilterField[] = [
     {

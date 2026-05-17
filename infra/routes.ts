@@ -239,6 +239,19 @@ export const appRoutes: RouteDef[] = [
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
+  // geocode — backend proxy to Photon (autocomplete) + OSRM (routing)
+  {
+    handler: "packages/functions/src/api/geocode/search.handler",
+    routeKey: "GET /api/geocode/search",
+    requiresAuth: true,
+    linkKeys: [],
+  },
+  {
+    handler: "packages/functions/src/api/geocode/route.handler",
+    routeKey: "POST /api/geocode/route",
+    requiresAuth: true,
+    linkKeys: [],
+  },
   // auth/me — permissions snapshot for the current user
   {
     handler: "packages/functions/src/api/auth/me.handler",
@@ -328,6 +341,12 @@ export const appRoutes: RouteDef[] = [
     linkKeys: ["cluster", "authContext"],
   },
   {
+    handler: "packages/functions/src/api/broker-request/get.handler",
+    routeKey: "GET /api/broker-requests/{requestId}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
     handler: "packages/functions/src/api/broker-request/create.handler",
     routeKey: "POST /api/broker-requests",
     requiresAuth: true,
@@ -396,6 +415,12 @@ export const appRoutes: RouteDef[] = [
     linkKeys: ["cluster", "authContext"],
   },
   {
+    handler: "packages/functions/src/api/carrier-request/get.handler",
+    routeKey: "GET /api/carrier-requests/{requestId}",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
     handler: "packages/functions/src/api/carrier-request/create.handler",
     routeKey: "POST /api/carrier-requests",
     requiresAuth: true,
@@ -417,6 +442,12 @@ export const appRoutes: RouteDef[] = [
   {
     handler: "packages/functions/src/api/payment-order/list.handler",
     routeKey: "GET /api/payment-orders",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/payment-order/get.handler",
+    routeKey: "GET /api/payment-orders/{paymentOrderId}",
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },
@@ -454,6 +485,12 @@ export const appRoutes: RouteDef[] = [
   {
     handler: "packages/functions/src/api/office-expense-payment-order/list.handler",
     routeKey: "GET /api/office-expense-payment-orders",
+    requiresAuth: true,
+    linkKeys: ["cluster", "authContext"],
+  },
+  {
+    handler: "packages/functions/src/api/office-expense-payment-order/get.handler",
+    routeKey: "GET /api/office-expense-payment-orders/{id}",
     requiresAuth: true,
     linkKeys: ["cluster", "authContext"],
   },

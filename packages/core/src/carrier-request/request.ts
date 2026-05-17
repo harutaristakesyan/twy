@@ -76,6 +76,15 @@ export const SubmitCarrierRequestEventSchema = z.object({
 
 export type SubmitCarrierRequestEvent = z.infer<typeof SubmitCarrierRequestEventSchema>;
 
+export const GetCarrierRequestEventSchema = z.object({
+  requestContext: AuthContext,
+  pathParameters: z.object({
+    requestId: uuidField,
+  }),
+});
+
+export type GetCarrierRequestEvent = z.infer<typeof GetCarrierRequestEventSchema>;
+
 export const ApproveCarrierRequestEventSchema = z.object({
   requestContext: AuthContext,
   pathParameters: z.object({

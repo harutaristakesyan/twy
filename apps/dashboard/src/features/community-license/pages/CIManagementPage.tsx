@@ -5,10 +5,9 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable } from "@/components/DataTable";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useServerTable } from "@/hooks/useServerTable";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useServerTable } from "@/libs/query";
 import { deleteCommunityLicense, getCommunityLicenses } from "../api/ciApi";
-import { useCIColumns } from "../components/useCIColumns";
+import { getCIColumns } from "../components/CIColumns";
 import type { CommunityLicense } from "../types/communityLicense";
 
 type SortField = "ciNumber" | "validFrom" | "createdAt";
@@ -22,7 +21,7 @@ const CIManagementPage: React.FC = () => {
 
   const { items, total, page, pageSize, isLoading, setPage, refetch } =
     useServerTable<CommunityLicense>({
-      queryKey: ["community-licenses"],
+      queryKey: queryKeys.communityLicenses.all,
       fetcher: async ({ page: p, pageSize: ps, sort }) => {
         const result = await getCommunityLicenses({
           page: p - 1,
@@ -62,7 +61,7 @@ const CIManagementPage: React.FC = () => {
     });
   };
 
-  const { columns, renderCell } = useCIColumns({
+  const { columns, renderCell } = getCIColumns({
     canEdit,
     canDelete,
     isDeleting: deleteMutation.isPending,

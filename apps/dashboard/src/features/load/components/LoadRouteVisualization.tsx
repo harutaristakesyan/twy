@@ -1,4 +1,5 @@
 import type React from "react";
+import { Stepper } from "@/components/Stepper";
 import type { LoadStatus } from "@/features/load/types/load";
 
 const TruckGlyph: React.FC<{ className?: string }> = ({ className }) => (
@@ -19,39 +20,36 @@ const TruckGlyph: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const truckPercentByStatus: Record<LoadStatus, number> = {
+const truckFractionByStatus: Record<LoadStatus, number> = {
   Pending: 0,
   Hold: 0,
   Declined: 0,
-  Approved: 50,
-  Delivered: 100,
+  Approved: 0.5,
+  Delivered: 1,
 };
 
-const trackColorByStatus: Record<LoadStatus, string> = {
-  Pending: "bg-default-300",
-  Hold: "bg-default-300",
-  Declined: "bg-default-300",
-  Approved: "bg-default-900",
-  Delivered: "bg-default-900",
+const activeIndexByStatus: Record<LoadStatus, number> = {
+  Pending: 0,
+  Hold: 0,
+  Declined: 0,
+  Approved: 1,
+  Delivered: 2,
 };
 
-export const LoadRouteVisualization: React.FC<{ status: LoadStatus }> = ({ status }) => {
-  const truckPercent = truckPercentByStatus[status];
-  const isDelivered = status === "Delivered";
-  return (
-    <div className="relative flex items-center py-2">
-      <span className="h-2 w-2 rounded-full bg-default-900" />
-      <div className="relative flex-1">
-        <div className={`h-0.5 w-full ${trackColorByStatus[status]}`} />
-        <span className="absolute -top-2.5 -translate-x-1/2" style={{ left: `${truckPercent}%` }}>
-          <TruckGlyph className="h-5 w-5 text-default-900" />
-        </span>
-      </div>
-      <span
-        className={`h-2 w-2 rounded-full ${
-          isDelivered ? "bg-default-900" : "border border-default-400 bg-white"
-        }`}
-      />
-    </div>
-  );
-};
+export const LoadRouteVisualization: React.FC<{ status: LoadStatus }> = ({ status }) => (
+  <div className="pt-7 pb-2">
+    <Stepper
+      steps={[{ key: "origin" }, { key: "destination" }]}
+      activeIndex={activeIndexByStatus[status]}
+      orientation="horizontal"
+      color="default"
+      pendingStyle="outline"
+      size="sm"
+      compact
+      marker={{
+        position: truckFractionByStatus[status],
+        content: <TruckGlyph className="h-5 w-5 text-gray-900" />,
+      }}
+    />
+  </div>
+);

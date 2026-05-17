@@ -18,7 +18,7 @@ export const USER_COLUMNS: UserColumnDef[] = [
   { id: "actions", label: "Actions" },
 ];
 
-type UseUserColumnsParams = {
+type UserColumnsParams = {
   currentUserEmail?: string;
   canEdit: boolean;
   canDelete: boolean;
@@ -27,14 +27,14 @@ type UseUserColumnsParams = {
   onDelete: (id: string) => void;
 };
 
-export function useUserColumns({
+export function getUserColumns({
   currentUserEmail,
   canEdit,
   canDelete,
   isDeleting,
   onEdit,
   onDelete,
-}: UseUserColumnsParams) {
+}: UserColumnsParams) {
   const renderCell = (record: User, colId: string) => {
     const isCurrentUser = currentUserEmail === record.email;
     const fullName = `${record.firstName ?? ""} ${record.lastName ?? ""}`.trim();

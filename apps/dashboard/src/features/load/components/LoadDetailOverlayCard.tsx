@@ -1,15 +1,23 @@
-import { Pencil, TrashBin, Xmark } from "@gravity-ui/icons";
+import { Comment, Pencil, TrashBin, Xmark } from "@gravity-ui/icons";
 import { Button, Tabs, toast } from "@heroui/react";
 import type React from "react";
 import { useNavigate } from "react-router-dom";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { useRoute } from "@/features/geocoding";
 import { loadApi } from "@/features/load/api/loadApi";
 import { LoadDetailDocsTab } from "@/features/load/components/LoadDetailDocsTab";
 import { LoadDetailLoadInfoTab } from "@/features/load/components/LoadDetailLoadInfoTab";
 import { LoadDetailTrackingTab } from "@/features/load/components/LoadDetailTrackingTab";
-import type { Load } from "@/features/load/types/load";
+import type { Load, Location } from "@/features/load/types/load";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useApiMutation } from "@/libs/query";
+import { formatDistanceKm, formatDurationHm } from "@/utils/formatters";
+
+const hasCoords = (loc: Location): loc is Location & { latitude: number; longitude: number } =>
+  loc.latitude !== null &&
+  loc.latitude !== undefined &&
+  loc.longitude !== null &&
+  loc.longitude !== undefined;
 
 const CopyGlyph: React.FC<{ className?: string }> = ({ className }) => (
   <svg
@@ -45,6 +53,12 @@ export const LoadDetailOverlayCard: React.FC<{ load: Load; onInvalidate: () => v
     },
   });
 
+  const routeCoords: Array<[number, number]> = [
+    ...load.pickups.filter(hasCoords),
+    ...load.dropoffs.filter(hasCoords),
+  ].map((s) => [s.longitude, s.latitude]);
+  const { data: route } = useRoute(routeCoords);
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(load.referenceNumber);
@@ -66,7 +80,14 @@ export const LoadDetailOverlayCard: React.FC<{ load: Load; onInvalidate: () => v
   return (
     <div className="pointer-events-auto w-100 rounded-2xl border border-default-200 bg-white p-4 shadow-xl">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold">No: #{load.referenceNumber}</p>
+        <div className="flex flex-col">
+          <p className="text-sm font-semibold">No: #{load.referenceNumber}</p>
+          {route && (
+            <p className="text-[11px] text-gray-500">
+              {formatDistanceKm(route.distanceMeters)} · {formatDurationHm(route.durationSeconds)}
+            </p>
+          )}
+        </div>
         <div className="flex gap-1">
           <Button
             isIconOnly
@@ -76,6 +97,15 @@ export const LoadDetailOverlayCard: React.FC<{ load: Load; onInvalidate: () => v
             aria-label="Copy reference number"
           >
             <CopyGlyph className="h-4 w-4" />
+          </Button>
+          <Button
+            isIconOnly
+            size="sm"
+            variant="tertiary"
+            onPress={() => navigate(`/loads/${load.id}/comments`)}
+            aria-label="View comments"
+          >
+            <Comment className="h-4 w-4" />
           </Button>
           {canEdit && (
             <Button

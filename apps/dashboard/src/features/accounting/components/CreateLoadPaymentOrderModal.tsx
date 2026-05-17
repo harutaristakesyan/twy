@@ -1,26 +1,25 @@
 import { Button, Input, Label, Modal, Spinner, TextField, toast } from "@heroui/react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadApi } from "@/features/load/api/loadApi";
 import type { Load } from "@/features/load/types/load";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { renderCurrency } from "@/utils/formatters";
 import { paymentOrderApi } from "../api/paymentOrderApi";
 
 const computeFinancials = (load: Load) => {
-  const customerRate = load.customerRate ?? null;
+  const brokerRate = load.brokerRate ?? null;
   const carrierRate = load.carrierRate ?? null;
   const serviceFee = load.serviceFee ?? 30;
   const profit =
-    customerRate != null && carrierRate != null ? customerRate - carrierRate + serviceFee : null;
-  return { brokerReceivable: customerRate, carrierPayable: carrierRate, profit, serviceFee };
+    brokerRate != null && carrierRate != null ? brokerRate - carrierRate + serviceFee : null;
+  return { brokerReceivable: brokerRate, carrierPayable: carrierRate, profit, serviceFee };
 };
 
 const CreateLoadPaymentOrderModal = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const debounceRef = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -34,19 +33,19 @@ const CreateLoadPaymentOrderModal = () => {
     debounceRef[1](timer);
   };
 
-  const { data, isFetching } = useQuery({
-    queryKey: ["loads-for-po-search", debouncedSearch],
-    queryFn: () =>
+  const { data, isFetching } = useApiQuery(
+    queryKeys.loads.forPoSearch(debouncedSearch),
+    () =>
       debouncedSearch.length >= 2
         ? loadApi.getAll({ limit: 20, query: debouncedSearch, excludeWithExistingPO: true })
         : Promise.resolve({ loads: [], total: 0 }),
-    enabled: debouncedSearch.length >= 2,
-  });
+    { enabled: debouncedSearch.length >= 2 },
+  );
 
   const mutation = useApiMutation((loadId: string) => paymentOrderApi.create(loadId), {
     onSuccess: async () => {
       toast.success("Load payment order created");
-      await queryClient.invalidateQueries({ queryKey: ["payment-orders"] });
+      await invalidate(queryKeys.paymentOrders.all);
       navigate("..");
     },
     onError: (err: unknown) => {

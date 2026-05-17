@@ -8,11 +8,10 @@ import { DataTable } from "@/components/DataTable";
 import type { Filter, FilterField } from "@/components/Search";
 import { ActiveFilters, Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useServerTable } from "@/hooks/useServerTable";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useServerTable } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { deleteTeam, getTeams } from "../api/teamApi";
-import { useTeamColumns } from "../components/useTeamColumns";
+import { getTeamColumns } from "../components/TeamColumns";
 import type { Team } from "../types/team";
 
 const BOOL_OPTIONS = [
@@ -36,7 +35,7 @@ const TeamsPage: React.FC = () => {
   const [activeQuery, setActiveQuery] = useState("");
 
   const table = useServerTable<Team>({
-    queryKey: ["teams", activeQuery, activeFilter],
+    queryKey: queryKeys.teams.list(activeQuery, activeFilter),
     fetcher: async ({ page, pageSize, sort }) => {
       const result = await getTeams({
         page: page - 1,
@@ -73,7 +72,7 @@ const TeamsPage: React.FC = () => {
       onConfirm: () => deleteMutation.mutate(id),
     });
 
-  const { columns, renderCell } = useTeamColumns({
+  const { columns, renderCell } = getTeamColumns({
     canEdit,
     canDelete,
     onEdit: handleEdit,

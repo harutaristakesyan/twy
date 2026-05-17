@@ -19,14 +19,14 @@ export const TEAM_COLUMNS: TeamColumnDef[] = [
   { id: "actions", label: "Actions" },
 ];
 
-type UseTeamColumnsParams = {
+type TeamColumnsParams = {
   canEdit: boolean;
   canDelete: boolean;
   onEdit: (team: Team) => void;
   onDelete: (id: string) => void;
 };
 
-export function useTeamColumns({ canEdit, canDelete, onEdit, onDelete }: UseTeamColumnsParams) {
+export function getTeamColumns({ canEdit, canDelete, onEdit, onDelete }: TeamColumnsParams) {
   const renderCell = (record: Team, colId: string) => {
     switch (colId) {
       case "name":

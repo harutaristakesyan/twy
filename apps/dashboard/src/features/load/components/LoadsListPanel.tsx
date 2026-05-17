@@ -11,7 +11,7 @@ import { useSelectedLoadId } from "@/features/load/hooks/useSelectedLoadId";
 import type { Load, LoadStatus } from "@/features/load/types/load";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { useApiQuery } from "@/libs/query";
+import { queryKeys, useApiQuery } from "@/libs/query";
 
 const STATUS_VALUES: LoadStatus[] = ["Pending", "Approved", "Delivered", "Hold", "Declined"];
 
@@ -37,7 +37,7 @@ export const LoadsListPanel: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<Filter | undefined>();
 
   const { data, isLoading } = useApiQuery(
-    ["loads", { q: debouncedSearch, filter: activeFilter }],
+    queryKeys.loads.list({ q: debouncedSearch, filter: activeFilter }),
     () =>
       loadApi.getAll({
         page: 0,

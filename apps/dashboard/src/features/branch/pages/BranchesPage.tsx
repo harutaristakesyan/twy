@@ -7,10 +7,9 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable } from "@/components/DataTable";
 import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useServerTable } from "@/hooks/useServerTable";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useServerTable } from "@/libs/query";
 import { deleteBranch, getBranches } from "../api/branchApi";
-import { useBranchColumns } from "../components/useBranchColumns";
+import { getBranchColumns } from "../components/BranchColumns";
 import type { Branch } from "../types/branch";
 
 type SortField = "name" | "createdAt" | "contact";
@@ -25,7 +24,7 @@ const BranchesPage: React.FC = () => {
   const [query, setQuery] = useState("");
 
   const { items, total, page, pageSize, isLoading, setPage, refetch } = useServerTable<Branch>({
-    queryKey: ["branches", query],
+    queryKey: queryKeys.branches.list(query),
     fetcher: async ({ page: p, pageSize: ps, sort }) => {
       const result = await getBranches({
         page: p - 1,
@@ -66,7 +65,7 @@ const BranchesPage: React.FC = () => {
     });
   };
 
-  const { columns, renderCell } = useBranchColumns({
+  const { columns, renderCell } = getBranchColumns({
     canEdit,
     canDelete,
     isDeleting: deleteMutation.isPending,

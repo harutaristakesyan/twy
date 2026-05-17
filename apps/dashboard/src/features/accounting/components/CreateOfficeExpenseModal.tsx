@@ -1,5 +1,4 @@
 import { Button, Checkbox, Label, Modal, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -7,7 +6,7 @@ import { FormAmountField, FormDateInput, FormSelect, FormTextArea } from "@/comp
 import type { FileUploaderHandle } from "@/features/files";
 import { FileUploader, MAX_FILES_DEFAULT } from "@/features/files";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useQueryActions } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { officeExpenseApi } from "../api/officeExpensePaymentOrderApi";
 import {
@@ -60,7 +59,7 @@ const currencyItems = CURRENCY_OPTIONS.map((o) => ({ id: o.value, label: o.label
 
 const CreateOfficeExpenseModal = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("..");
   const uploaderRef = useRef<FileUploaderHandle>(null);
 
@@ -95,7 +94,7 @@ const CreateOfficeExpenseModal = () => {
       onSuccess: async () => {
         uploaderRef.current?.commit();
         toast.success("Office expense payment order created");
-        await queryClient.invalidateQueries({ queryKey: ["office-expense-orders"] });
+        await invalidate(queryKeys.officeExpenseOrders.all);
         close();
       },
       onError: (err) => {

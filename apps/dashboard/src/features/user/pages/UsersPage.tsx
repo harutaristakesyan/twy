@@ -7,10 +7,9 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable } from "@/components/DataTable";
 import { Search } from "@/components/Search";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useServerTable } from "@/hooks/useServerTable";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useServerTable } from "@/libs/query";
 import { deleteUser, getUsers } from "../api/userApi";
-import { useUserColumns } from "../components/useUserColumns";
+import { getUserColumns } from "../components/UserColumns";
 import type { User as UserType } from "../types/user";
 
 type SortField = "firstName" | "lastName" | "email" | "isActive" | "createdAt" | "branch";
@@ -25,7 +24,7 @@ const UsersPage: React.FC = () => {
   const [query, setQuery] = useState("");
 
   const { items, total, page, pageSize, isLoading, setPage, refetch } = useServerTable<UserType>({
-    queryKey: ["users", query],
+    queryKey: queryKeys.users.list(query),
     fetcher: async ({ page: p, pageSize: ps, sort }) => {
       const result = await getUsers({
         page: p - 1,
@@ -66,7 +65,7 @@ const UsersPage: React.FC = () => {
     });
   };
 
-  const { columns, renderCell } = useUserColumns({
+  const { columns, renderCell } = getUserColumns({
     currentUserEmail: currentUser?.email,
     canEdit,
     canDelete,

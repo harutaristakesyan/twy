@@ -1,10 +1,9 @@
 import { Button, Modal, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { FormDateInput, FormTextField } from "@/components/form";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useQueryActions } from "@/libs/query";
 import { createCommunityLicense } from "../api/ciApi";
 
 const schema = z.object({
@@ -20,7 +19,7 @@ type FormValues = z.infer<typeof schema>;
 
 const CICreateModal = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("/settings");
 
   const { control, handleSubmit } = useZodForm(schema, {
@@ -32,7 +31,7 @@ const CICreateModal = () => {
   const mutation = useApiMutation(createCommunityLicense, {
     onSuccess: async () => {
       toast.success("Community license created successfully");
-      await queryClient.invalidateQueries({ queryKey: ["community-licenses"] });
+      await invalidate(queryKeys.communityLicenses.all);
       close();
     },
   });

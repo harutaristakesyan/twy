@@ -1,7 +1,11 @@
 import { filesApi } from "@/features/files";
 import ApiClient from "@/libs/ApiClient";
 import type { ApiResponse } from "@/libs/api-types";
-import type { PaginatedPaymentOrdersResponse, UpdatePaymentOrderDto } from "../types/paymentOrder";
+import type {
+  PaginatedPaymentOrdersResponse,
+  PaymentOrder,
+  UpdatePaymentOrderDto,
+} from "../types/paymentOrder";
 
 export const paymentOrderApi = {
   list: async (params: {
@@ -14,6 +18,11 @@ export const paymentOrderApi = {
       "/payment-orders",
       params,
     );
+    return res.data;
+  },
+
+  getById: async (paymentOrderId: string): Promise<PaymentOrder> => {
+    const res = await ApiClient.get<ApiResponse<PaymentOrder>>(`/payment-orders/${paymentOrderId}`);
     return res.data;
   },
 

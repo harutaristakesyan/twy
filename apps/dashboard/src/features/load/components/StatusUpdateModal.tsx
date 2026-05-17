@@ -9,7 +9,6 @@ import {
   Spinner,
   toast,
 } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
@@ -22,7 +21,7 @@ import type { LoadStatus } from "@/features/load/types/load";
 import { getAllowedTransitions } from "@/features/load/utils/statusMachine";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation, useApiQuery } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 
 const statusBadge: Record<LoadStatus, string> = {
@@ -55,13 +54,13 @@ type FormValues = z.infer<typeof schema>;
 const StatusUpdateModal = () => {
   const { loadId } = useParams<{ loadId: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const { permissions } = useCurrentUser();
 
   const close = () => navigate("..");
 
   const { data: load } = useApiQuery(
-    ["load", loadId],
+    queryKeys.loads.detail(loadId),
     () => {
       if (!loadId) return Promise.reject(new Error("No loadId"));
       return loadApi.getById(loadId);
@@ -140,10 +139,7 @@ const StatusUpdateModal = () => {
       onSuccess: async () => {
         uploaderRef.current?.commit();
         toast.success("Load status updated successfully");
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["loads"] }),
-          queryClient.invalidateQueries({ queryKey: ["load", loadId] }),
-        ]);
+        await invalidate(queryKeys.loads.all, queryKeys.loads.detail(loadId));
         close();
       },
       onError: (err: unknown) => toast.danger(getErrorMessage(err)),

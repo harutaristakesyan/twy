@@ -49,7 +49,7 @@ export class LoadNotFoundError extends Error {
 }
 
 export const computePaymentOrderFinancials = (financials: {
-  customerRate: string | null;
+  brokerRate: string | null;
   carrierRate: string;
   serviceFee: string | null;
 }): {
@@ -58,18 +58,16 @@ export const computePaymentOrderFinancials = (financials: {
   incomePercentage: string | null;
   profit: string | null;
 } => {
-  const customerRate = financials.customerRate != null ? Number(financials.customerRate) : null;
+  const brokerRate = financials.brokerRate != null ? Number(financials.brokerRate) : null;
   const carrierRate = Number(financials.carrierRate);
   const serviceFee = financials.serviceFee != null ? Number(financials.serviceFee) : 30;
-  const income = customerRate != null ? customerRate - carrierRate : null;
+  const income = brokerRate != null ? brokerRate - carrierRate : null;
   const incomePercentage =
-    income != null && customerRate != null && customerRate !== 0
-      ? (income / customerRate) * 100
-      : null;
+    income != null && brokerRate != null && brokerRate !== 0 ? (income / brokerRate) * 100 : null;
   const profit = income != null ? income + serviceFee : null;
 
   return {
-    brokerReceivable: customerRate != null ? customerRate.toString() : null,
+    brokerReceivable: brokerRate != null ? brokerRate.toString() : null,
     carrierPayable: carrierRate.toString(),
     incomePercentage: incomePercentage != null ? incomePercentage.toFixed(2) : null,
     profit: profit != null ? profit.toString() : null,
@@ -150,7 +148,7 @@ export const createPaymentOrderForLoad = async (
     .select({
       branchId: load.branchId,
       carrierId: load.carrierId,
-      customerRate: load.customerRate,
+      brokerRate: load.brokerRate,
       carrierRate: load.carrierRate,
       serviceFee: load.serviceFee,
       chargeAmount: load.chargeAmount,
@@ -175,14 +173,12 @@ export const createPaymentOrderForLoad = async (
     if (existing) throw new PaymentOrderAlreadyExistsError(loadId);
   }
 
-  const customerRate = numericToNumber(loadRow.customerRate);
+  const brokerRate = numericToNumber(loadRow.brokerRate);
   const carrierRate = Number(loadRow.carrierRate);
   const serviceFee = numericToNumber(loadRow.serviceFee) ?? 30;
-  const income = customerRate != null ? customerRate - carrierRate : null;
+  const income = brokerRate != null ? brokerRate - carrierRate : null;
   const incomePercentage =
-    income != null && customerRate != null && customerRate !== 0
-      ? (income / customerRate) * 100
-      : null;
+    income != null && brokerRate != null && brokerRate !== 0 ? (income / brokerRate) * 100 : null;
   const profit = income != null ? income + serviceFee : null;
 
   const id = randomUUID();
@@ -193,7 +189,7 @@ export const createPaymentOrderForLoad = async (
       loadId,
       branchId: loadRow.branchId,
       carrierId: loadRow.carrierId ?? null,
-      brokerReceivable: customerRate != null ? customerRate.toString() : null,
+      brokerReceivable: brokerRate != null ? brokerRate.toString() : null,
       carrierPayable: carrierRate.toString(),
       serviceFee: serviceFee.toString(),
       incomePercentage: incomePercentage != null ? incomePercentage.toFixed(2) : null,
@@ -226,7 +222,7 @@ export const syncPaymentOrderFromLoad = async (
   loadId: string,
   toStatus: LoadStatus,
   financials?: {
-    customerRate: string | null;
+    brokerRate: string | null;
     carrierRate: string;
     serviceFee: string | null;
   },
@@ -272,6 +268,36 @@ export interface ListPaymentOrdersInput {
   query?: string;
   advancedFilter?: AdvancedFilter;
 }
+
+export const getPaymentOrderById = async (
+  paymentOrderId: string,
+): Promise<PaymentOrderResponse | null> => {
+  const [row] = await db
+    .select({
+      paymentOrder: paymentOrder,
+      referenceNumber: load.referenceNumber,
+      branchName: branch.name,
+      carrierName: carrier.carrierName,
+      chargeSide: load.chargeSide,
+    })
+    .from(paymentOrder)
+    .innerJoin(load, eq(load.id, paymentOrder.loadId))
+    .innerJoin(branch, eq(branch.id, paymentOrder.branchId))
+    .leftJoin(carrier, eq(carrier.id, paymentOrder.carrierId))
+    .where(eq(paymentOrder.id, paymentOrderId));
+
+  if (!row) return null;
+
+  const invoicesMap = await fetchInvoicesForPaymentOrders([row.paymentOrder.id]);
+  return mapRow(
+    row.paymentOrder,
+    row.referenceNumber,
+    row.branchName,
+    row.carrierName ?? null,
+    row.chargeSide ?? null,
+    invoicesMap.get(row.paymentOrder.id) ?? [],
+  );
+};
 
 export const listPaymentOrders = async (
   input: ListPaymentOrdersInput,

@@ -1,8 +1,7 @@
 import { Button, Modal, Spinner, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { getDirtyFields } from "@/utils/getDirtyFields";
 import { officeExpenseApi } from "../api/officeExpensePaymentOrderApi";
@@ -49,23 +48,20 @@ const buildUpdateDto = (values: OfficeExpenseFormValues): UpdateOfficeExpenseDto
 };
 
 export default function OfficeExpensePaymentOrderDetailModal() {
-  const { officeExpenseOrderId } = useParams<{ officeExpenseOrderId: string }>();
+  const { officeExpenseOrderId } = useParams() as { officeExpenseOrderId: string };
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
 
   const mode = (searchParams.get("mode") ?? "view") as "edit" | "view";
   const readOnly = mode === "view";
 
   const close = () => navigate("..");
 
-  // Look up the order from the React Query cache (populated by useServerTable).
-  const cached = queryClient.getQueriesData<{ items: OfficeExpensePaymentOrder[]; total: number }>({
-    queryKey: ["office-expense-orders"],
-  });
-  const order: OfficeExpensePaymentOrder | undefined = cached
-    .flatMap(([, data]) => data?.items ?? [])
-    .find((r) => r.id === officeExpenseOrderId);
+  const { data: order } = useApiQuery(
+    queryKeys.officeExpenseOrders.detail(officeExpenseOrderId),
+    () => officeExpenseApi.getById(officeExpenseOrderId),
+  );
 
   const [formValues, setFormValues] = useState<OfficeExpenseFormValues | null>(() =>
     order ? buildInitialValues(order) : null,
@@ -91,7 +87,7 @@ export default function OfficeExpensePaymentOrderDetailModal() {
     {
       onSuccess: async () => {
         toast.success("Office expense payment order updated");
-        await queryClient.invalidateQueries({ queryKey: ["office-expense-orders"] });
+        await invalidate(queryKeys.officeExpenseOrders.all);
         close();
       },
       onError: (err) => toast.danger(getErrorMessage(err)),
@@ -99,7 +95,7 @@ export default function OfficeExpensePaymentOrderDetailModal() {
   );
 
   const handleFilesChanged = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["office-expense-orders"] });
+    await invalidate(queryKeys.officeExpenseOrders.all);
   };
 
   const modalTitle = order

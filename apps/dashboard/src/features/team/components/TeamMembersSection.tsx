@@ -8,8 +8,7 @@ import type { ColumnDef } from "@/components/DataTable";
 import { DataTable } from "@/components/DataTable";
 import UserSelect from "@/features/user/components/UserSelect";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useServerTable } from "@/hooks/useServerTable";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useServerTable } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 import { addTeamMember, getTeamMembers, removeTeamMember } from "../api/teamApi";
 import type { TeamMember } from "../types/team";
@@ -24,7 +23,7 @@ const TeamMembersSection: React.FC<TeamMembersSectionProps> = ({ teamId }) => {
   const [pickedUserId, setPickedUserId] = useState<string | null>(null);
 
   const { items, total, page, pageSize, isLoading, setPage, refetch } = useServerTable<TeamMember>({
-    queryKey: ["team-members", teamId],
+    queryKey: queryKeys.teams.members(teamId),
     fetcher: async ({ page: p, pageSize: ps }) => {
       const result = await getTeamMembers(teamId, { page: p - 1, limit: ps });
       return { items: result.items, total: result.total };

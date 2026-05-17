@@ -6,7 +6,7 @@ import { DataTable } from "@/components/DataTable";
 import { Search } from "@/components/Search";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePermission } from "@/hooks/usePermission";
-import { useServerTable } from "@/hooks/useServerTable";
+import { queryKeys, useServerTable } from "@/libs/query";
 import { paymentOrderApi } from "../api/paymentOrderApi";
 import type { PaymentOrder } from "../types/paymentOrder";
 import { useLoadPaymentOrderColumns } from "./useLoadPaymentOrderColumns";
@@ -18,7 +18,7 @@ export default function LoadPaymentOrdersTab() {
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const table = useServerTable<PaymentOrder>({
-    queryKey: ["payment-orders", debouncedSearch],
+    queryKey: queryKeys.paymentOrders.list(debouncedSearch),
     fetcher: async ({ page, pageSize }) => {
       const res = await paymentOrderApi.list({
         page: page - 1,

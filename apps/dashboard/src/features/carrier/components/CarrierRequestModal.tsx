@@ -1,13 +1,15 @@
 import { Check, Xmark } from "@gravity-ui/icons";
 import { Button, Chip, Label, Modal, Spinner, TextArea, TextField, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
-import { approveCarrierRequest, rejectCarrierRequest } from "../api/carrierRequestApi";
-import type { CarrierRequest } from "../types/carrierRequest";
+import {
+  approveCarrierRequest,
+  getCarrierRequestById,
+  rejectCarrierRequest,
+} from "../api/carrierRequestApi";
 import { deriveInsuranceStatus } from "../utils/insuranceStatus";
 
 const statusColor: Record<string, "success" | "warning" | "danger"> = {
@@ -17,28 +19,22 @@ const statusColor: Record<string, "success" | "warning" | "danger"> = {
 };
 
 const CarrierRequestModal = () => {
-  const { requestId } = useParams<{ requestId: string }>();
+  const { requestId } = useParams() as { requestId: string };
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("..");
 
   const { permissions } = useCurrentUser();
   const canReview = Boolean(permissions.carriers_requests?.edit);
 
-  const cached = queryClient.getQueriesData<{ items: CarrierRequest[]; total: number }>({
-    queryKey: ["carrier-requests"],
-  });
-  const rec: CarrierRequest | undefined = cached
-    .flatMap(([, data]) => data?.items ?? [])
-    .find((r) => r.id === requestId);
+  const { data: rec } = useApiQuery(queryKeys.carrierRequests.detail(requestId), () =>
+    getCarrierRequestById(requestId),
+  );
 
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
-  const refreshLists = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["carrier-requests"] });
-    await queryClient.invalidateQueries({ queryKey: ["carriers"] });
-  };
+  const refreshLists = () => invalidate(queryKeys.carrierRequests.all, queryKeys.carriers.all);
 
   const approveMutation = useApiMutation((id: string) => approveCarrierRequest(id), {
     onSuccess: async () => {

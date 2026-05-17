@@ -1,12 +1,11 @@
 import { ArrowLeft, Plus } from "@gravity-ui/icons";
 import { Button, Chip, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useQueryActions } from "@/libs/query";
 import {
   emptyPermissionsMap,
   type PermissionsMap,
@@ -47,7 +46,7 @@ function scopeLabel(branchRestricted: boolean, onlyOwnData: boolean): string {
 
 const CreateTeamPage = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const [permissions, setPermissions] = useState<PermissionsMap>(() => emptyPermissionsMap());
 
   const close = () => navigate("/user-management/teams");
@@ -68,7 +67,7 @@ const CreateTeamPage = () => {
   const mutation = useApiMutation(createTeam, {
     onSuccess: async () => {
       toast.success("Team created successfully");
-      await queryClient.invalidateQueries({ queryKey: ["teams"] });
+      await invalidate(queryKeys.teams.all);
       close();
     },
   });

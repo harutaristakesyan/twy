@@ -19,7 +19,7 @@ export const BRANCH_COLUMNS: BranchColumnDef[] = [
   { id: "actions", label: "Actions" },
 ];
 
-type UseBranchColumnsParams = {
+type BranchColumnsParams = {
   canEdit: boolean;
   canDelete: boolean;
   isDeleting: boolean;
@@ -27,13 +27,13 @@ type UseBranchColumnsParams = {
   onDelete: (id: string) => void;
 };
 
-export function useBranchColumns({
+export function getBranchColumns({
   canEdit,
   canDelete,
   isDeleting,
   onEdit,
   onDelete,
-}: UseBranchColumnsParams) {
+}: BranchColumnsParams) {
   const renderCell = (record: Branch, colId: string) => {
     switch (colId) {
       case "name":

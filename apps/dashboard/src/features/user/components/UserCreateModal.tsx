@@ -1,6 +1,5 @@
 import { Check, Power } from "@gravity-ui/icons";
 import { Button, Label, Modal, Switch, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Controller } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -8,7 +7,7 @@ import { FormTextField } from "@/components/form";
 import BranchSelect from "@/features/branch/components/BranchSelect";
 import TeamSelect from "@/features/team/components/TeamSelect";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation } from "@/libs/query";
+import { queryKeys, useApiMutation, useQueryActions } from "@/libs/query";
 import { createUser } from "../api/userApi";
 
 const schema = z.object({
@@ -24,7 +23,7 @@ type FormValues = z.infer<typeof schema>;
 
 const UserCreateModal = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("..");
 
   const { control, handleSubmit } = useZodForm(schema, {
@@ -39,7 +38,7 @@ const UserCreateModal = () => {
   const mutation = useApiMutation(createUser, {
     onSuccess: async () => {
       toast.success("User created successfully");
-      await queryClient.invalidateQueries({ queryKey: ["users"] });
+      await invalidate(queryKeys.users.all);
       close();
     },
   });

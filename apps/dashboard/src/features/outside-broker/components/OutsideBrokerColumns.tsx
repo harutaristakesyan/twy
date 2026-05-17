@@ -26,7 +26,7 @@ const statusColor: Record<BrokerStatus, "success" | "warning" | "danger"> = {
   [BrokerStatus.DENIED]: "danger",
 };
 
-type UseOutsideBrokerColumnsParams = {
+type OutsideBrokerColumnsParams = {
   canEdit: boolean;
   canDelete: boolean;
   isDeleting: boolean;
@@ -34,13 +34,13 @@ type UseOutsideBrokerColumnsParams = {
   onDelete: (id: string) => void;
 };
 
-export function useOutsideBrokerColumns({
+export function getOutsideBrokerColumns({
   canEdit,
   canDelete,
   isDeleting,
   onEdit,
   onDelete,
-}: UseOutsideBrokerColumnsParams) {
+}: OutsideBrokerColumnsParams) {
   const renderCell = (broker: OutsideBroker, colId: string) => {
     switch (colId) {
       case "brokerName":

@@ -1,0 +1,1 @@
+ALTER TABLE "load" RENAME COLUMN "customer_rate" TO "broker_rate";

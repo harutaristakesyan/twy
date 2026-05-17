@@ -1,12 +1,11 @@
 import { Button, Checkbox, Label, ListBox, Modal, Select, Spinner, toast } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Controller } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { FormNumberInput, FormTextArea, FormTextField } from "@/components/form";
 import { useZodForm } from "@/libs/form";
-import { useApiMutation, useApiQuery } from "@/libs/query";
+import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getOutsideBrokerById, updateOutsideBroker } from "../api/brokerApi";
 import { BrokerStatus } from "../types/broker";
 
@@ -46,12 +45,12 @@ const STATUS_OPTIONS = [
 
 const OutsideBrokerEditModal = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { invalidate } = useQueryActions();
   const close = () => navigate("..");
   const { brokerId } = useParams<{ brokerId: string }>();
 
   const { data: broker, isLoading } = useApiQuery(
-    ["outside-broker", brokerId],
+    queryKeys.outsideBrokers.detail(brokerId),
     () => getOutsideBrokerById(brokerId),
     { enabled: !!brokerId },
   );
@@ -95,8 +94,7 @@ const OutsideBrokerEditModal = () => {
   const mutation = useApiMutation(updateOutsideBroker, {
     onSuccess: async () => {
       toast.success("Outside broker updated successfully");
-      await queryClient.invalidateQueries({ queryKey: ["outside-brokers"] });
-      await queryClient.invalidateQueries({ queryKey: ["outside-broker", brokerId] });
+      await invalidate(queryKeys.outsideBrokers.all, queryKeys.outsideBrokers.detail(brokerId));
       close();
     },
   });

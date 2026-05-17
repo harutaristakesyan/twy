@@ -15,7 +15,7 @@ import createError from "http-errors";
 const createLoad = async (event: CreateLoadEvent): Promise<CreateLoadResponse> => {
   const {
     brokerId,
-    customerRate,
+    brokerRate,
     carrierId,
     carrierRate,
     chargeServiceFeeToOffice,
@@ -56,7 +56,7 @@ const createLoad = async (event: CreateLoadEvent): Promise<CreateLoadResponse> =
 
   const { loadId, referenceNumber } = await createLoadRecord({
     brokerId,
-    customerRate,
+    brokerRate,
     carrierId,
     carrierRate,
     chargeServiceFeeToOffice,
