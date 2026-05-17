@@ -11,6 +11,7 @@ export type UserColumnDef = {
 
 export const USER_COLUMNS: UserColumnDef[] = [
   { id: "name", label: "Name", isRowHeader: true },
+  { id: "phone", label: "Phone" },
   { id: "team", label: "Team" },
   { id: "branch", label: "Branch" },
   { id: "status", label: "Status" },
@@ -49,6 +50,12 @@ export function getUserColumns({
               <span className="text-xs text-default-500">{record.email}</span>
             </div>
           </div>
+        );
+      case "phone":
+        return record.phone ? (
+          <span className="text-sm">{record.phone}</span>
+        ) : (
+          <span className="text-sm text-default-400">—</span>
         );
       case "team":
         return record.teamName ? (
