@@ -9,6 +9,7 @@ export const useCurrentUser = () => {
         email: authMe.user.email,
         firstName: authMe.user.firstName,
         lastName: authMe.user.lastName,
+        phone: authMe.user.phone,
         isActive: authMe.user.isActive,
         branch: authMe.user.branch,
         profilePictureFileId: authMe.user.profilePictureFileId,

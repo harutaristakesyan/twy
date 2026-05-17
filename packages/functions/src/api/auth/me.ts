@@ -23,6 +23,7 @@ interface MeResponse {
     email: string;
     firstName: string | null;
     lastName: string | null;
+    phone: string | null;
     isActive: boolean;
     branch: UserBranchResponse | null;
     profilePictureFileId: string | null;
@@ -57,6 +58,7 @@ const getMe = async (event: MeEvent): Promise<MeResponse> => {
       email: profile.email,
       firstName: profile.firstName,
       lastName: profile.lastName,
+      phone: profile.phone,
       isActive: profile.isActive,
       branch: profile.branch,
       profilePictureFileId: profile.profilePictureFileId,
