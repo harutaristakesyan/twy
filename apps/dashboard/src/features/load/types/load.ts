@@ -7,6 +7,8 @@ export interface LoadFile {
 }
 
 export interface Location {
+  originName?: string | null;
+  pickupNumber?: number | null;
   cityZipCode?: string | null;
   phone?: string | null;
   address: string;
@@ -52,6 +54,7 @@ export interface Load {
   soldAs: string;
   weight: string;
   temperature?: string | null;
+  transportBodyTypes: string[];
   pickups: Location[];
   dropoffs: Location[];
   branchId: string;
@@ -78,6 +81,7 @@ export interface CreateLoadDto {
   soldAs: string;
   weight: string;
   temperature?: string | null;
+  transportBodyTypes?: string[];
   pickups: Location[];
   dropoffs: Location[];
   files?: LoadFile[];

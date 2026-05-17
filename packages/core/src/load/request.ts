@@ -11,6 +11,8 @@ const loadStatusEnum = z.enum([...loadStatusValues] as [
 const uuidField = z.uuid("Value must be a valid UUID");
 
 const locationSchema = z.object({
+  originName: z.string().trim().nullable().optional(),
+  pickupNumber: z.number().int().nullable().optional(),
   cityZipCode: z.string().trim().nullable().optional(),
   phone: z.string().trim().nullable().optional(),
   address: z.string().trim().min(1, "Address is required"),
@@ -40,6 +42,7 @@ const LoadBaseSchema = z.object({
   soldAs: z.string().trim().min(1, "Sold As is required"),
   weight: z.string().trim().min(1, "Weight is required"),
   temperature: z.string().trim().nullable().optional(),
+  transportBodyTypes: z.array(z.string()).nullable().optional(),
   pickups: stopsArraySchema,
   dropoffs: stopsArraySchema,
   files: z

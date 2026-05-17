@@ -176,6 +176,20 @@
       "when": 1779040752296,
       "tag": "0024_greedy_catseye",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1779048156133,
+      "tag": "0025_sturdy_zzzax",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1779048598049,
+      "tag": "0026_slim_mole_man",
+      "breakpoints": true
     }
   ]
 }

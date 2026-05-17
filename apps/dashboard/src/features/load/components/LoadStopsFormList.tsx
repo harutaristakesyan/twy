@@ -2,10 +2,15 @@ import { Minus, Plus } from "@gravity-ui/icons";
 import { Button, Input, Label, TextField } from "@heroui/react";
 import type React from "react";
 import { useState } from "react";
+import type { Control, FieldValues, Path } from "react-hook-form";
+import { useWatch } from "react-hook-form";
+import { FormNumberInput, FormTextField } from "@/components/form";
 import { AddressAutocomplete, type AddressSuggestion } from "@/features/geocoding";
 import type { Location } from "@/features/load/types/load";
 
 const emptyStop = (): Location => ({
+  originName: null,
+  pickupNumber: null,
   cityZipCode: null,
   phone: null,
   address: "",
@@ -31,25 +36,36 @@ const stopToSuggestion = (stop: Location): AddressSuggestion | null => {
   };
 };
 
-export interface LoadStopsFormListProps {
+export interface LoadStopsFormListProps<T extends FieldValues> {
+  control: Control<T>;
+  namePrefix: string;
   stops: Location[];
   onChange: (stops: Location[]) => void;
   legLabel: string;
+  showPickupNumber?: boolean;
 }
 
-export const LoadStopsFormList: React.FC<LoadStopsFormListProps> = ({
+export function LoadStopsFormList<T extends FieldValues>({
+  control,
+  namePrefix,
   stops,
   onChange,
   legLabel,
-}) => {
+  showPickupNumber = false,
+}: LoadStopsFormListProps<T>): React.ReactElement {
   const [expandedIndex, setExpandedIndex] = useState<number>(0);
 
+  // useWatch gives the live Controller values (originName, pickupNumber) which
+  // useFieldArray.fields does NOT reflect when updated mid-session via Controller.
+  // Without this, calling replace() after typing originName would overwrite it with null.
+  const liveStops = (useWatch({ control, name: namePrefix as Path<T> }) ?? stops) as Location[];
+
   const replaceStop = (index: number, next: Location) => {
-    onChange(stops.map((s, i) => (i === index ? next : s)));
+    onChange(liveStops.map((s, i) => (i === index ? next : s)));
   };
 
   const handleAddressSelect = (index: number, suggestion: AddressSuggestion | null) => {
-    const current = stops[index];
+    const current = liveStops[index];
     if (!suggestion) {
       replaceStop(index, {
         ...current,
@@ -72,18 +88,18 @@ export const LoadStopsFormList: React.FC<LoadStopsFormListProps> = ({
   };
 
   const updatePhone = (index: number, value: string | null) => {
-    const current = stops[index];
+    const current = liveStops[index];
     replaceStop(index, { ...current, phone: value });
   };
 
   const addStop = () => {
-    const next = [...stops, emptyStop()];
+    const next = [...liveStops, emptyStop()];
     onChange(next);
     setExpandedIndex(next.length - 1);
   };
 
   const removeStop = (index: number) => {
-    const next = stops.filter((_, i) => i !== index);
+    const next = liveStops.filter((_, i) => i !== index);
     onChange(next);
     if (expandedIndex >= next.length) setExpandedIndex(Math.max(0, next.length - 1));
   };
@@ -92,6 +108,7 @@ export const LoadStopsFormList: React.FC<LoadStopsFormListProps> = ({
     <div className="flex flex-col gap-3">
       {stops.map((stop, index) => {
         const isGeocoded = stop.latitude !== null && stop.latitude !== undefined;
+        const prefix = `${namePrefix}.${index}`;
         return (
           // biome-ignore lint/suspicious/noArrayIndexKey: stops have no stable ID
           <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -135,6 +152,14 @@ export const LoadStopsFormList: React.FC<LoadStopsFormListProps> = ({
             {expandedIndex === index && (
               <div className="p-4 grid grid-cols-2 gap-4">
                 <div className="col-span-2">
+                  <FormTextField
+                    control={control}
+                    name={`${prefix}.originName` as Path<T>}
+                    label="Origin Name"
+                    placeholder="Enter origin name"
+                  />
+                </div>
+                <div className="col-span-2">
                   <AddressAutocomplete
                     label={`${legLabel} address *`}
                     value={stopToSuggestion(stop)}
@@ -149,6 +174,16 @@ export const LoadStopsFormList: React.FC<LoadStopsFormListProps> = ({
                     onChange={(e) => updatePhone(index, e.target.value || null)}
                   />
                 </TextField>
+                {showPickupNumber && (
+                  <FormNumberInput
+                    control={control}
+                    name={`${prefix}.pickupNumber` as Path<T>}
+                    label="Pickup Number"
+                    placeholder="Enter pickup number"
+                    min="0"
+                    step="1"
+                  />
+                )}
                 {isGeocoded && (
                   <div className="flex flex-col justify-end">
                     <span className="text-[11px] text-gray-500">{stop.cityZipCode ?? ""}</span>
@@ -173,4 +208,4 @@ export const LoadStopsFormList: React.FC<LoadStopsFormListProps> = ({
       </Button>
     </div>
   );
-};
+}

@@ -1,0 +1,1 @@
+ALTER TABLE "load" ADD COLUMN "transport_body_types" jsonb;

@@ -1,5 +1,6 @@
 import {
   boolean,
+  jsonb,
   numeric,
   pgTable,
   primaryKey,
@@ -48,6 +49,7 @@ export const load = pgTable("load", {
   soldAs: text().notNull(),
   weight: text().notNull(),
   temperature: text(),
+  transportBodyTypes: jsonb().$type<string[]>(),
 
   branchId: uuid()
     .notNull()
