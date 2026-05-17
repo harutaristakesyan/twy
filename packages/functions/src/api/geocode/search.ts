@@ -81,7 +81,7 @@ const searchAddress = async (event: SearchAddressEvent): Promise<SearchAddressRe
 
   const url = new URL("https://photon.komoot.io/api/");
   url.searchParams.set("q", q);
-  url.searchParams.set("limit", String(limit));
+  url.searchParams.set("limit", String(Math.min(limit * 3, 15)));
   url.searchParams.set("lang", lang);
 
   try {
@@ -92,7 +92,19 @@ const searchAddress = async (event: SearchAddressEvent): Promise<SearchAddressRe
       throw new createError.BadGateway(`Photon responded with ${res.status}`);
     }
     const photon = (await res.json()) as PhotonResponse;
-    return { results: photon.features.map(toSuggestion) };
+    const seen = new Set<string>();
+    const results: AddressSuggestion[] = [];
+    for (const feature of photon.features) {
+      const suggestion = toSuggestion(feature);
+      const dedupeKey = [suggestion.address, suggestion.cityZipCode ?? "", suggestion.country ?? ""]
+        .join("|")
+        .toLowerCase();
+      if (!dedupeKey.trim() || seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+      results.push(suggestion);
+      if (results.length >= limit) break;
+    }
+    return { results };
   } catch (error) {
     if (createError.isHttpError(error)) {
       throw error;

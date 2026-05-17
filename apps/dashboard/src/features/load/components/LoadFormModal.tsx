@@ -29,6 +29,9 @@ const locationSchema = z.object({
   cityZipCode: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
   address: z.string().min(1, "Address is required"),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
+  placeId: z.string().nullable().optional(),
 });
 
 const schema = z.object({
@@ -236,11 +239,17 @@ export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) =>
         cityZipCode: toNull(p.cityZipCode),
         phone: toNull(p.phone),
         address: p.address,
+        latitude: p.latitude ?? null,
+        longitude: p.longitude ?? null,
+        placeId: p.placeId ?? null,
       })),
       dropoffs: values.dropoffs.map((d) => ({
         cityZipCode: toNull(d.cityZipCode),
         phone: toNull(d.phone),
         address: d.address,
+        latitude: d.latitude ?? null,
+        longitude: d.longitude ?? null,
+        placeId: d.placeId ?? null,
       })),
       files: filesPayload.length ? filesPayload : undefined,
     };

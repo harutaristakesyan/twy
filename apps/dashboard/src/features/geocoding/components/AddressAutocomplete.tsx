@@ -42,6 +42,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
   return (
     <Autocomplete
+      allowsEmptyCollection
       selectionMode="single"
       isDisabled={disabled}
       isInvalid={isInvalid}
