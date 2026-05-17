@@ -19,7 +19,7 @@ const cognitoClient = new CognitoIdentityProviderClient({});
 
 const updateSelfUser = async (event: SelfUpdateUserEvent): Promise<MessageResponse> => {
   const { userId } = event.requestContext.authUser;
-  const { firstName, lastName, profilePictureFileId } = event.body;
+  const { firstName, lastName, phone, profilePictureFileId } = event.body;
 
   const cognitoAttributes = [];
 
@@ -31,7 +31,12 @@ const updateSelfUser = async (event: SelfUpdateUserEvent): Promise<MessageRespon
     cognitoAttributes.push({ Name: "family_name", Value: lastName });
   }
 
-  const dbUpdate = updateSelfUserRecord(userId, { firstName, lastName, profilePictureFileId });
+  const dbUpdate = updateSelfUserRecord(userId, {
+    firstName,
+    lastName,
+    phone,
+    profilePictureFileId,
+  });
 
   if (cognitoAttributes.length > 0) {
     const [email] = await Promise.all([getUserEmail(userId), dbUpdate]);

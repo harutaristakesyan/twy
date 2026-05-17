@@ -86,6 +86,12 @@ const SelfUpdateUserPayloadSchema = z
   .object({
     firstName: z.string().trim().min(1, "First name is required").optional(),
     lastName: z.string().trim().min(1, "Last name is required").optional(),
+    phone: z
+      .string()
+      .max(32, "Phone number is too long")
+      .nullable()
+      .optional()
+      .transform((v) => v?.trim() || null),
     profilePictureFileId: z.uuid("profilePictureFileId must be a valid UUID").nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
@@ -105,6 +111,12 @@ export const CreateUserEventSchema = z.object({
     email: z.string().email("Must be a valid email"),
     firstName: z.string().trim().min(1, "First name is required"),
     lastName: z.string().trim().min(1, "Last name is required"),
+    phone: z
+      .string()
+      .max(32, "Phone number is too long")
+      .nullable()
+      .optional()
+      .transform((v) => v?.trim() || null),
     branch: z.uuid("branch must be a valid UUID").nullable().optional(),
     teamId: z.uuid("teamId must be a valid UUID").nullable().optional(),
     isActive: z.boolean(),

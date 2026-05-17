@@ -169,6 +169,13 @@
       "when": 1779027765985,
       "tag": "0023_warm_tomorrow_man",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1779040752296,
+      "tag": "0024_greedy_catseye",
+      "breakpoints": true
     }
   ]
 }

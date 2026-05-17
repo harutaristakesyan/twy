@@ -14,6 +14,13 @@ const schema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
   lastName: z.string().min(2, "Last name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email"),
+  phone: z
+    .string()
+    .trim()
+    .max(32, "Phone number is too long")
+    .nullable()
+    .optional()
+    .transform((v) => v?.trim() || null),
   branch: z.string().nullable().optional(),
   teamId: z.string().nullable().optional(),
   isActive: z.boolean(),
@@ -31,6 +38,7 @@ const UserCreateModal = () => {
     firstName: "",
     lastName: "",
     email: "",
+    phone: null,
     branch: null,
     teamId: null,
   });
@@ -48,6 +56,7 @@ const UserCreateModal = () => {
       firstName: values.firstName,
       lastName: values.lastName,
       email: values.email,
+      phone: values.phone ?? null,
       isActive: values.isActive,
       branch: values.branch ?? null,
       teamId: values.teamId ?? null,
@@ -92,6 +101,8 @@ const UserCreateModal = () => {
                   label="Email"
                   placeholder="name@example.com"
                 />
+
+                <FormTextField control={control} name="phone" label="Phone" placeholder="" />
 
                 <Controller
                   name="branch"

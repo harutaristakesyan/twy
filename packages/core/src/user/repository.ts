@@ -22,6 +22,7 @@ interface UserDetailsRow {
   email: string;
   firstName: string | null;
   lastName: string | null;
+  phone: string | null;
   isActive: boolean;
   branchId: string | null;
   branchName: string | null;
@@ -35,6 +36,7 @@ const mapUserDetails = (row: UserDetailsRow) => ({
   email: row.email,
   firstName: row.firstName,
   lastName: row.lastName,
+  phone: row.phone ?? null,
   isActive: row.isActive,
   branch: row.branchId ? { id: row.branchId, name: row.branchName } : null,
   teamId: row.teamId ?? null,
@@ -79,6 +81,7 @@ export const getFullUserInfoById = async (userId: string) => {
       email: users.email,
       firstName: users.firstName,
       lastName: users.lastName,
+      phone: users.phone,
       isActive: users.isActive,
       branchId: users.branch,
       branchName: branch.name,
@@ -165,6 +168,7 @@ export const listUsers = async (input: ListUsersInput) => {
         email: users.email,
         firstName: users.firstName,
         lastName: users.lastName,
+        phone: users.phone,
         isActive: users.isActive,
         branchId: users.branch,
         branchName: branch.name,
@@ -279,6 +283,7 @@ export const deleteUser = async (userId: string): Promise<boolean> => {
 export interface SelfUpdateUserInput {
   firstName?: string;
   lastName?: string;
+  phone?: string | null;
   profilePictureFileId?: string | null;
 }
 
@@ -300,6 +305,10 @@ export const updateSelfUser = async (
 
   if (typeof input.lastName !== "undefined") {
     updatePayload.lastName = input.lastName;
+  }
+
+  if (Object.hasOwn(input, "phone")) {
+    updatePayload.phone = input.phone ?? null;
   }
 
   if (Object.hasOwn(input, "profilePictureFileId")) {
