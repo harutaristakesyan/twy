@@ -64,6 +64,8 @@ export interface LoadFileRecord {
 }
 
 export interface LoadLocationRecord {
+  originName: string | null;
+  pickupNumber: number | null;
   cityZipCode: string | null;
   phone: string | null;
   address: string;
@@ -109,6 +111,7 @@ export interface LoadRecord {
   soldAs: string;
   weight: string;
   temperature: string | null;
+  transportBodyTypes: string[];
   pickups: LoadLocationRecord[];
   dropoffs: LoadLocationRecord[];
   branchId: string;
@@ -135,6 +138,7 @@ export type CreateLoadInput = {
   soldAs: string;
   weight: string;
   temperature?: string | null;
+  transportBodyTypes?: string[] | null;
   pickups: LoadLocationRecord[];
   dropoffs: LoadLocationRecord[];
   branchId: string;
@@ -253,6 +257,8 @@ type LoadStopSelectRow = {
   loadId: string;
   kind: LoadStopKind;
   sortOrder: number;
+  originName: string | null;
+  pickupNumber: number | null;
   cityZipCode: string | null;
   phone: string | null;
   address: string;
@@ -262,6 +268,8 @@ type LoadStopSelectRow = {
 };
 
 const mapStopRowToLocation = (row: LoadStopSelectRow): LoadLocationRecord => ({
+  originName: row.originName ?? null,
+  pickupNumber: row.pickupNumber ?? null,
   cityZipCode: row.cityZipCode ?? null,
   phone: row.phone ?? null,
   address: row.address,
@@ -288,6 +296,8 @@ const fetchStopsForLoads = async (
       loadId: row.loadId,
       kind: row.kind,
       sortOrder: row.sortOrder,
+      originName: row.originName ?? null,
+      pickupNumber: row.pickupNumber ?? null,
       cityZipCode: row.cityZipCode ?? null,
       phone: row.phone ?? null,
       address: row.address,
@@ -366,6 +376,9 @@ const mapLoadRow = (
     soldAs: row.soldAs,
     weight: row.weight,
     temperature: row.temperature ?? null,
+    transportBodyTypes: Array.isArray(row.transportBodyTypes)
+      ? (row.transportBodyTypes as string[])
+      : [],
     pickups: stops.pickups,
     dropoffs: stops.dropoffs,
     branchId: row.branchId,
@@ -558,6 +571,8 @@ const replaceLoadStopsForKind = async (
       loadId,
       kind,
       sortOrder,
+      originName: loc.originName ?? null,
+      pickupNumber: loc.pickupNumber ?? null,
       cityZipCode: loc.cityZipCode ?? null,
       phone: loc.phone ?? null,
       address: loc.address,
@@ -596,6 +611,7 @@ export const createLoad = async (
       soldAs: input.soldAs,
       weight: input.weight,
       temperature: input.temperature ?? null,
+      transportBodyTypes: input.transportBodyTypes ?? null,
       branchId: input.branchId,
       createdBy: input.createdBy,
       status: DEFAULT_LOAD_STATUS,
@@ -663,6 +679,8 @@ export const updateLoad = async (loadId: string, input: UpdateLoad): Promise<boo
     if (typeof input.weight !== "undefined") updatePayload.weight = input.weight;
     if (typeof input.temperature !== "undefined")
       updatePayload.temperature = input.temperature ?? null;
+    if (typeof input.transportBodyTypes !== "undefined")
+      updatePayload.transportBodyTypes = input.transportBodyTypes ?? null;
     if (typeof input.branchId !== "undefined") updatePayload.branchId = input.branchId;
 
     if (Object.keys(updatePayload).length > 0) {

@@ -4,7 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { Controller, useFieldArray } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { FormCheckbox, FormNumberInput, FormTextField } from "@/components/form";
+import type { SelectSection } from "@/components/form";
+import {
+  FormCheckbox,
+  FormMultiSelect,
+  FormNumberInput,
+  FormSelect,
+  FormSlider,
+  FormTextField,
+} from "@/components/form";
 import CarrierAutocomplete from "@/features/carrier/components/CarrierAutocomplete";
 import type { FileUploaderHandle, FileUploaderValueItem } from "@/features/files";
 import { FileUploader, MAX_FILES_DEFAULT } from "@/features/files";
@@ -16,16 +24,69 @@ import { useZodForm } from "@/libs/form";
 import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
 import { getErrorMessage } from "@/utils/errorUtils";
 
+const TRANSPORT_BODY_TYPE_SECTIONS: SelectSection[] = [
+  {
+    title: "Tent",
+    items: ["BDE", "Coilmulde", "Curtainsider", "Joloda", "Jumbo", "Mega", "Standard"].map((v) => ({
+      id: v,
+      label: v,
+    })),
+  },
+  { title: "Rigid body", items: ["Box", "Rigid body"].map((v) => ({ id: v, label: v })) },
+  {
+    title: "Cooler",
+    items: ["Cooler", "Isotherm", "Meat hanging cooler"].map((v) => ({ id: v, label: v })),
+  },
+  {
+    title: "Tanker",
+    items: [
+      "Chemical tanker",
+      "Food tanker",
+      "Fuel tanker",
+      "Gas tanker",
+      "Other tanker",
+      "Silo",
+    ].map((v) => ({ id: v, label: v })),
+  },
+  {
+    title: "Tipper",
+    items: ["Tipper", "Steel", "Aluminum", "Walking floor"].map((v) => ({ id: v, label: v })),
+  },
+  {
+    title: "Container",
+    items: [
+      "20' standard",
+      "20' tanker",
+      "40' standard",
+      "40' tanker",
+      "45' standard",
+      "Swap body",
+    ].map((v) => ({ id: v, label: v })),
+  },
+  {
+    title: "Other",
+    items: [
+      "Hook truck",
+      "Log trailer",
+      "Low loader",
+      "Other",
+      "Platform trailer",
+      "Tow truck",
+      "Tractor unit",
+    ].map((v) => ({ id: v, label: v })),
+  },
+];
+
 const STEPS = [
-  { title: "Customer & carrier", description: "Who pays and who hauls" },
-  { title: "Service & booking", description: "How the load is classified" },
-  { title: "Pick-up", description: "Origin stops" },
-  { title: "Drop-off", description: "Destination stops" },
+  { title: "Load Info", description: "Customer, carrier and service details" },
+  { title: "Location Info", description: "Pick-up and drop-off stops" },
   { title: "Files", description: "Optional documents" },
 ];
 const LAST_STEP = STEPS.length - 1;
 
 const locationSchema = z.object({
+  originName: z.string().nullable().optional(),
+  pickupNumber: z.number().int().nullable().optional(),
   cityZipCode: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
   address: z.string().min(1, "Address is required"),
@@ -55,7 +116,8 @@ const schema = z.object({
   bookedAs: z.string().min(1, "Booked as is required"),
   soldAs: z.string().min(1, "Sold as is required"),
   weight: z.string().min(1, "Weight is required"),
-  temperature: z.string().nullable().optional(),
+  temperature: z.number().min(-50).max(50).nullable(),
+  transportBodyTypes: z.array(z.string()).optional(),
   pickups: z.array(locationSchema),
   dropoffs: z.array(locationSchema),
 });
@@ -63,8 +125,11 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const STEP_FIELDS: Record<number, (keyof FormValues)[]> = {
-  0: ["brokerId", "brokerRate", "carrierId", "carrierRate"],
-  1: [
+  0: [
+    "brokerId",
+    "brokerRate",
+    "carrierId",
+    "carrierRate",
     "chargeServiceFeeToOffice",
     "loadType",
     "serviceType",
@@ -75,11 +140,12 @@ const STEP_FIELDS: Record<number, (keyof FormValues)[]> = {
     "weight",
     "temperature",
   ],
-  2: ["pickups"],
-  3: ["dropoffs"],
+  1: ["pickups", "dropoffs"],
 };
 
 const emptyStop = (): Location => ({
+  originName: null,
+  pickupNumber: null,
   cityZipCode: null,
   phone: null,
   address: "",
@@ -104,7 +170,8 @@ const toFormValues = (load: Load): FormValues => ({
   bookedAs: load.bookedAs,
   soldAs: load.soldAs,
   weight: load.weight,
-  temperature: load.temperature ?? "",
+  temperature: load.temperature != null ? Number(load.temperature) : null,
+  transportBodyTypes: load.transportBodyTypes ?? [],
   pickups: load.pickups.length > 0 ? load.pickups : [emptyStop()],
   dropoffs: load.dropoffs.length > 0 ? load.dropoffs : [emptyStop()],
 });
@@ -144,7 +211,8 @@ export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) =>
     bookedAs: "",
     soldAs: "",
     weight: "",
-    temperature: "",
+    temperature: null,
+    transportBodyTypes: [],
     pickups: [emptyStop()],
     dropoffs: [emptyStop()],
   });
@@ -234,8 +302,11 @@ export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) =>
       bookedAs: values.bookedAs,
       soldAs: values.soldAs,
       weight: values.weight,
-      temperature: toNull(values.temperature),
+      temperature: values.temperature !== null ? String(values.temperature) : null,
+      transportBodyTypes: values.transportBodyTypes,
       pickups: values.pickups.map((p) => ({
+        originName: toNull(p.originName),
+        pickupNumber: p.pickupNumber ?? null,
         cityZipCode: toNull(p.cityZipCode),
         phone: toNull(p.phone),
         address: p.address,
@@ -244,6 +315,7 @@ export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) =>
         placeId: p.placeId ?? null,
       })),
       dropoffs: values.dropoffs.map((d) => ({
+        originName: toNull(d.originName),
         cityZipCode: toNull(d.cityZipCode),
         phone: toNull(d.phone),
         address: d.address,
@@ -315,49 +387,100 @@ export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) =>
                 step="0.01"
               />
             </div>
-          </div>
-        );
-      case 1:
-        return (
-          <div className="flex flex-col gap-4">
-            <p className="border-b pb-1 text-sm font-semibold text-gray-600">Service</p>
+            <p className="mt-2 border-b pb-1 text-sm font-semibold text-gray-600">Service</p>
             <FormCheckbox
               control={control}
               name="chargeServiceFeeToOffice"
               label="Charge Service Fee to Office"
             />
             <div className="grid grid-cols-2 gap-4">
-              <FormTextField control={control} name="loadType" label="Load Type *" />
-              <FormTextField control={control} name="serviceType" label="Service Type *" />
-              <FormTextField control={control} name="serviceGivenAs" label="Service Given As *" />
+              <FormSelect
+                control={control}
+                name="loadType"
+                label="Load Type *"
+                placeholder="Select load type"
+                items={[
+                  { id: "Dedicated truck", label: "Dedicated truck" },
+                  { id: "Groupage", label: "Groupage" },
+                ]}
+              />
+              <FormSelect
+                control={control}
+                name="serviceType"
+                label="Service Type *"
+                placeholder="Select service type"
+                items={[
+                  { id: "Team", label: "Team" },
+                  { id: "Solo", label: "Solo" },
+                ]}
+              />
+              <FormSelect
+                control={control}
+                name="serviceGivenAs"
+                label="Service Given As *"
+                placeholder="Select service given as"
+                items={[
+                  { id: "Team", label: "Team" },
+                  { id: "Solo", label: "Solo" },
+                ]}
+              />
               <FormTextField control={control} name="commodity" label="Commodity *" />
+              <div className="col-span-2">
+                <FormMultiSelect
+                  control={control}
+                  name="transportBodyTypes"
+                  label="Transport Body Type"
+                  placeholder="Select body types"
+                  sections={TRANSPORT_BODY_TYPE_SECTIONS}
+                  fullWidth
+                />
+              </div>
             </div>
             <p className="mt-2 border-b pb-1 text-sm font-semibold text-gray-600">Booking</p>
             <div className="grid grid-cols-2 gap-4">
               <FormTextField control={control} name="bookedAs" label="Booked As *" />
               <FormTextField control={control} name="soldAs" label="Sold As *" />
               <FormTextField control={control} name="weight" label="Weight *" />
-              <FormTextField control={control} name="temperature" label="Temperature" />
+              <div>
+                <FormSlider
+                  control={control}
+                  name="temperature"
+                  label="Temperature"
+                  minValue={-50}
+                  maxValue={50}
+                  formatOutput={(v) => `${v}°C`}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      case 1:
+        return (
+          <div className="flex flex-col gap-6">
+            <div>
+              <p className="mb-3 border-b pb-1 text-sm font-semibold text-gray-600">Pick-up</p>
+              <LoadStopsFormList
+                control={control}
+                namePrefix="pickups"
+                stops={pickupsField.fields as Location[]}
+                onChange={(stops) => pickupsField.replace(stops)}
+                legLabel="Pick-up"
+                showPickupNumber
+              />
+            </div>
+            <div>
+              <p className="mb-3 border-b pb-1 text-sm font-semibold text-gray-600">Drop-off</p>
+              <LoadStopsFormList
+                control={control}
+                namePrefix="dropoffs"
+                stops={dropoffsField.fields as Location[]}
+                onChange={(stops) => dropoffsField.replace(stops)}
+                legLabel="Drop-off"
+              />
             </div>
           </div>
         );
       case 2:
-        return (
-          <LoadStopsFormList
-            stops={pickupsField.fields as Location[]}
-            onChange={(stops) => pickupsField.replace(stops)}
-            legLabel="Pick-up"
-          />
-        );
-      case 3:
-        return (
-          <LoadStopsFormList
-            stops={dropoffsField.fields as Location[]}
-            onChange={(stops) => dropoffsField.replace(stops)}
-            legLabel="Drop-off"
-          />
-        );
-      case 4:
         return (
           <FileUploader
             ref={uploaderRef}
@@ -383,7 +506,7 @@ export const LoadFormModal: React.FC<LoadFormModalProps> = ({ mode, loadId }) =>
         }}
       >
         <Modal.Container>
-          <Modal.Dialog className="sm:max-w-2xl">
+          <Modal.Dialog className="sm:max-w-4xl">
             <Modal.CloseTrigger />
             <Modal.Header>
               <Modal.Heading>{mode === "create" ? "Add new load" : "Edit load"}</Modal.Heading>

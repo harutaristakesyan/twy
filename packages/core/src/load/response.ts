@@ -2,6 +2,8 @@ import type { ChargeSide, LoadCommentType, LoadStatus } from "@twy/db";
 import type { MessageResponse } from "../shared/response.js";
 
 export interface LoadLocationResponse {
+  originName: string | null;
+  pickupNumber: number | null;
   cityZipCode: string | null;
   phone: string | null;
   address: string;
@@ -47,9 +49,12 @@ export interface LoadResponse {
   soldAs: string;
   weight: string;
   temperature: string | null;
+  transportBodyTypes: string[];
   pickups: LoadLocationResponse[];
   dropoffs: LoadLocationResponse[];
   branchId: string;
+  branchName: string;
+  serviceFee: number | null;
   status: LoadStatus;
   statusChangedBy: string | null;
   files: LoadFileResponse[];

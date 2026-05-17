@@ -2,16 +2,19 @@ import { Check, Power } from "@gravity-ui/icons";
 import {
   Checkbox,
   FieldError,
+  Header,
   Input,
   Label,
   ListBox,
   NumberField,
   Select,
+  Slider,
   Switch,
   TextArea,
   TextField,
 } from "@heroui/react";
 import type { ComponentProps, ReactNode } from "react";
+import { Fragment } from "react";
 import {
   type Control,
   Controller,
@@ -366,6 +369,142 @@ export function FormSelect<T extends FieldValues>({
           </Select.Popover>
           {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
         </Select>
+      )}
+    />
+  );
+}
+
+/* -- Multi-select field -------------------------------------------- */
+
+export interface SelectSection {
+  title: string;
+  items: SelectItem[];
+}
+
+interface FormMultiSelectProps<T extends FieldValues> {
+  control: Control<T>;
+  name: Path<T>;
+  label?: string;
+  placeholder?: string;
+  items?: SelectItem[];
+  sections?: SelectSection[];
+  variant?: "primary" | "secondary";
+  isDisabled?: boolean;
+  fullWidth?: boolean;
+}
+
+export function FormMultiSelect<T extends FieldValues>({
+  control,
+  name,
+  label,
+  placeholder,
+  items,
+  sections,
+  variant,
+  isDisabled,
+  fullWidth,
+}: FormMultiSelectProps<T>) {
+  return (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field, fieldState }) => (
+        <Select
+          selectionMode="multiple"
+          variant={variant}
+          isDisabled={isDisabled}
+          isInvalid={!!fieldState.error}
+          fullWidth={fullWidth}
+          value={field.value as string[]}
+          onChange={(keys) =>
+            field.onChange(Array.isArray(keys) ? keys.map(String) : keys ? [String(keys)] : [])
+          }
+        >
+          {label && <Label>{label}</Label>}
+          <Select.Trigger>
+            <Select.Value>
+              {({ defaultChildren, isPlaceholder }) =>
+                isPlaceholder ? (placeholder ?? defaultChildren) : defaultChildren
+              }
+            </Select.Value>
+            <Select.Indicator />
+          </Select.Trigger>
+          <Select.Popover>
+            <ListBox selectionMode="multiple">
+              {sections
+                ? sections.map((section) => (
+                    <Fragment key={section.title}>
+                      <ListBox.Section>
+                        <Header>{section.title}</Header>
+                        {section.items.map((item) => (
+                          <ListBox.Item key={item.id} id={item.id} textValue={item.label}>
+                            {item.label}
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        ))}
+                      </ListBox.Section>
+                    </Fragment>
+                  ))
+                : items?.map((item) => (
+                    <ListBox.Item key={item.id} id={item.id} textValue={item.label}>
+                      {item.label}
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+            </ListBox>
+          </Select.Popover>
+          {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
+        </Select>
+      )}
+    />
+  );
+}
+
+/* -- Slider field -------------------------------------------------- */
+
+interface FormSliderProps<T extends FieldValues> {
+  control: Control<T>;
+  name: Path<T>;
+  label?: string;
+  minValue: number;
+  maxValue: number;
+  step?: number;
+  formatOutput?: (value: number) => string;
+}
+
+export function FormSlider<T extends FieldValues>({
+  control,
+  name,
+  label,
+  minValue,
+  maxValue,
+  step = 1,
+  formatOutput,
+}: FormSliderProps<T>) {
+  return (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field }) => (
+        <Slider
+          value={(field.value as number | null) ?? minValue}
+          onChange={(v) => field.onChange(typeof v === "number" ? v : v[0])}
+          minValue={minValue}
+          maxValue={maxValue}
+          step={step}
+          className="w-full"
+        >
+          {label && <Label>{label}</Label>}
+          <Slider.Output>
+            {({ state }) =>
+              formatOutput ? formatOutput(state.values[0] ?? 0) : state.getThumbValueLabel(0)
+            }
+          </Slider.Output>
+          <Slider.Track>
+            <Slider.Fill />
+            <Slider.Thumb />
+          </Slider.Track>
+        </Slider>
       )}
     />
   );

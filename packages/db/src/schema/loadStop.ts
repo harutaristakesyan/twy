@@ -13,6 +13,8 @@ export const loadStop = pgTable(
       .references(() => load.id, { onDelete: "cascade" }),
     kind: text().$type<LoadStopKind>().notNull(),
     sortOrder: integer().notNull(),
+    originName: text(),
+    pickupNumber: integer(),
     cityZipCode: text(),
     phone: text(),
     address: text().notNull(),
