@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           email: "",
           firstName: null,
           lastName: null,
+          phone: null,
           isActive: false,
           branch: null,
           profilePictureFileId: null,
