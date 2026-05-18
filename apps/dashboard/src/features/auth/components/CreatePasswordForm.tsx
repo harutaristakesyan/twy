@@ -1,19 +1,22 @@
-import { Button, FieldError, Input, Label, TextField } from "@heroui/react";
+import { Button, FieldError, Input, Label, TextField, toast } from "@heroui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
+import PasswordRequirements from "@/features/auth/components/PasswordRequirements";
 import ResendCode from "@/features/auth/components/ResendCode";
+import { validatePassword } from "@/features/auth/utils/password";
 import ApiClient from "@/libs/ApiClient";
 import { maskEmail } from "@/utils/email";
-
-const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{8,})/;
+import { getErrorMessage } from "@/utils/errorUtils";
 
 const schema = z
   .object({
     code: z.string().min(6, "Please enter the 6-digit code").max(6),
-    newPassword: z.string().regex(passwordRegex, "Password does not meet requirements"),
+    newPassword: z
+      .string()
+      .refine((v) => validatePassword(v).isValid, "Password does not meet requirements"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -32,8 +35,11 @@ const CreatePasswordForm = () => {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<CreatePasswordFormValues>({ resolver: zodResolver(schema) });
+
+  const passwordValue = watch("newPassword") ?? "";
 
   const onSubmit = async ({ newPassword, code }: CreatePasswordFormValues) => {
     setLoading(true);
@@ -44,6 +50,8 @@ const CreatePasswordForm = () => {
         true,
       );
       navigate("/login");
+    } catch (error) {
+      toast.danger(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -68,6 +76,8 @@ const CreatePasswordForm = () => {
         <FieldError>{errors.newPassword?.message}</FieldError>
       </TextField>
 
+      <PasswordRequirements password={passwordValue} />
+
       <TextField isInvalid={!!errors.confirmPassword}>
         <Label>Confirm Password</Label>
         <Input
@@ -77,16 +87,6 @@ const CreatePasswordForm = () => {
         />
         <FieldError>{errors.confirmPassword?.message}</FieldError>
       </TextField>
-
-      <div className="rounded-lg bg-gray-50 p-4 text-sm">
-        <p className="font-semibold mb-2">Password must contain:</p>
-        <div className="grid grid-cols-2 gap-1">
-          <span>✓ At least 8 characters</span>
-          <span>✓ One uppercase letter</span>
-          <span>✓ One number</span>
-          <span>✓ One special character</span>
-        </div>
-      </div>
 
       <Button
         type="submit"
