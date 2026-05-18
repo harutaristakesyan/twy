@@ -4,25 +4,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import PasswordRequirements from "@/features/auth/components/PasswordRequirements";
+import { validatePassword } from "@/features/auth/utils/password";
 import ApiClient from "@/libs/ApiClient";
 import { getErrorMessage } from "@/utils/errorUtils";
-
-const passwordChecks = [
-  { key: "length", label: "At least 8 characters", test: (v: string) => v.length >= 8 },
-  { key: "uppercase", label: "One uppercase letter", test: (v: string) => /[A-Z]/.test(v) },
-  { key: "number", label: "One number", test: (v: string) => /[0-9]/.test(v) },
-  {
-    key: "special",
-    label: "One special character (!@#$%^&*)",
-    test: (v: string) => /[!@#$%^&*]/.test(v),
-  },
-];
-
-function validatePassword(value = "") {
-  const results = passwordChecks.map((c) => ({ ...c, valid: c.test(value) }));
-  const isValid = results.every((r) => r.valid);
-  return { isValid, results };
-}
 
 const schema = z.object({
   firstName: z.string().min(1, "Required"),
@@ -50,7 +35,6 @@ const RegistrationForm = () => {
   });
 
   const passwordValue = watch("password") ?? "";
-  const passwordResult = validatePassword(passwordValue);
 
   const onSubmit = async (values: RegistrationFormValues) => {
     setLoading(true);
@@ -91,15 +75,7 @@ const RegistrationForm = () => {
         <FieldError>{errors.password?.message}</FieldError>
       </TextField>
 
-      {passwordValue ? (
-        <ul className="text-sm space-y-1 px-1">
-          {passwordResult.results.map((item) => (
-            <li key={item.key} className={item.valid ? "text-green-600" : "text-red-500"}>
-              {item.valid ? "✓" : "✗"} {item.label}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <PasswordRequirements password={passwordValue} />
 
       <Button
         type="submit"
