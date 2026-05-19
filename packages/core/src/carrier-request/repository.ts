@@ -72,6 +72,7 @@ const mapRow = (row: {
   submitterFirstName: string | null;
   submitterLastName: string | null;
   submitterEmail: string | null;
+  submitterPhone: string | null;
   reviewedBy: string | null;
   reviewerFirstName: string | null;
   reviewerLastName: string | null;
@@ -99,6 +100,8 @@ const mapRow = (row: {
     row.submitterLastName,
     row.submitterEmail,
   ),
+  submittedByEmail: row.submitterEmail,
+  submittedByPhone: row.submitterPhone,
   reviewedBy: row.reviewedBy,
   reviewedByName: formatUserName(row.reviewerFirstName, row.reviewerLastName, row.reviewerEmail),
   reviewedAt: row.reviewedAt?.toISOString() ?? null,
@@ -164,6 +167,7 @@ export const listCarrierRequests = async (input: ListCarrierRequestsInput) => {
         submitterFirstName: submitter.firstName,
         submitterLastName: submitter.lastName,
         submitterEmail: submitter.email,
+        submitterPhone: submitter.phone,
         reviewedBy: carrierRequest.reviewedBy,
         reviewerFirstName: reviewer.firstName,
         reviewerLastName: reviewer.lastName,
@@ -210,6 +214,7 @@ export const getCarrierRequestById = async (
       submitterFirstName: submitter.firstName,
       submitterLastName: submitter.lastName,
       submitterEmail: submitter.email,
+      submitterPhone: submitter.phone,
       reviewedBy: carrierRequest.reviewedBy,
       reviewerFirstName: reviewer.firstName,
       reviewerLastName: reviewer.lastName,
