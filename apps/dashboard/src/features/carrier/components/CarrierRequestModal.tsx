@@ -1,6 +1,6 @@
 import { Check, Xmark } from "@gravity-ui/icons";
 import { Button, Chip, Label, Modal, Spinner, TextArea, TextField, toast } from "@heroui/react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { queryKeys, useApiMutation, useApiQuery, useQueryActions } from "@/libs/query";
@@ -18,6 +18,19 @@ const statusColor: Record<string, "success" | "warning" | "danger"> = {
   rejected: "danger",
 };
 
+const InfoField = ({ label, value, span }: { label: string; value: ReactNode; span?: 2 }) => (
+  <div className={span === 2 ? "col-span-2" : undefined}>
+    <p className="text-[11px] font-semibold uppercase tracking-widest text-default-400">{label}</p>
+    <p className="mt-1 break-words text-sm text-default-900">
+      {value ?? <span className="text-default-400">—</span>}
+    </p>
+  </div>
+);
+
+const SectionHeading = ({ children }: { children: ReactNode }) => (
+  <p className="text-xs font-semibold uppercase tracking-wider text-default-400">{children}</p>
+);
+
 const CarrierRequestModal = () => {
   const { requestId } = useParams() as { requestId: string };
   const navigate = useNavigate();
@@ -27,14 +40,19 @@ const CarrierRequestModal = () => {
   const { permissions } = useCurrentUser();
   const canReview = Boolean(permissions.carriers_requests?.edit);
 
-  const { data: rec } = useApiQuery(queryKeys.carrierRequests.detail(requestId), () =>
+  const { data: rec, isLoading } = useApiQuery(queryKeys.carrierRequests.detail(requestId), () =>
     getCarrierRequestById(requestId),
   );
 
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
-  const refreshLists = () => invalidate(queryKeys.carrierRequests.all, queryKeys.carriers.all);
+  const refreshLists = () =>
+    invalidate(
+      queryKeys.carrierRequests.all,
+      queryKeys.carrierRequests.detail(requestId),
+      queryKeys.carriers.all,
+    );
 
   const approveMutation = useApiMutation((id: string) => approveCarrierRequest(id), {
     onSuccess: async () => {
@@ -58,6 +76,8 @@ const CarrierRequestModal = () => {
     },
   );
 
+  const canAct = rec !== undefined && canReview && rec.status === "pending";
+
   return (
     <Modal>
       <Modal.Backdrop
@@ -70,127 +90,169 @@ const CarrierRequestModal = () => {
           <Modal.Dialog>
             <Modal.CloseTrigger />
             <Modal.Header>
-              <Modal.Heading>
-                {rec ? `${rec.carrierName} — ${rec.mcDotNumber}` : "Carrier Request"}
-              </Modal.Heading>
+              <Modal.Heading>Carrier Request</Modal.Heading>
             </Modal.Header>
-            <Modal.Body className="p-2">
-              {!rec ? (
+
+            <Modal.Body className="px-4 py-3">
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Spinner size="md" />
+                </div>
+              ) : !rec ? (
                 <p className="py-4 text-center text-sm text-default-500">
                   Request not found. Open it from the list to view details.
                 </p>
               ) : (
-                <div className="flex flex-col gap-3">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex flex-col gap-4">
+                  {/* Identity card */}
+                  <div className="flex items-start justify-between rounded-xl border border-default-200 bg-default-50 px-4 py-3">
                     <div>
-                      <span className="font-medium text-default-600">Kind:</span>{" "}
-                      <span className="capitalize">{rec.kind}</span>
+                      <p className="text-base font-semibold text-default-900">{rec.carrierName}</p>
+                      <p className="mt-0.5 text-sm text-default-500">MC/DOT {rec.mcDotNumber}</p>
                     </div>
-                    <div>
-                      <span className="font-medium text-default-600">Status:</span>{" "}
-                      <Chip color={statusColor[rec.status] ?? "default"} size="sm" variant="soft">
-                        {rec.status}
-                      </Chip>
-                    </div>
-                    <div>
-                      <span className="font-medium text-default-600">Equipment:</span>{" "}
-                      {rec.equipmentType ?? "—"}
-                    </div>
-                    <div>
-                      <span className="font-medium text-default-600">Insurance:</span>{" "}
-                      {rec.insuranceExpiry ? deriveInsuranceStatus(rec.insuranceExpiry).label : "—"}
-                    </div>
-                    <div>
-                      <span className="font-medium text-default-600">Phone:</span>{" "}
-                      {rec.phone ?? "—"}
-                    </div>
-                    <div>
-                      <span className="font-medium text-default-600">Email:</span>{" "}
-                      {rec.email ?? "—"}
-                    </div>
-                    <div className="col-span-2">
-                      <span className="font-medium text-default-600">Notes:</span>{" "}
-                      {rec.notes ?? "—"}
-                    </div>
-                    <div>
-                      <span className="font-medium text-default-600">Submitted:</span>{" "}
-                      {new Date(rec.createdAt).toLocaleString()}
-                      {rec.submittedByName && ` by ${rec.submittedByName}`}
+                    <Chip
+                      color={statusColor[rec.status] ?? "default"}
+                      variant="soft"
+                      size="sm"
+                      className="mt-0.5 capitalize"
+                    >
+                      {rec.status}
+                    </Chip>
+                  </div>
+
+                  {/* Contact Information */}
+                  <div className="flex flex-col gap-2">
+                    <SectionHeading>Contact Information</SectionHeading>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-default-100 p-4">
+                      <InfoField label="Phone" value={rec.phone} />
+                      <InfoField label="Email" value={rec.email} />
                     </div>
                   </div>
 
+                  {/* Carrier Details */}
+                  <div className="flex flex-col gap-2">
+                    <SectionHeading>Carrier Details</SectionHeading>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-default-100 p-4">
+                      <InfoField
+                        label="Kind"
+                        value={<span className="capitalize">{rec.kind}</span>}
+                      />
+                      <InfoField label="Equipment Type" value={rec.equipmentType} />
+                      <InfoField
+                        label="Insurance Status"
+                        value={
+                          rec.insuranceExpiry
+                            ? deriveInsuranceStatus(rec.insuranceExpiry).label
+                            : null
+                        }
+                      />
+                      <InfoField
+                        label="Submitted"
+                        value={new Date(rec.createdAt).toLocaleString()}
+                      />
+                      {rec.notes && <InfoField label="Notes" value={rec.notes} span={2} />}
+                    </div>
+                  </div>
+
+                  {/* Submitted By */}
+                  <div className="flex flex-col gap-2">
+                    <SectionHeading>Submitted By</SectionHeading>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-default-100 p-4">
+                      <InfoField label="Name" value={rec.submittedByName} />
+                      <InfoField label="Phone" value={rec.submittedByPhone} />
+                      <InfoField label="Email" value={rec.submittedByEmail} span={2} />
+                    </div>
+                  </div>
+
+                  {/* Review history */}
                   {(rec.status === "approved" || rec.status === "rejected") && rec.reviewedAt && (
-                    <div className="rounded-lg bg-default-100 p-3 text-sm">
-                      <p className="font-medium">
-                        {rec.status === "approved" ? "Approved" : "Rejected"}
-                        {rec.reviewedByName && ` by ${rec.reviewedByName}`}
-                      </p>
-                      <p className="text-default-500">
-                        {new Date(rec.reviewedAt).toLocaleString()}
-                      </p>
-                      {rec.status === "rejected" && rec.rejectionReason && (
-                        <p className="mt-2">Reason: {rec.rejectionReason}</p>
-                      )}
+                    <div className="flex flex-col gap-2">
+                      <SectionHeading>Review</SectionHeading>
+                      <div
+                        className={`rounded-xl border-l-4 p-4 ${
+                          rec.status === "approved"
+                            ? "border-success bg-success-50"
+                            : "border-danger bg-danger-50"
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-default-900">
+                          {rec.status === "approved" ? "Approved" : "Rejected"}
+                          {rec.reviewedByName && ` by ${rec.reviewedByName}`}
+                        </p>
+                        <p className="mt-0.5 text-xs text-default-500">
+                          {new Date(rec.reviewedAt).toLocaleString()}
+                        </p>
+                        {rec.status === "rejected" && rec.rejectionReason && (
+                          <p className="mt-2 text-sm text-default-700">
+                            <span className="font-medium">Reason: </span>
+                            {rec.rejectionReason}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
 
-                  {canReview && rec.status === "pending" && (
-                    <div className="border-t border-default-200 pt-3">
-                      {showRejectInput ? (
-                        <div className="flex flex-col gap-2">
-                          <TextField value={rejectReason} onChange={setRejectReason} fullWidth>
-                            <Label>Rejection reason</Label>
-                            <TextArea rows={3} placeholder="Optional reason" />
-                          </TextField>
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" onPress={() => setShowRejectInput(false)}>
-                              Cancel
-                            </Button>
-                            <Button
-                              variant="danger"
-                              isDisabled={rejectMutation.isPending}
-                              onPress={() =>
-                                rejectMutation.mutate({
-                                  id: rec.id,
-                                  reason: rejectReason || undefined,
-                                })
-                              }
-                            >
-                              {rejectMutation.isPending ? <Spinner size="sm" /> : "Confirm Reject"}
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex justify-end gap-2">
-                          <Button variant="danger-soft" onPress={() => setShowRejectInput(true)}>
-                            <Xmark className="h-4 w-4" />
-                            Reject
-                          </Button>
-                          <Button
-                            variant="primary"
-                            isDisabled={approveMutation.isPending}
-                            onPress={() => approveMutation.mutate(rec.id)}
-                          >
-                            {approveMutation.isPending ? (
-                              <Spinner size="sm" />
-                            ) : (
-                              <>
-                                <Check className="h-4 w-4" />
-                                Approve
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+                  {/* Reject reason input */}
+                  {canAct && showRejectInput && (
+                    <TextField value={rejectReason} onChange={setRejectReason} fullWidth>
+                      <Label>Rejection reason</Label>
+                      <TextArea rows={3} placeholder="Optional reason" />
+                    </TextField>
                   )}
                 </div>
               )}
             </Modal.Body>
+
             <Modal.Footer>
-              <Button variant="ghost" onPress={close}>
-                Close
-              </Button>
+              <div className="flex w-full items-center justify-between">
+                <Button variant="ghost" onPress={close}>
+                  Close
+                </Button>
+                {canAct && rec && (
+                  <div className="flex gap-2">
+                    {showRejectInput ? (
+                      <>
+                        <Button variant="ghost" onPress={() => setShowRejectInput(false)}>
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="danger"
+                          isDisabled={rejectMutation.isPending}
+                          onPress={() =>
+                            rejectMutation.mutate({
+                              id: rec.id,
+                              reason: rejectReason || undefined,
+                            })
+                          }
+                        >
+                          {rejectMutation.isPending ? <Spinner size="sm" /> : "Confirm Reject"}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="danger-soft" onPress={() => setShowRejectInput(true)}>
+                          <Xmark className="h-4 w-4" />
+                          Reject
+                        </Button>
+                        <Button
+                          variant="primary"
+                          isDisabled={approveMutation.isPending}
+                          onPress={() => approveMutation.mutate(rec.id)}
+                        >
+                          {approveMutation.isPending ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <>
+                              <Check className="h-4 w-4" />
+                              Approve
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>

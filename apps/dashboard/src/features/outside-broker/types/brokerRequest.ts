@@ -14,6 +14,8 @@ export interface BrokerRequest {
   status: "pending" | "approved" | "rejected";
   submittedBy: string | null;
   submittedByName: string | null;
+  submittedByEmail: string | null;
+  submittedByPhone: string | null;
   reviewedBy: string | null;
   reviewedByName: string | null;
   reviewedAt: string | null;
